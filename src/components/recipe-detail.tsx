@@ -5,6 +5,7 @@ import Link from 'next/link'
 import type { RecipeWithChildren } from '@/lib/db-types'
 import type { IngredientInput } from '@/lib/types'
 import { AddToListButton } from '@/components/add-to-list-button'
+import { DeleteRecipeButton } from '@/components/delete-recipe-button'
 import { scaleIngredients } from '@/lib/scaling'
 import { publicImageUrl } from '@/lib/image-url'
 import { Button } from '@/components/ui/button'
@@ -34,7 +35,10 @@ export function RecipeDetail({ recipe }: { recipe: RecipeWithChildren }) {
 
       <div className="flex items-start justify-between gap-3">
         <h1 className="font-serif text-3xl text-primary">{recipe.title}</h1>
-        <Button asChild variant="outline" size="sm"><Link href={`/recipes/${recipe.id}/edit`}>Edit</Link></Button>
+        <div className="flex shrink-0 gap-2">
+          <Button asChild variant="outline" size="sm"><Link href={`/recipes/${recipe.id}/edit`}>Edit</Link></Button>
+          <DeleteRecipeButton recipeId={recipe.id} />
+        </div>
       </div>
       {recipe.description && <p className="mt-1 text-muted-foreground">{recipe.description}</p>}
       <p className="mt-2 text-sm text-muted-foreground">
