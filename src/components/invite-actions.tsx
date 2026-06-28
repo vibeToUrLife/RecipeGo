@@ -6,32 +6,46 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 
 export function InviteActions({ inviteId }: { inviteId: string }) {
-  const [pending, start] = useTransition()
+  const [acceptPending, startAccept] = useTransition()
+  const [declinePending, startDecline] = useTransition()
   const router = useRouter()
-
-  function handleAccept() {
-    start(async () => {
-      await acceptInviteAction(inviteId)
-      toast.success('Invite accepted')
-      router.refresh()
-    })
-  }
-
-  function handleDecline() {
-    start(async () => {
-      await declineInviteAction(inviteId)
-      toast.success('Invite declined')
-      router.refresh()
-    })
-  }
 
   return (
     <div className="flex gap-2">
-      <Button size="sm" disabled={pending} onClick={handleAccept}>
-        {pending ? 'Saving…' : 'Accept'}
+      <Button
+        size="sm"
+        disabled={acceptPending || declinePending}
+        onClick={() =>
+          startAccept(async () => {
+            try {
+              await acceptInviteAction(inviteId)
+              toast.success('Invite accepted')
+              router.refresh()
+            } catch {
+              toast.error('Something went wrong. Please try again.')
+            }
+          })
+        }
+      >
+        {acceptPending ? 'Saving…' : 'Accept'}
       </Button>
-      <Button size="sm" variant="secondary" disabled={pending} onClick={handleDecline}>
-        Decline
+      <Button
+        size="sm"
+        variant="secondary"
+        disabled={acceptPending || declinePending}
+        onClick={() =>
+          startDecline(async () => {
+            try {
+              await declineInviteAction(inviteId)
+              toast.success('Invite declined')
+              router.refresh()
+            } catch {
+              toast.error('Something went wrong. Please try again.')
+            }
+          })
+        }
+      >
+        {declinePending ? 'Declining…' : 'Decline'}
       </Button>
     </div>
   )
