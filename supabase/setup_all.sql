@@ -70,15 +70,6 @@ returns boolean language sql security definer stable set search_path = '' as $$
   select exists (select 1 from public.rooms r
                  where r.id = p_room and r.owner_id = (select auth.uid()));
 $$;
-create or replace function public.can_access_recipe(p_recipe uuid)
-returns boolean language sql security definer stable set search_path = '' as $$
-  select exists (
-    select 1 from public.recipes r
-    where r.id = p_recipe
-      and ( (r.room_id is null and r.user_id = (select auth.uid()))
-            or (r.room_id is not null and public.is_room_member(r.room_id)) ));
-$$;
-
 -- auto-add owner as member
 create or replace function public.handle_new_room()
 returns trigger language plpgsql security definer set search_path = '' as $$
@@ -116,7 +107,7 @@ language sql security definer stable set search_path = '' as $$
 $$;
 
 alter table public.rooms enable row level security;
-create policy "rooms select" on public.rooms for select to authenticated using ( public.is_room_member(id) );
+create policy "rooms select" on public.rooms for select to authenticated using ( public.is_room_member(id) or owner_id = (select auth.uid()) );
 create policy "rooms insert" on public.rooms for insert to authenticated with check ( owner_id = (select auth.uid()) );
 create policy "rooms update" on public.rooms for update to authenticated using ( public.is_room_owner(id) ) with check ( public.is_room_owner(id) );
 create policy "rooms delete" on public.rooms for delete to authenticated using ( public.is_room_owner(id) );
@@ -129,7 +120,7 @@ create policy "members delete" on public.room_members for delete to authenticate
 alter table public.room_invites enable row level security;
 create policy "invites select" on public.room_invites for select to authenticated using ( public.is_room_member(room_id) or lower(email) = lower((select auth.email())) );
 create policy "invites insert" on public.room_invites for insert to authenticated with check ( public.is_room_owner(room_id) );
-create policy "invites update" on public.room_invites for update to authenticated using ( lower(email) = lower((select auth.email())) ) with check ( lower(email) = lower((select auth.email())) );
+create policy "invites update" on public.room_invites for update to authenticated using ( lower(email) = lower((select auth.email())) ) with check ( lower(email) = lower((select auth.email())) and status = 'declined' );
 create policy "invites delete" on public.room_invites for delete to authenticated using ( public.is_room_owner(room_id) );
 
 -- ========== 3. RECIPES / INGREDIENTS / STEPS / TAGS ==========
@@ -150,6 +141,14 @@ create table public.recipes (
 );
 create index recipes_user_id_idx on public.recipes (user_id);
 create index recipes_room_id_idx on public.recipes (room_id);
+create or replace function public.can_access_recipe(p_recipe uuid)
+returns boolean language sql security definer stable set search_path = '' as $$
+  select exists (
+    select 1 from public.recipes r
+    where r.id = p_recipe
+      and ( (r.room_id is null and r.user_id = (select auth.uid()))
+            or (r.room_id is not null and public.is_room_member(r.room_id)) ));
+$$;
 alter table public.recipes enable row level security;
 create policy "recipes select" on public.recipes for select to authenticated
   using ( (room_id is null and user_id = (select auth.uid())) or (room_id is not null and public.is_room_member(room_id)) );

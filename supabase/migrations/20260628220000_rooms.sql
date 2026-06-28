@@ -88,7 +88,7 @@ $$;
 
 -- ============ RLS: new tables ============
 alter table public.rooms enable row level security;
-create policy "rooms select" on public.rooms for select to authenticated using ( public.is_room_member(id) );
+create policy "rooms select" on public.rooms for select to authenticated using ( public.is_room_member(id) or owner_id = (select auth.uid()) );
 create policy "rooms insert" on public.rooms for insert to authenticated with check ( owner_id = (select auth.uid()) );
 create policy "rooms update" on public.rooms for update to authenticated using ( public.is_room_owner(id) ) with check ( public.is_room_owner(id) );
 create policy "rooms delete" on public.rooms for delete to authenticated using ( public.is_room_owner(id) );
@@ -101,7 +101,7 @@ create policy "members delete" on public.room_members for delete to authenticate
 alter table public.room_invites enable row level security;
 create policy "invites select" on public.room_invites for select to authenticated using ( public.is_room_member(room_id) or lower(email) = lower((select auth.email())) );
 create policy "invites insert" on public.room_invites for insert to authenticated with check ( public.is_room_owner(room_id) );
-create policy "invites update" on public.room_invites for update to authenticated using ( lower(email) = lower((select auth.email())) ) with check ( lower(email) = lower((select auth.email())) );
+create policy "invites update" on public.room_invites for update to authenticated using ( lower(email) = lower((select auth.email())) ) with check ( lower(email) = lower((select auth.email())) and status = 'declined' );
 create policy "invites delete" on public.room_invites for delete to authenticated using ( public.is_room_owner(room_id) );
 
 -- ============ RLS: rewrite recipes / ingredients / steps / shopping ============
