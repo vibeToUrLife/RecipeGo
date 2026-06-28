@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-export default function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; message?: string }> }) {
+  const sp = await searchParams
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
       <Card className="w-full max-w-sm">
@@ -14,6 +15,12 @@ export default function LoginPage() {
           <p className="text-sm text-muted-foreground">Sign in or create an account.</p>
         </CardHeader>
         <CardContent>
+          {sp.error && (
+            <p className="mb-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{sp.error}</p>
+          )}
+          {sp.message && (
+            <p className="mb-3 rounded-md bg-secondary/15 px-3 py-2 text-sm text-secondary-foreground">{sp.message}</p>
+          )}
           <form className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

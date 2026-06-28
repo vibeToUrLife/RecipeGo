@@ -9,6 +9,7 @@ import { scaleIngredients } from '@/lib/scaling'
 import { publicImageUrl } from '@/lib/image-url'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { ServingsStepper } from '@/components/servings-stepper'
 
 function fmtQty(q: number | null) {
   if (q === null) return ''
@@ -75,7 +76,6 @@ export function RecipeDetail({ recipe }: { recipe: RecipeWithChildren }) {
   )
 }
 
-import { ServingsStepper } from '@/components/servings-stepper'
 function ServingsStepperSlot({ servings, setServings }: { servings: number; setServings: (n: number) => void }) {
   return <ServingsStepper value={servings} onChange={setServings} />
 }
