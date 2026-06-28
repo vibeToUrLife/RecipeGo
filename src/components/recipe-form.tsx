@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { saveRecipe } from '@/app/recipes/actions'
 import type { RecipeWithChildren } from '@/lib/db-types'
+import type { ImportedRecipe } from '@/lib/recipe/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,31 +12,36 @@ import { ImageUpload } from '@/components/image-upload'
 type Row = { name: string; qty: string; unit: string }
 type StepRow = { text: string }
 
-export function RecipeForm({ recipe }: { recipe?: RecipeWithChildren }) {
+export function RecipeForm({ recipe, imported }: { recipe?: RecipeWithChildren; imported?: ImportedRecipe | null }) {
   const [ings, setIngs] = useState<Row[]>(
-    recipe?.ingredients.map((i) => ({ name: i.name, qty: i.quantity?.toString() ?? '', unit: i.unit ?? '' })) ?? [{ name: '', qty: '', unit: '' }],
+    imported
+      ? imported.ingredients.map((line) => ({ name: line, qty: '', unit: '' }))
+      : recipe?.ingredients.map((i) => ({ name: i.name, qty: i.quantity?.toString() ?? '', unit: i.unit ?? '' })) ?? [{ name: '', qty: '', unit: '' }],
   )
   const [steps, setSteps] = useState<StepRow[]>(
-    recipe?.steps.map((s) => ({ text: s.text })) ?? [{ text: '' }],
+    imported
+      ? imported.instructions.map((text) => ({ text }))
+      : recipe?.steps.map((s) => ({ text: s.text })) ?? [{ text: '' }],
   )
 
   return (
     <form action={saveRecipe} className="space-y-5">
       {recipe && <input type="hidden" name="id" value={recipe.id} />}
+      <input type="hidden" name="source_url" value={imported?.sourceUrl ?? recipe?.source_url ?? ''} />
       <ImageUpload defaultPath={recipe?.image_path} />
 
       <div className="space-y-2">
         <Label htmlFor="title">Title</Label>
-        <Input id="title" name="title" required defaultValue={recipe?.title} />
+        <Input id="title" name="title" required defaultValue={imported?.name ?? recipe?.title} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
         <Textarea id="description" name="description" defaultValue={recipe?.description ?? ''} />
       </div>
       <div className="grid grid-cols-3 gap-3">
-        <div className="space-y-2"><Label htmlFor="servings">Servings</Label><Input id="servings" name="servings" type="number" min={1} defaultValue={recipe?.servings ?? 2} /></div>
-        <div className="space-y-2"><Label htmlFor="prep_minutes">Prep (min)</Label><Input id="prep_minutes" name="prep_minutes" type="number" min={0} defaultValue={recipe?.prep_minutes ?? ''} /></div>
-        <div className="space-y-2"><Label htmlFor="cook_minutes">Cook (min)</Label><Input id="cook_minutes" name="cook_minutes" type="number" min={0} defaultValue={recipe?.cook_minutes ?? ''} /></div>
+        <div className="space-y-2"><Label htmlFor="servings">Servings</Label><Input id="servings" name="servings" type="number" min={1} defaultValue={imported?.servings ?? recipe?.servings ?? 2} /></div>
+        <div className="space-y-2"><Label htmlFor="prep_minutes">Prep (min)</Label><Input id="prep_minutes" name="prep_minutes" type="number" min={0} defaultValue={imported?.prepMinutes ?? recipe?.prep_minutes ?? ''} /></div>
+        <div className="space-y-2"><Label htmlFor="cook_minutes">Cook (min)</Label><Input id="cook_minutes" name="cook_minutes" type="number" min={0} defaultValue={imported?.cookMinutes ?? recipe?.cook_minutes ?? ''} /></div>
       </div>
 
       <fieldset className="space-y-2">
