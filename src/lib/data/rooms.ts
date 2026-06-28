@@ -38,15 +38,16 @@ export async function deleteRoom(id: string): Promise<void> {
 
 export async function listMembers(roomId: string): Promise<MemberWithName[]> {
   const s = await createClient()
-  const { data, error } = await s.from('room_members').select('*, profiles(display_name)').eq('room_id', roomId)
+  const { data: members, error } = await s.from('room_members').select('*').eq('room_id', roomId)
   if (error) throw error
-  return (data ?? []).map((m: any) => ({
-    room_id: m.room_id,
-    user_id: m.user_id,
-    role: m.role,
-    joined_at: m.joined_at,
-    display_name: m.profiles?.display_name ?? null,
-  }))
+  const ids = (members ?? []).map((m) => m.user_id)
+  let names: Record<string, string | null> = {}
+  if (ids.length) {
+    const { data: profs, error: pErr } = await s.from('profiles').select('id, display_name').in('id', ids)
+    if (pErr) throw pErr
+    names = Object.fromEntries((profs ?? []).map((p: any) => [p.id, p.display_name]))
+  }
+  return (members ?? []).map((m: any) => ({ room_id: m.room_id, user_id: m.user_id, role: m.role, joined_at: m.joined_at, display_name: names[m.user_id] ?? null }))
 }
 
 export async function removeMember(roomId: string, userId: string): Promise<void> {
@@ -57,8 +58,10 @@ export async function removeMember(roomId: string, userId: string): Promise<void
 
 export async function leaveRoom(roomId: string): Promise<void> {
   const s = await createClient()
-  const { data: { user } } = await s.auth.getUser()
-  const { error } = await s.from('room_members').delete().eq('room_id', roomId).eq('user_id', user!.id)
+  const { data: { user }, error: authError } = await s.auth.getUser()
+  if (authError) throw authError
+  if (!user) throw new Error('Not authenticated')
+  const { error } = await s.from('room_members').delete().eq('room_id', roomId).eq('user_id', user.id)
   if (error) throw error
 }
 
