@@ -84,7 +84,8 @@ create table public.steps (
   id uuid primary key default gen_random_uuid(),
   recipe_id uuid not null references public.recipes(id) on delete cascade,
   step_number int not null,
-  text text not null
+  text text not null,
+  image_path text
 );
 create index steps_recipe_id_idx on public.steps (recipe_id);
 alter table public.steps enable row level security;

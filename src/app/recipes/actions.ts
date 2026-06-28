@@ -4,26 +4,27 @@ import { revalidatePath } from 'next/cache'
 import { createRecipe, updateRecipe, deleteRecipe } from '@/lib/data/recipes'
 import { categorizeIngredient } from '@/lib/aisles'
 import type { RecipeFormData } from '@/lib/db-types'
-import type { Unit } from '@/lib/types'
 
 function parseForm(formData: FormData): RecipeFormData {
   const names = formData.getAll('ing_name') as string[]
   const qtys = formData.getAll('ing_qty') as string[]
-  const units = formData.getAll('ing_unit') as string[]
   const ingredients = names
     .map((name, i) => ({
       name: name.trim(),
       quantity: qtys[i] ? Number(qtys[i]) : null,
-      unit: (units[i] || null) as Unit,
+      unit: null,
       category: categorizeIngredient(name),
       position: i,
     }))
     .filter((ing) => ing.name.length > 0)
 
+  // step_text and step_image are emitted once per row, so they stay index-aligned.
   const stepTexts = formData.getAll('step_text') as string[]
+  const stepImages = formData.getAll('step_image') as string[]
   const steps = stepTexts
-    .map((t, i) => ({ step_number: i + 1, text: t.trim() }))
+    .map((t, i) => ({ text: t.trim(), image_path: stepImages[i] || null }))
     .filter((s) => s.text.length > 0)
+    .map((s, i) => ({ step_number: i + 1, text: s.text, image_path: s.image_path }))
 
   const num = (v: FormDataEntryValue | null) => (v ? Number(v) : null)
   return {

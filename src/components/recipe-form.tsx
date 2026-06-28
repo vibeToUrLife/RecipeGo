@@ -10,19 +10,19 @@ import { Textarea } from '@/components/ui/textarea'
 import { ImageUpload } from '@/components/image-upload'
 import { parseIngredientLine } from '@/lib/recipe/parse-ingredient'
 
-type Row = { id: string; name: string; qty: string; unit: string }
-type StepRow = { id: string; text: string }
+type Row = { id: string; name: string; qty: string }
+type StepRow = { id: string; text: string; image: string }
 
 export function RecipeForm({ recipe, imported }: { recipe?: RecipeWithChildren; imported?: ImportedRecipe | null }) {
   const [ings, setIngs] = useState<Row[]>(
     imported && imported.ingredients.length
-      ? imported.ingredients.map((line, i) => { const p = parseIngredientLine(line); return { id: `ing-${i}`, name: p.name, qty: p.quantity?.toString() ?? '', unit: p.unit ?? '' } })
-      : (recipe?.ingredients.map((ing, i) => ({ id: `ing-${i}`, name: ing.name, qty: ing.quantity?.toString() ?? '', unit: ing.unit ?? '' })) ?? [{ id: 'ing-0', name: '', qty: '', unit: '' }])
+      ? imported.ingredients.map((line, i) => { const p = parseIngredientLine(line); return { id: `ing-${i}`, name: p.name, qty: p.quantity?.toString() ?? '' } })
+      : (recipe?.ingredients.map((ing, i) => ({ id: `ing-${i}`, name: ing.name, qty: ing.quantity?.toString() ?? '' })) ?? [{ id: 'ing-0', name: '', qty: '' }])
   )
   const [steps, setSteps] = useState<StepRow[]>(
     imported && imported.instructions.length
-      ? imported.instructions.map((text, i) => ({ id: `step-${i}`, text }))
-      : (recipe?.steps.map((s, i) => ({ id: `step-${i}`, text: s.text })) ?? [{ id: 'step-0', text: '' }])
+      ? imported.instructions.map((text, i) => ({ id: `step-${i}`, text, image: '' }))
+      : (recipe?.steps.map((s, i) => ({ id: `step-${i}`, text: s.text, image: s.image_path ?? '' })) ?? [{ id: 'step-0', text: '', image: '' }])
   )
   const nextIngId = useRef(
     imported && imported.ingredients.length ? imported.ingredients.length : (recipe?.ingredients.length ?? 1)
@@ -35,7 +35,7 @@ export function RecipeForm({ recipe, imported }: { recipe?: RecipeWithChildren; 
     <form action={saveRecipe} className="space-y-5">
       {recipe && <input type="hidden" name="id" value={recipe.id} />}
       <input type="hidden" name="source_url" value={imported?.sourceUrl ?? recipe?.source_url ?? ''} />
-      <ImageUpload defaultPath={recipe?.image_path} />
+      <ImageUpload name="image_path" defaultPath={recipe?.image_path} />
 
       <div className="space-y-2">
         <Label htmlFor="title">Title</Label>
@@ -45,8 +45,10 @@ export function RecipeForm({ recipe, imported }: { recipe?: RecipeWithChildren; 
         <Label htmlFor="description">Description</Label>
         <Textarea id="description" name="description" defaultValue={recipe?.description ?? ''} />
       </div>
-      <div className="grid grid-cols-3 gap-3">
-        <div className="space-y-2"><Label htmlFor="servings">Servings</Label><Input id="servings" name="servings" type="number" min={1} defaultValue={imported?.servings ?? recipe?.servings ?? 2} /></div>
+      <div className={`grid gap-3 ${recipe ? 'grid-cols-3' : 'grid-cols-2'}`}>
+        {recipe && (
+          <div className="space-y-2"><Label htmlFor="servings">Servings</Label><Input id="servings" name="servings" type="number" min={1} step={1} defaultValue={recipe.servings} /></div>
+        )}
         <div className="space-y-2"><Label htmlFor="prep_minutes">Prep (min)</Label><Input id="prep_minutes" name="prep_minutes" type="number" min={0} defaultValue={imported?.prepMinutes ?? recipe?.prep_minutes ?? ''} /></div>
         <div className="space-y-2"><Label htmlFor="cook_minutes">Cook (min)</Label><Input id="cook_minutes" name="cook_minutes" type="number" min={0} defaultValue={imported?.cookMinutes ?? recipe?.cook_minutes ?? ''} /></div>
       </div>
@@ -65,13 +67,12 @@ export function RecipeForm({ recipe, imported }: { recipe?: RecipeWithChildren; 
         <legend className="text-sm font-semibold">Ingredients</legend>
         {ings.map((row) => (
           <div key={row.id} className="flex gap-2">
-            <Input name="ing_qty" placeholder="Qty" defaultValue={row.qty} className="w-20" />
-            <Input name="ing_unit" placeholder="unit" defaultValue={row.unit} className="w-24" />
+            <Input name="ing_qty" type="number" min={0} step="any" inputMode="decimal" placeholder="Qty" defaultValue={row.qty} className="w-24" />
             <Input name="ing_name" placeholder="Ingredient" defaultValue={row.name} className="flex-1" />
             <Button type="button" variant="ghost" size="icon" onClick={() => setIngs(ings.filter((r) => r.id !== row.id))}>✕</Button>
           </div>
         ))}
-        <Button type="button" variant="outline" size="sm" onClick={() => setIngs([...ings, { id: `ing-${nextIngId.current++}`, name: '', qty: '', unit: '' }])}>＋ Add ingredient</Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => setIngs([...ings, { id: `ing-${nextIngId.current++}`, name: '', qty: '' }])}>＋ Add ingredient</Button>
       </fieldset>
 
       <fieldset className="space-y-2">
@@ -79,11 +80,14 @@ export function RecipeForm({ recipe, imported }: { recipe?: RecipeWithChildren; 
         {steps.map((row, i) => (
           <div key={row.id} className="flex gap-2">
             <span className="pt-2 text-sm text-muted-foreground">{i + 1}.</span>
-            <Textarea name="step_text" placeholder="Describe this step" defaultValue={row.text} className="flex-1" />
+            <div className="flex-1 space-y-2">
+              <Textarea name="step_text" placeholder="Describe this step" defaultValue={row.text} />
+              <ImageUpload name="step_image" defaultPath={row.image} compact />
+            </div>
             <Button type="button" variant="ghost" size="icon" onClick={() => setSteps(steps.filter((r) => r.id !== row.id))}>✕</Button>
           </div>
         ))}
-        <Button type="button" variant="outline" size="sm" onClick={() => setSteps([...steps, { id: `step-${nextStepId.current++}`, text: '' }])}>＋ Add step</Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => setSteps([...steps, { id: `step-${nextStepId.current++}`, text: '', image: '' }])}>＋ Add step</Button>
       </fieldset>
 
       <Button type="submit" className="w-full">{recipe ? 'Save changes' : 'Create recipe'}</Button>

@@ -62,13 +62,21 @@ export function RecipeDetail({ recipe }: { recipe: RecipeWithChildren }) {
         </section>
         <section>
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">Method</h2>
-          <ol className="space-y-2 text-sm">
-            {recipe.steps.map((s) => (
-              <li key={s.id} className="flex gap-2">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs">{s.step_number}</span>
-                <span>{s.text}</span>
-              </li>
-            ))}
+          <ol className="space-y-3 text-sm">
+            {recipe.steps.map((s) => {
+              const stepImg = publicImageUrl(s.image_path)
+              return (
+                <li key={s.id} className="flex gap-2">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs">{s.step_number}</span>
+                  <div className="flex-1 space-y-2">
+                    <span>{s.text}</span>
+                    {stepImg && (
+                      <Image src={stepImg} alt="" width={480} height={300} className="w-full rounded-lg object-cover" />
+                    )}
+                  </div>
+                </li>
+              )
+            })}
           </ol>
         </section>
       </div>

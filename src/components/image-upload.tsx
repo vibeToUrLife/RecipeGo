@@ -1,13 +1,22 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { publicImageUrl } from '@/lib/image-url'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 
-export function ImageUpload({ defaultPath }: { defaultPath?: string | null }) {
+export function ImageUpload({
+  name = 'image_path',
+  defaultPath,
+  compact = false,
+}: {
+  name?: string
+  defaultPath?: string | null
+  compact?: boolean
+}) {
   const [path, setPath] = useState<string>(defaultPath ?? '')
   const [busy, setBusy] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -28,14 +37,26 @@ export function ImageUpload({ defaultPath }: { defaultPath?: string | null }) {
   const preview = publicImageUrl(path || null)
   return (
     <div className="space-y-2">
-      <input type="hidden" name="image_path" value={path} />
-      {preview && <img src={preview} alt="" className="h-32 w-full rounded-lg object-cover" />}
-      <label>
-        <input type="file" accept="image/*" className="hidden" onChange={onPick} />
-        <Button type="button" variant="outline" size="sm" asChild={false} disabled={busy}>
-          <span>{busy ? 'Uploading…' : preview ? 'Change image' : 'Upload image'}</span>
-        </Button>
-      </label>
+      {/* Always rendered so FormData arrays stay index-aligned (e.g. per-step images). */}
+      <input type="hidden" name={name} value={path} />
+      {preview && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={preview}
+          alt=""
+          className={compact ? 'h-16 w-16 rounded-md object-cover' : 'h-32 w-full rounded-lg object-cover'}
+        />
+      )}
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={onPick} />
+      <Button
+        type="button"
+        variant="outline"
+        size={compact ? 'xs' : 'sm'}
+        disabled={busy}
+        onClick={() => inputRef.current?.click()}
+      >
+        {busy ? 'Uploading…' : preview ? (compact ? 'Change' : 'Change image') : (compact ? '＋ Photo' : 'Upload image')}
+      </Button>
     </div>
   )
 }

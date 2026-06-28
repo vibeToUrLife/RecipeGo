@@ -30,6 +30,7 @@ export interface Step {
   recipe_id: string
   step_number: number
   text: string
+  image_path: string | null
 }
 
 export interface RecipeWithChildren extends Recipe {
@@ -47,5 +48,5 @@ export interface RecipeFormData {
   source_url: string | null
   image_path: string | null
   ingredients: Array<{ name: string; quantity: number | null; unit: Unit; category: Aisle; position: number }>
-  steps: Array<{ step_number: number; text: string }>
+  steps: Array<{ step_number: number; text: string; image_path: string | null }>
 }
