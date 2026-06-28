@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { RecipeWithChildren } from '@/lib/db-types'
 import type { IngredientInput } from '@/lib/types'
+import { AddToListButton } from '@/components/add-to-list-button'
 import { scaleIngredients } from '@/lib/scaling'
 import { publicImageUrl } from '@/lib/image-url'
 import { Button } from '@/components/ui/button'
@@ -43,8 +44,9 @@ export function RecipeDetail({ recipe }: { recipe: RecipeWithChildren }) {
         <ServingsStepperSlot servings={servings} setServings={setServings} />
       </div>
 
-      {/* Add-to-list button is injected in Task 25 here */}
-      <div id="add-to-list-slot" className="mb-6" />
+      <div className="mb-6">
+        <AddToListButton recipeId={recipe.id} servings={servings} />
+      </div>
 
       <div className="grid gap-6 sm:grid-cols-[40%_1fr]">
         <section>
