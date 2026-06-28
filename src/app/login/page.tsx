@@ -31,8 +31,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               <Input id="password" name="password" type="password" required minLength={6} />
             </div>
             <div className="flex gap-2">
-              <Button formAction={login} className="flex-1">Log in</Button>
-              <Button formAction={signup} variant="secondary" className="flex-1">Sign up</Button>
+              <Button type="submit" formAction={login} className="flex-1">Log in</Button>
+              <Button type="submit" formAction={signup} variant="secondary" className="flex-1">Sign up</Button>
             </div>
           </form>
           <form action={signInWithGoogle} className="mt-3">
