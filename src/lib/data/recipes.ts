@@ -2,12 +2,11 @@ import 'server-only'
 import { createClient } from '@/utils/supabase/server'
 import type { Recipe, RecipeWithChildren, RecipeFormData } from '@/lib/db-types'
 
-export async function listRecipes(): Promise<Recipe[]> {
+export async function listRecipes(roomId: string | null = null): Promise<Recipe[]> {
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('recipes')
-    .select('*')
-    .order('created_at', { ascending: false })
+  let q = supabase.from('recipes').select('*').order('created_at', { ascending: false })
+  q = roomId ? q.eq('room_id', roomId) : q.is('room_id', null)
+  const { data, error } = await q
   if (error) throw error
   return data ?? []
 }
