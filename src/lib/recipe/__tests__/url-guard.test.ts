@@ -39,4 +39,8 @@ describe('isBlockedImportUrl', () => {
   it('blocks IPv6 loopback ::1', () => {
     expect(isBlockedImportUrl('http://[::1]/x')).toBe(true)
   })
+  it('blocks IPv4-mapped IPv6 (::ffff: range) that resolves to a private IPv4', () => {
+    expect(isBlockedImportUrl('http://[::ffff:127.0.0.1]/x')).toBe(true)
+    expect(isBlockedImportUrl('http://[::ffff:192.168.1.1]/x')).toBe(true)
+  })
 })

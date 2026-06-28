@@ -23,6 +23,9 @@ function isBlockedIPv6(addr: string): boolean {
   const normalized = addr.toLowerCase()
   // loopback ::1
   if (normalized === '::1') return true
+  // IPv4-mapped IPv6 ::ffff:0:0/96 (e.g. ::ffff:7f00:1 == 127.0.0.1); Node/undici
+  // connects to the underlying IPv4, so block the whole mapped range.
+  if (normalized.startsWith('::ffff:')) return true
   // unique-local fc00::/7 — starts with fc or fd
   if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true
   // link-local fe80::/10

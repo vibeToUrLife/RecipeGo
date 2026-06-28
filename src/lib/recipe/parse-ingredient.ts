@@ -16,10 +16,6 @@ const UNIT_MAP: Record<string, Unit> = {
   piece: 'piece', pieces: 'piece',
 }
 
-// Matches: optional whole number, then optional fraction, then optional attached unit letters
-// Groups: 1=whole, 2=frac_num, 3=frac_den, 4=attached_unit
-const LEADING_NUM_RE = /^(\d+(?:\.\d+)?)(?:\/(\d+))?(?:\s+(\d+)\/(\d+))?\s*/
-
 export function parseIngredientLine(line: string): { name: string; quantity: number | null; unit: Unit } {
   const trimmed = line.trim()
 
