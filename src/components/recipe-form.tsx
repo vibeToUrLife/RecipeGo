@@ -14,14 +14,10 @@ type StepRow = { text: string }
 
 export function RecipeForm({ recipe, imported }: { recipe?: RecipeWithChildren; imported?: ImportedRecipe | null }) {
   const [ings, setIngs] = useState<Row[]>(
-    imported
-      ? imported.ingredients.map((line) => ({ name: line, qty: '', unit: '' }))
-      : recipe?.ingredients.map((i) => ({ name: i.name, qty: i.quantity?.toString() ?? '', unit: i.unit ?? '' })) ?? [{ name: '', qty: '', unit: '' }],
+    imported && imported.ingredients.length ? imported.ingredients.map((line) => ({ name: line, qty: '', unit: '' })) : (recipe?.ingredients.map((i) => ({ name: i.name, qty: i.quantity?.toString() ?? '', unit: i.unit ?? '' })) ?? [{ name: '', qty: '', unit: '' }])
   )
   const [steps, setSteps] = useState<StepRow[]>(
-    imported
-      ? imported.instructions.map((text) => ({ text }))
-      : recipe?.steps.map((s) => ({ text: s.text })) ?? [{ text: '' }],
+    imported && imported.instructions.length ? imported.instructions.map((text) => ({ text })) : (recipe?.steps.map((s) => ({ text: s.text })) ?? [{ text: '' }])
   )
 
   return (

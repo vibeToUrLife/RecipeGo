@@ -17,7 +17,7 @@ export function ImportBar({ onImported }: { onImported: (r: ImportedRecipe) => v
         method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url }),
       })
       const data = (await res.json()) as ImportedRecipe
-      if (data.needsManualEntry) toast.info('Couldn’t auto-read this page — enter details manually.')
+      if (data.needsManualEntry) toast.info("Couldn’t auto-read this page — enter details manually.")
       else toast.success('Recipe imported — review and save.')
       onImported(data)
     } catch {
