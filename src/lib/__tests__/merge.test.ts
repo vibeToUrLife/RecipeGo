@@ -48,6 +48,14 @@ describe('mergeIngredients', () => {
     expect(out[0].mergedCount).toBe(2)
   })
 
+  it('splits a null-unit item from a quantified-unit item of the same name', () => {
+    const out = mergeIngredients([
+      { name: 'salt', quantity: null, unit: null, recipeId: 'r1' },
+      { name: 'salt', quantity: 1, unit: 'tsp', recipeId: 'r2' },
+    ])
+    expect(out).toHaveLength(2)
+  })
+
   it('assigns an aisle and sorts produce before pantry', () => {
     const out = mergeIngredients([
       { name: 'spaghetti', quantity: 200, unit: 'g', recipeId: 'r1' },

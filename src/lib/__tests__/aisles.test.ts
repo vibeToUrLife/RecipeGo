@@ -31,4 +31,14 @@ describe('categorizeIngredient', () => {
     expect(AISLE_ORDER[0]).toBe('Produce')
     expect(AISLE_ORDER[AISLE_ORDER.length - 1]).toBe('Other')
   })
+  it('routes peppercorn spices to Spices, bell pepper to Produce', () => {
+    expect(categorizeIngredient('black pepper')).toBe('Spices')
+    expect(categorizeIngredient('ground pepper')).toBe('Spices')
+    expect(categorizeIngredient('bell pepper')).toBe('Produce')
+  })
+  it('routes processed tomato/corn items to Pantry', () => {
+    expect(categorizeIngredient('tomato paste')).toBe('Pantry')
+    expect(categorizeIngredient('corn syrup')).toBe('Pantry')
+    expect(categorizeIngredient('Tomato')).toBe('Produce')
+  })
 })

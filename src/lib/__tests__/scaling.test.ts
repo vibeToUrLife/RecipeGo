@@ -31,4 +31,7 @@ describe('scaleIngredients', () => {
   it('throws on non-positive fromServings', () => {
     expect(() => scaleIngredients(base, 0, 4)).toThrow()
   })
+  it('throws on negative fromServings', () => {
+    expect(() => scaleIngredients([{ name: 'x', quantity: 1, unit: 'g' }], -1, 4)).toThrow()
+  })
 })
