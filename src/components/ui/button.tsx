@@ -51,6 +51,11 @@ function Button({
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants> & { asChild?: boolean }) {
   const classNames = cn(buttonVariants({ variant, size, className }))
 
+  // NOTE: asChild only merges className onto the child. Button-level props
+  // (disabled, aria-*, event handlers) are NOT forwarded in this branch.
+  // It's sufficient for our `<Button asChild><Link/></Button>` link usages;
+  // for new polymorphic needs that require prop forwarding, prefer Base UI's
+  // `render` prop instead of asChild.
   if (asChild && React.isValidElement(children)) {
     return React.cloneElement(children as React.ReactElement<any>, {
       className: cn((children as any).props.className, classNames),
