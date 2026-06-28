@@ -10,7 +10,7 @@
 --   reset role;   -- returns to postgres (session user) between users
 
 begin;
-select plan(23);
+select plan(26);
 
 -- ====================================================================
 -- SETUP: seed three auth users as postgres (superuser — bypasses RLS).
@@ -289,6 +289,60 @@ select throws_ok(
   'P0001',
   'invite is not for you',
   '(e) accept_room_invite raises when caller email does not match invite email'
+);
+
+reset role;
+
+-- ====================================================================
+-- (f) Outsider C: blocked UPDATE and DELETE on public.recipes
+--
+-- Under RLS the UPDATE/DELETE matches 0 visible rows (no exception).
+-- Verified by confirming the value / row existence is unchanged.
+-- ====================================================================
+set local role authenticated;
+set local "request.jwt.claims" to
+  '{"sub":"c0000000-0000-0000-0000-000000000003","email":"userc@test.com"}';
+
+-- C attempts to UPDATE the room recipe (RLS USING clause hides the row)
+update public.recipes
+set title = 'hacked'
+where id = 'f0000000-0000-0000-0000-000000000006';
+
+-- C attempts to DELETE the room recipe (RLS USING clause hides the row)
+delete from public.recipes
+where id = 'f0000000-0000-0000-0000-000000000006';
+
+reset role;
+
+-- #24 — title is unchanged (C's UPDATE matched 0 visible rows)
+select is(
+  (select title from public.recipes where id = 'f0000000-0000-0000-0000-000000000006'),
+  'Room Recipe',
+  'C cannot update room recipe (title unchanged)'
+);
+
+-- #25 — row still exists (C's DELETE matched 0 visible rows)
+select isnt_empty(
+  $$ select 1 from public.recipes where id = 'f0000000-0000-0000-0000-000000000006' $$,
+  'C cannot delete room recipe (row survives)'
+);
+
+-- ====================================================================
+-- (g) Positive owner control: owner A can remove member B
+--
+-- All B-dependent assertions (#3–#6, #19–#21) are complete above, so
+-- deleting B here does not invalidate any earlier check.
+-- ====================================================================
+set local role authenticated;
+set local "request.jwt.claims" to
+  '{"sub":"a0000000-0000-0000-0000-000000000001","email":"usera@test.com"}';
+
+-- #26 — owner A can delete member B from room_members without error
+select lives_ok(
+  $$ delete from public.room_members
+     where room_id = 'd0000000-0000-0000-0000-000000000004'
+       and user_id = 'b0000000-0000-0000-0000-000000000002' $$,
+  'owner A can remove member B'
 );
 
 reset role;
