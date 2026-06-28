@@ -12,7 +12,7 @@ function fmtQty(q: number | null) {
   return Number.isInteger(q) ? String(q) : q.toFixed(2).replace(/\.?0+$/, '')
 }
 
-export function ShoppingListView({ items }: { items: ShoppingListRow[] }) {
+export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; roomId?: string | null }) {
   const [optimistic, setOptimistic] = useOptimistic(items)
   const [, start] = useTransition()
 
@@ -68,7 +68,7 @@ export function ShoppingListView({ items }: { items: ShoppingListRow[] }) {
       ))}
 
       {checkedCount > 0 && (
-        <form action={clearCheckedAction}>
+        <form action={clearCheckedAction.bind(null, roomId ?? null)}>
           <Button type="submit" variant="outline" size="sm">Clear {checkedCount} checked item(s)</Button>
         </form>
       )}
