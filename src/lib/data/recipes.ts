@@ -55,6 +55,7 @@ export async function createRecipe(input: RecipeFormData): Promise<string> {
       difficulty: input.difficulty,
       source_url: input.source_url,
       image_path: input.image_path,
+      room_id: input.room_id,
     })
     .select('id')
     .single()
@@ -76,6 +77,7 @@ export async function updateRecipe(id: string, input: RecipeFormData): Promise<v
       difficulty: input.difficulty,
       source_url: input.source_url,
       image_path: input.image_path,
+      room_id: input.room_id,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)

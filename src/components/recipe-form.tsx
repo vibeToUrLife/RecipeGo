@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
 import { saveRecipe } from '@/app/recipes/actions'
-import type { RecipeWithChildren } from '@/lib/db-types'
+import type { RecipeWithChildren, Room } from '@/lib/db-types'
 import type { ImportedRecipe } from '@/lib/recipe/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,7 +13,7 @@ import { parseIngredientLine } from '@/lib/recipe/parse-ingredient'
 type Row = { id: string; name: string; qty: string }
 type StepRow = { id: string; text: string; image: string }
 
-export function RecipeForm({ recipe, imported }: { recipe?: RecipeWithChildren; imported?: ImportedRecipe | null }) {
+export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?: RecipeWithChildren; imported?: ImportedRecipe | null; rooms: Room[]; defaultRoomId?: string | null }) {
   const [ings, setIngs] = useState<Row[]>(
     imported && imported.ingredients.length
       ? imported.ingredients.map((line, i) => { const p = parseIngredientLine(line); return { id: `ing-${i}`, name: p.name, qty: p.quantity?.toString() ?? '' } })
@@ -52,6 +52,15 @@ export function RecipeForm({ recipe, imported }: { recipe?: RecipeWithChildren; 
         <div className="space-y-2"><Label htmlFor="prep_minutes">Prep (min)</Label><Input id="prep_minutes" name="prep_minutes" type="number" min={0} defaultValue={imported?.prepMinutes ?? recipe?.prep_minutes ?? ''} /></div>
         <div className="space-y-2"><Label htmlFor="cook_minutes">Cook (min)</Label><Input id="cook_minutes" name="cook_minutes" type="number" min={0} defaultValue={imported?.cookMinutes ?? recipe?.cook_minutes ?? ''} /></div>
       </div>
+      <div className="space-y-2">
+        <Label htmlFor="room_id">Collection</Label>
+        <select id="room_id" name="room_id" defaultValue={recipe?.room_id ?? defaultRoomId ?? ''}
+          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
+          <option value="">My Recipes (private)</option>
+          {rooms.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+        </select>
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="difficulty">Difficulty</Label>
         <select id="difficulty" name="difficulty" defaultValue={recipe?.difficulty ?? ''}
