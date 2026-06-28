@@ -4,6 +4,7 @@ import { fetchHtml } from '@/lib/recipe/fetch-html'
 import { extractJsonLd } from '@/lib/recipe/extract-jsonld'
 import { findRecipeNode } from '@/lib/recipe/find-recipe-node'
 import { normalizeRecipe } from '@/lib/recipe/normalize'
+import { isBlockedImportUrl } from '@/lib/recipe/url-guard'
 
 export const runtime = 'nodejs'
 
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 })
   }
-  if (!url || !/^https?:\/\//i.test(url)) {
+  if (!url || isBlockedImportUrl(url)) {
     return NextResponse.json({ error: 'Invalid URL' }, { status: 400 })
   }
 

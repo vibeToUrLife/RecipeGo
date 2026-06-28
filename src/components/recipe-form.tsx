@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ImageUpload } from '@/components/image-upload'
+import { parseIngredientLine } from '@/lib/recipe/parse-ingredient'
 
 type Row = { id: string; name: string; qty: string; unit: string }
 type StepRow = { id: string; text: string }
@@ -15,7 +16,7 @@ type StepRow = { id: string; text: string }
 export function RecipeForm({ recipe, imported }: { recipe?: RecipeWithChildren; imported?: ImportedRecipe | null }) {
   const [ings, setIngs] = useState<Row[]>(
     imported && imported.ingredients.length
-      ? imported.ingredients.map((line, i) => ({ id: `ing-${i}`, name: line, qty: '', unit: '' }))
+      ? imported.ingredients.map((line, i) => { const p = parseIngredientLine(line); return { id: `ing-${i}`, name: p.name, qty: p.quantity?.toString() ?? '', unit: p.unit ?? '' } })
       : (recipe?.ingredients.map((ing, i) => ({ id: `ing-${i}`, name: ing.name, qty: ing.quantity?.toString() ?? '', unit: ing.unit ?? '' })) ?? [{ id: 'ing-0', name: '', qty: '', unit: '' }])
   )
   const [steps, setSteps] = useState<StepRow[]>(
