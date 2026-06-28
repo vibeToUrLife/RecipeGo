@@ -36,6 +36,7 @@ function parseForm(formData: FormData): RecipeFormData {
     difficulty: (formData.get('difficulty') as RecipeFormData['difficulty']) || null,
     source_url: (formData.get('source_url') as string)?.trim() || null,
     image_path: (formData.get('image_path') as string) || null,
+    room_id: (formData.get('room_id') as string) || null,
     ingredients,
     steps,
   }
