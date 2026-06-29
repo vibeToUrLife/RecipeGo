@@ -22,7 +22,10 @@ export function RecipeLibrary({ recipes, addHref = '/recipes/new' }: { recipes: 
 
   return (
     <>
-      <Input placeholder="🔍 Search recipes…" value={q} onChange={(e) => setQ(e.target.value)} className="mb-4 max-w-sm" />
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <Input placeholder="🔍 Search recipes…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-sm" />
+        <Button asChild><Link href={addHref}>＋ Add recipe</Link></Button>
+      </div>
       {filtered.length === 0 ? (
         <p className="text-sm text-muted-foreground">No recipes match "{q}".</p>
       ) : (
