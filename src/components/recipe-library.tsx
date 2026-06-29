@@ -6,7 +6,7 @@ import { RecipeCard } from '@/components/recipe-card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
-export function RecipeLibrary({ recipes }: { recipes: Recipe[] }) {
+export function RecipeLibrary({ recipes, addHref = '/recipes/new' }: { recipes: Recipe[]; addHref?: string }) {
   const [q, setQ] = useState('')
   const filtered = recipes.filter((r) => r.title.toLowerCase().includes(q.toLowerCase()))
 
@@ -15,7 +15,7 @@ export function RecipeLibrary({ recipes }: { recipes: Recipe[] }) {
       <div className="rounded-xl border border-dashed p-10 text-center">
         <p className="text-lg">No recipes yet.</p>
         <p className="mb-4 text-sm text-muted-foreground">Add your first recipe or import one from a URL.</p>
-        <Button asChild><Link href="/recipes/new">＋ Add a recipe</Link></Button>
+        <Button asChild><Link href={addHref}>＋ Add a recipe</Link></Button>
       </div>
     )
   }

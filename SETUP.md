@@ -19,10 +19,11 @@ A complete, beginner-friendly walkthrough to get RecipeGo running on your own ma
 7. [Create your account](#7-create-your-account)
 8. [Optional: Enable Google sign-in](#8-optional-enable-google-sign-in)
 9. [Optional: Deploy online with Vercel](#9-optional-deploy-online-with-vercel)
-10. [Useful commands](#10-useful-commands)
-11. [Project structure](#11-project-structure)
-12. [Troubleshooting](#12-troubleshooting)
-13. [Security notes](#13-security-notes)
+10. [Shared Rooms](#10-shared-rooms)
+11. [Useful commands](#11-useful-commands)
+12. [Project structure](#12-project-structure)
+13. [Troubleshooting](#13-troubleshooting)
+14. [Security notes](#14-security-notes)
 
 ---
 
@@ -229,7 +230,39 @@ Every future `git push` to the `master` branch auto-deploys.
 
 ---
 
-## 10. Useful commands
+## 10. Shared Rooms
+
+Shared Rooms let multiple users add, edit, and delete the same recipes and share one shopping list.
+
+### Apply the Rooms migration
+
+The Rooms tables and RLS policies are included in `supabase/setup_all.sql`, so **if you ran Method A or B in step 5 on a fresh project they are already applied.**
+
+If you added Rooms to an existing project (i.e., the DB was set up before the Rooms feature was merged), apply the migration manually:
+
+1. Open **SQL Editor → New query** in your Supabase dashboard.
+2. Open `supabase/migrations/20260628220000_rooms.sql`, copy **all** of it, paste, and click **Run**.
+3. You should see **"Success. No rows returned."** ✅
+
+Alternatively, drop and recreate the entire schema by re-running `supabase/setup_all.sql` on a fresh project.
+
+### How rooms work
+
+| Step | What happens |
+|---|---|
+| **Create a room** | Open the **Rooms** page (`/rooms`) → **New room**. You become the owner and are automatically added as a member. |
+| **Invite others** | Inside the room → **Members** → **Invite by email**. The invitee receives a pending invite (only owners can invite). |
+| **Accept an invite** | The invitee opens `/rooms` and clicks **Accept** next to the pending invite. They are added as a member immediately. |
+| **Add recipes** | Any member can create, edit, and delete recipes inside the room. Switch context using the room picker at the top of the recipes page. |
+| **Shared shopping list** | Each room has its own shopping list. Add ingredients from any room recipe and all members see the same list. |
+| **Personal recipes stay private** | Recipes without a `room_id` are only visible to their creator — Rooms do not affect personal data. |
+| **Leave or remove members** | Members can leave a room themselves; only the owner can remove other members or delete the room. |
+
+> **Outsider isolation** is enforced by Row-Level Security at the database level. A user who is not a room member cannot read or write that room's recipes, ingredients, steps, shopping list items, members list, or invites — regardless of how they call the API.
+
+---
+
+## 11. Useful commands
 
 | Command | What it does |
 |---|---|
@@ -242,7 +275,7 @@ Every future `git push` to the `master` branch auto-deploys.
 
 ---
 
-## 11. Project structure
+## 12. Project structure
 
 ```
 src/
@@ -266,7 +299,7 @@ supabase/
 
 ---
 
-## 12. Troubleshooting
+## 13. Troubleshooting
 
 **"Your project's URL and Key are required" / app won't start**
 `.env.local` is missing or misspelled. Confirm the three variable names exactly match step 4, then restart `npm run dev` (env changes need a restart).
@@ -297,7 +330,7 @@ The app parses common formats (`200g flour`, `1/2 cup sugar`). Unusual lines may
 
 ---
 
-## 13. Security notes
+## 14. Security notes
 
 - **`SUPABASE_SERVICE_ROLE_KEY` is all-powerful** — it bypasses every security rule. It is used **server-side only**, is never sent to the browser, and must never be prefixed with `NEXT_PUBLIC_`. If it ever leaks, rotate it in **Project Settings → API Keys**.
 - **Row-Level Security (RLS)** is the real boundary: every table has policies so each signed-in user can only read/write their **own** rows. The `anon`/publishable key is safe to expose in the browser precisely because RLS restricts what it can do.

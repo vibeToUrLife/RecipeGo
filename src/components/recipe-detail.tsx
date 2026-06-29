@@ -50,7 +50,7 @@ export function RecipeDetail({ recipe }: { recipe: RecipeWithChildren }) {
       </div>
 
       <div className="mb-6">
-        <AddToListButton recipeId={recipe.id} servings={servings} />
+        <AddToListButton recipeId={recipe.id} servings={servings} recipeRoomId={recipe.room_id} />
       </div>
 
       <div className="grid gap-6 sm:grid-cols-[40%_1fr]">
