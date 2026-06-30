@@ -1,4 +1,5 @@
 import type { Aisle, Unit } from '@/lib/types'
+import type { MealSlot } from '@/lib/plan/week'
 
 export interface Recipe {
   id: string
@@ -85,4 +86,22 @@ export interface PendingInvite {
   room_id: string
   room_name: string
   created_at: string
+}
+
+export type { MealSlot }
+
+export interface MealPlanEntry {
+  id: string
+  user_id: string
+  room_id: string | null
+  recipe_id: string
+  plan_date: string
+  meal_slot: MealSlot
+  servings: number
+  created_at: string
+}
+
+// An entry joined with the bit the grid needs to render.
+export interface MealPlanEntryView extends MealPlanEntry {
+  recipe_title: string
 }

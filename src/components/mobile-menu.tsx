@@ -14,6 +14,7 @@ export function MobileMenu({ rooms, signOut }: { rooms: Room[]; signOut: () => v
   const recipesHref = roomId ? `/rooms/${roomId}` : '/'
   const cookHref = roomId ? `/rooms/${roomId}/cook` : '/cook'
   const shoppingHref = roomId ? `/rooms/${roomId}/shopping-list` : '/shopping-list'
+  const planHref = roomId ? `/rooms/${roomId}/plan` : '/plan'
   const close = () => setOpen(false)
   const item = 'block rounded-md px-3 py-2 text-sm hover:bg-muted'
 
@@ -33,6 +34,7 @@ export function MobileMenu({ rooms, signOut }: { rooms: Room[]; signOut: () => v
           <div className="fixed inset-0 z-30" onClick={close} aria-hidden />
           <div className="absolute right-0 top-full z-40 mt-2 w-56 rounded-xl border bg-card p-2 text-foreground shadow-lg">
             <Link href={recipesHref} onClick={close} className={item}>{t('nav.recipes')}</Link>
+            <Link href={planHref} onClick={close} className={item}>{t('nav.plan')}</Link>
             <Link href={cookHref} onClick={close} className={item}>{t('nav.ingredients')}</Link>
             <Link href={shoppingHref} onClick={close} className={item}>{t('nav.shoppingList')}</Link>
             <div className="my-1 border-t" />

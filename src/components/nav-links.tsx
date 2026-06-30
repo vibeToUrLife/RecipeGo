@@ -15,9 +15,11 @@ export function NavLinks({ roomId: roomIdProp }: { roomId?: string | null } = {}
   const recipesHref = roomId ? `/rooms/${roomId}` : '/'
   const cookHref = roomId ? `/rooms/${roomId}/cook` : '/cook'
   const shoppingHref = roomId ? `/rooms/${roomId}/shopping-list` : '/shopping-list'
+  const planHref = roomId ? `/rooms/${roomId}/plan` : '/plan'
   return (
     <>
       <Button asChild variant="ghost" size="sm"><Link href={recipesHref}>{t('nav.recipes')}</Link></Button>
+      <Button asChild variant="ghost" size="sm"><Link href={planHref}>{t('nav.plan')}</Link></Button>
       <Button asChild variant="ghost" size="sm"><Link href={cookHref}>{t('nav.ingredients')}</Link></Button>
       <Button asChild variant="ghost" size="sm"><Link href={shoppingHref}>{t('nav.shoppingList')}</Link></Button>
     </>

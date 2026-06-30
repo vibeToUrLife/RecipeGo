@@ -2,7 +2,7 @@
 
 ## What it is
 
-RecipeGo is a multi-user recipe management app where every cook has their own private library. You can add recipes by hand or import them directly from any food blog URL — the app fetches the page, parses the ingredients and steps, and pre-fills the form so you only need to review and save. A built-in serving scaler adjusts every quantity when you change the number of portions. When you add recipes to your shopping list, RecipeGo merges shared ingredients across dishes (so two recipes each calling for garlic appear as one line with the combined amount) and groups everything by supermarket aisle so you can move through the store in order. The interface follows a Warm Editorial design — clean typography, a cream-and-terracotta palette, and no visual clutter.
+RecipeGo is a multi-user recipe management app where every cook has their own private library. You can add recipes by hand or import them directly from any food blog URL — the app fetches the page, parses the ingredients and steps, and pre-fills the form so you only need to review and save. A built-in serving scaler adjusts every quantity when you change the number of portions. When you add recipes to your shopping list, RecipeGo merges shared ingredients across dishes (so two recipes each calling for garlic appear as one line with the combined amount) and groups everything by supermarket aisle so you can move through the store in order. A weekly **meal planner** lets you drop recipes into Breakfast / Lunch / Dinner slots for each day, set how many people each meal is for, and then build the whole week's shopping list in one tap — works for your personal recipes and inside shared Rooms. The interface follows a Warm Editorial design — clean typography, a cream-and-terracotta palette, and no visual clutter.
 
 ---
 
@@ -180,6 +180,7 @@ Run through this checklist after your first deployment (or after any migration c
 - [ ] **Scale servings.** Open any recipe and change the serving count → all ingredient quantities update proportionally.
 - [ ] **Shopping list merging and aisle grouping.** Add two recipes that share a common ingredient (e.g. both call for garlic) to the shopping list. The list shows a single garlic line with the combined quantity, and all ingredients are grouped by supermarket aisle.
 - [ ] **Check and clear.** Check off individual items on the shopping list → the progress bar advances. Click "Clear checked" → checked items are removed.
+- [ ] **Plan a week.** Open "Plan", add a recipe to Monday Dinner (set the servings), add another to Tuesday Lunch, then click "Add this week to shopping list" → the shopping list shows the combined, aisle-grouped ingredients, scaled to the servings you set. (Requires the `20260630190000_meal_plan.sql` migration to be applied.)
 - [ ] **Sign out.** Click sign out → you are redirected to `/login`. Navigating to a protected page (e.g. `/recipes`) while signed out also redirects to `/login`.
 
 ---
