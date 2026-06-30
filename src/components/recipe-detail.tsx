@@ -12,6 +12,7 @@ import { publicImageUrl } from '@/lib/image-url'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { ServingsStepper } from '@/components/servings-stepper'
+import { useT } from '@/components/i18n-provider'
 
 function fmtQty(q: number | null) {
   if (q === null) return ''
@@ -19,6 +20,7 @@ function fmtQty(q: number | null) {
 }
 
 export function RecipeDetail({ recipe }: { recipe: RecipeWithChildren }) {
+  const t = useT()
   const [servings, setServings] = useState(recipe.servings)
   const img = publicImageUrl(recipe.image_path)
 
@@ -38,13 +40,13 @@ export function RecipeDetail({ recipe }: { recipe: RecipeWithChildren }) {
         <h1 className="font-serif text-3xl text-primary">{recipe.title}</h1>
         <div className="flex shrink-0 gap-2">
           <ShareRecipeButton recipeId={recipe.id} />
-          <Button asChild variant="outline" size="sm"><Link href={`/recipes/${recipe.id}/edit`}>Edit</Link></Button>
+          <Button asChild variant="outline" size="sm"><Link href={`/recipes/${recipe.id}/edit`}>{t('common.edit')}</Link></Button>
           <DeleteRecipeButton recipeId={recipe.id} />
         </div>
       </div>
       {recipe.description && <p className="mt-1 text-muted-foreground">{recipe.description}</p>}
       <p className="mt-2 text-sm text-muted-foreground">
-        {total > 0 ? `⏱ ${total} min` : ''} {recipe.difficulty ? `· ${recipe.difficulty}` : ''}
+        {total > 0 ? `⏱ ${t('detail.min', { n: total })}` : ''} {recipe.difficulty ? `· ${recipe.difficulty}` : ''}
       </p>
 
       <div className="my-4">
@@ -57,7 +59,7 @@ export function RecipeDetail({ recipe }: { recipe: RecipeWithChildren }) {
 
       <div className="grid gap-6 sm:grid-cols-[40%_1fr]">
         <section>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">Ingredients</h2>
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">{t('detail.ingredients')}</h2>
           <ul className="space-y-1 text-sm">
             {scaled.map((ing, idx) => (
               <li key={idx} className="border-b py-1">
@@ -67,7 +69,7 @@ export function RecipeDetail({ recipe }: { recipe: RecipeWithChildren }) {
           </ul>
         </section>
         <section>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">Method</h2>
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">{t('detail.method')}</h2>
           <ol className="space-y-3 text-sm">
             {recipe.steps.map((s) => {
               const stepImg = publicImageUrl(s.image_path)

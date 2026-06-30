@@ -2,8 +2,10 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { useT } from '@/components/i18n-provider'
 
 export function ShareRecipeButton({ recipeId }: { recipeId: string }) {
+  const t = useT()
   const [copied, setCopied] = useState(false)
 
   async function copy() {
@@ -11,17 +13,17 @@ export function ShareRecipeButton({ recipeId }: { recipeId: string }) {
     try {
       await navigator.clipboard.writeText(url)
       setCopied(true)
-      toast.success('Link copied — paste it into "Import from a website" to add this recipe.')
+      toast.success(t('detail.shareCopied'))
       setTimeout(() => setCopied(false), 2000)
     } catch {
       // Clipboard blocked — show the link so they can copy it by hand.
-      toast.message('Copy this link to share', { description: url })
+      toast.message(t('detail.shareCopyManual'), { description: url })
     }
   }
 
   return (
     <Button type="button" variant="outline" size="sm" onClick={copy}>
-      {copied ? '✓ Copied' : '🔗 Share'}
+      {copied ? t('detail.copied') : t('detail.share')}
     </Button>
   )
 }

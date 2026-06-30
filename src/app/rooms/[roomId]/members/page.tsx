@@ -9,6 +9,7 @@ import { InviteForm } from '@/components/invite-form'
 import { InviteCancelButton } from '@/components/invite-cancel-button'
 import { getRoom, listMembers, listRoomInvites } from '@/lib/data/rooms'
 import { createClient } from '@/utils/supabase/server'
+import { getT } from '@/lib/i18n-server'
 import {
   renameRoomAction,
   deleteRoomAction,
@@ -25,10 +26,11 @@ export default async function MembersPage({
   const { roomId } = await params
   const sp = await searchParams
 
-  const [room, members, invites] = await Promise.all([
+  const [room, members, invites, t] = await Promise.all([
     getRoom(roomId),
     listMembers(roomId),
     listRoomInvites(roomId),
+    getT(),
   ])
 
   if (!room) notFound()
@@ -47,7 +49,7 @@ export default async function MembersPage({
     <>
       <AppNav />
       <main className="mx-auto max-w-2xl px-4 py-6">
-        <h1 className="mb-6 font-serif text-2xl text-primary">{room.name} — Members</h1>
+        <h1 className="mb-6 font-serif text-2xl text-primary">{t('rooms.membersTitle', { room: room.name })}</h1>
 
         {sp.error && (
           <p className="mb-4 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -63,14 +65,14 @@ export default async function MembersPage({
         {/* Members list */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle className="font-serif text-lg text-primary">Members</CardTitle>
+            <CardTitle className="font-serif text-lg text-primary">{t('rooms.members')}</CardTitle>
           </CardHeader>
           <CardContent className="divide-y">
             {members.length === 0 ? (
-              <p className="py-2 text-sm text-muted-foreground">No members yet.</p>
+              <p className="py-2 text-sm text-muted-foreground">{t('rooms.noMembers')}</p>
             ) : (
               members.map((m) => {
-                const name = m.display_name ?? 'Member'
+                const name = m.display_name ?? t('rooms.defaultMemberName')
                 const canRemove = isOwner && m.user_id !== user?.id && m.role !== 'owner'
                 return (
                   <MemberRow
@@ -91,7 +93,7 @@ export default async function MembersPage({
         {isOwner && invites.length > 0 && (
           <Card className="mb-8">
             <CardHeader>
-              <CardTitle className="font-serif text-lg text-primary">Pending invites</CardTitle>
+              <CardTitle className="font-serif text-lg text-primary">{t('rooms.pendingInvites')}</CardTitle>
             </CardHeader>
             <CardContent className="divide-y">
               {invites.map((i) => (
@@ -109,7 +111,7 @@ export default async function MembersPage({
             {/* Invite by email */}
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle className="font-serif text-lg text-primary">Invite by email</CardTitle>
+                <CardTitle className="font-serif text-lg text-primary">{t('rooms.inviteByEmail')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <InviteForm roomId={roomId} />
@@ -119,13 +121,13 @@ export default async function MembersPage({
             {/* Rename room */}
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle className="font-serif text-lg text-primary">Rename room</CardTitle>
+                <CardTitle className="font-serif text-lg text-primary">{t('rooms.renameRoom')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <form action={rename} className="flex gap-2">
                   <div className="flex-1 space-y-1">
                     <Label htmlFor="room-name" className="sr-only">
-                      Room name
+                      {t('rooms.roomName')}
                     </Label>
                     <Input
                       id="room-name"
@@ -134,7 +136,7 @@ export default async function MembersPage({
                       required
                     />
                   </div>
-                  <Button type="submit">Save</Button>
+                  <Button type="submit">{t('common.save')}</Button>
                 </form>
               </CardContent>
             </Card>
@@ -142,7 +144,7 @@ export default async function MembersPage({
             {/* Delete room */}
             <form action={deleteRoom}>
               <Button type="submit" variant="destructive" size="sm">
-                Delete room
+                {t('rooms.deleteRoom')}
               </Button>
             </form>
           </>
@@ -150,7 +152,7 @@ export default async function MembersPage({
           /* Leave room */
           <form action={leaveRoom}>
             <Button type="submit" variant="outline" size="sm">
-              Leave room
+              {t('rooms.leaveRoom')}
             </Button>
           </form>
         )}

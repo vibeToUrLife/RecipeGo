@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { ImageUpload } from '@/components/image-upload'
 import { parseIngredientLine } from '@/lib/recipe/parse-ingredient'
 import { UNIT_GROUPS } from '@/lib/unit-options'
+import { useT } from '@/components/i18n-provider'
 
 type Row = { id: string; name: string; qty: string; unit: string }
 type StepRow = { id: string; text: string; image: string }
@@ -33,6 +34,7 @@ export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?
   const nextStepId = useRef(
     imported && imported.instructions.length ? imported.instructions.length : (recipe?.steps.length ?? 1)
   )
+  const t = useT()
 
   return (
     <form action={saveRecipe} className="space-y-5">
@@ -41,76 +43,76 @@ export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?
       <ImageUpload name="image_path" defaultPath={recipe?.image_path} />
 
       <div className="space-y-2">
-        <Label htmlFor="title">Title</Label>
+        <Label htmlFor="title">{t('form.title')}</Label>
         <Input id="title" name="title" required defaultValue={imported?.name ?? recipe?.title} />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description">{t('form.description')}</Label>
         <Textarea id="description" name="description" defaultValue={imported?.description ?? recipe?.description ?? ''} />
       </div>
       <div className={`grid gap-3 ${recipe ? 'grid-cols-3' : 'grid-cols-2'}`}>
         {recipe && (
-          <div className="space-y-2"><Label htmlFor="servings">Servings</Label><Input id="servings" name="servings" type="number" min={1} step={1} defaultValue={recipe.servings} /></div>
+          <div className="space-y-2"><Label htmlFor="servings">{t('form.servings')}</Label><Input id="servings" name="servings" type="number" min={1} step={1} defaultValue={recipe.servings} /></div>
         )}
-        <div className="space-y-2"><Label htmlFor="prep_minutes">Prep (min)</Label><Input id="prep_minutes" name="prep_minutes" type="number" min={0} defaultValue={imported?.prepMinutes ?? recipe?.prep_minutes ?? ''} /></div>
-        <div className="space-y-2"><Label htmlFor="cook_minutes">Cook (min)</Label><Input id="cook_minutes" name="cook_minutes" type="number" min={0} defaultValue={imported?.cookMinutes ?? recipe?.cook_minutes ?? ''} /></div>
+        <div className="space-y-2"><Label htmlFor="prep_minutes">{t('form.prep')}</Label><Input id="prep_minutes" name="prep_minutes" type="number" min={0} defaultValue={imported?.prepMinutes ?? recipe?.prep_minutes ?? ''} /></div>
+        <div className="space-y-2"><Label htmlFor="cook_minutes">{t('form.cook')}</Label><Input id="cook_minutes" name="cook_minutes" type="number" min={0} defaultValue={imported?.cookMinutes ?? recipe?.cook_minutes ?? ''} /></div>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="room_id">Collection</Label>
+        <Label htmlFor="room_id">{t('form.collection')}</Label>
         <select id="room_id" name="room_id" defaultValue={recipe?.room_id ?? defaultRoomId ?? ''}
           className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
-          <option value="">My Recipes (private)</option>
+          <option value="">{t('form.collectionPersonal')}</option>
           {rooms.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
         </select>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="difficulty">Difficulty</Label>
+        <Label htmlFor="difficulty">{t('form.difficulty')}</Label>
         <select id="difficulty" name="difficulty" defaultValue={recipe?.difficulty ?? ''}
           className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
-          <option value="">—</option>
-          <option value="easy">Easy</option>
-          <option value="medium">Medium</option>
-          <option value="hard">Hard</option>
+          <option value="">{t('form.diffNone')}</option>
+          <option value="easy">{t('form.diffEasy')}</option>
+          <option value="medium">{t('form.diffMedium')}</option>
+          <option value="hard">{t('form.diffHard')}</option>
         </select>
       </div>
 
       <fieldset className="space-y-2">
-        <legend className="text-sm font-semibold">Ingredients</legend>
+        <legend className="text-sm font-semibold">{t('form.ingredients')}</legend>
         {ings.map((row) => (
           <div key={row.id} className="flex gap-2">
-            <Input name="ing_qty" type="number" min={0} step="any" inputMode="decimal" placeholder="Qty" defaultValue={row.qty} className="w-16" />
-            <select name="ing_unit" defaultValue={row.unit} aria-label="Unit" className="h-9 w-20 shrink-0 rounded-md border border-input bg-background px-2 text-sm">
-              <option value="">unit</option>
+            <Input name="ing_qty" type="number" min={0} step="any" inputMode="decimal" placeholder={t('form.qty')} defaultValue={row.qty} className="w-16" />
+            <select name="ing_unit" defaultValue={row.unit} aria-label={t('form.unit')} className="h-9 w-20 shrink-0 rounded-md border border-input bg-background px-2 text-sm">
+              <option value="">{t('form.unit')}</option>
               {UNIT_GROUPS.map((g) => (
                 <optgroup key={g.label} label={g.label}>
                   {g.units.map((u) => <option key={u} value={u}>{u}</option>)}
                 </optgroup>
               ))}
             </select>
-            <Input name="ing_name" placeholder="Ingredient" defaultValue={row.name} className="flex-1" />
+            <Input name="ing_name" placeholder={t('form.ingredientName')} defaultValue={row.name} className="flex-1" />
             <Button type="button" variant="ghost" size="icon" onClick={() => setIngs(ings.filter((r) => r.id !== row.id))}>✕</Button>
           </div>
         ))}
-        <Button type="button" variant="outline" size="sm" onClick={() => setIngs([...ings, { id: `ing-${nextIngId.current++}`, name: '', qty: '', unit: '' }])}>＋ Add ingredient</Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => setIngs([...ings, { id: `ing-${nextIngId.current++}`, name: '', qty: '', unit: '' }])}>{t('form.addIngredient')}</Button>
       </fieldset>
 
       <fieldset className="space-y-2">
-        <legend className="text-sm font-semibold">Method</legend>
+        <legend className="text-sm font-semibold">{t('form.method')}</legend>
         {steps.map((row, i) => (
           <div key={row.id} className="flex gap-2">
             <span className="pt-2 text-sm text-muted-foreground">{i + 1}.</span>
             <div className="flex-1 space-y-2">
-              <Textarea name="step_text" placeholder="Describe this step" defaultValue={row.text} />
+              <Textarea name="step_text" placeholder={t('form.describeStep')} defaultValue={row.text} />
               <ImageUpload name="step_image" defaultPath={row.image} compact />
             </div>
             <Button type="button" variant="ghost" size="icon" onClick={() => setSteps(steps.filter((r) => r.id !== row.id))}>✕</Button>
           </div>
         ))}
-        <Button type="button" variant="outline" size="sm" onClick={() => setSteps([...steps, { id: `step-${nextStepId.current++}`, text: '', image: '' }])}>＋ Add step</Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => setSteps([...steps, { id: `step-${nextStepId.current++}`, text: '', image: '' }])}>{t('form.addStep')}</Button>
       </fieldset>
 
-      <Button type="submit" className="w-full">{recipe ? 'Save changes' : 'Create recipe'}</Button>
+      <Button type="submit" className="w-full">{recipe ? t('form.saveChanges') : t('form.create')}</Button>
     </form>
   )
 }

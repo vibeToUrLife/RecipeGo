@@ -8,6 +8,7 @@ import { matchRecipes, normalizeIng, type RecipeIngredients } from '@/lib/cook/m
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useT } from '@/components/i18n-provider'
 
 function titleCase(s: string) {
   return s.replace(/\b\w/g, (c) => c.toUpperCase())
@@ -35,6 +36,7 @@ export function CookPlanner({
   universe: string[]
   initialHave: string[]
 }) {
+  const t = useT()
   const [have, setHave] = useState<Set<string>>(() => new Set(initialHave.map(normalizeIng)))
   const [draft, setDraft] = useState('')
   const [, startTransition] = useTransition()
@@ -53,7 +55,7 @@ export function CookPlanner({
       try {
         await setPantryItemAction(key, present)
       } catch {
-        toast.error('Could not save your ingredients — please try again.')
+        toast.error(t('cook.saveFailed'))
         revert()
       }
     })
@@ -98,7 +100,7 @@ export function CookPlanner({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 font-serif text-lg text-primary">
-            <span aria-hidden>🧺</span> My ingredients <CountBadge>{have.size}</CountBadge>
+            <span aria-hidden>🧺</span> {t('cook.myIngredients')} <CountBadge>{have.size}</CountBadge>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -112,15 +114,15 @@ export function CookPlanner({
                   onAdd()
                 }
               }}
-              placeholder="Add an ingredient you have — e.g. eggs"
+              placeholder={t('cook.addPlaceholder')}
             />
             <Button type="button" onClick={onAdd} className="shrink-0">
-              <Plus className="size-4" /> Add
+              <Plus className="size-4" /> {t('common.add')}
             </Button>
           </div>
           {haveList.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Type an ingredient and press Add (or Enter). Add a few and we&apos;ll match them to your recipes below.
+              {t('cook.haveHint')}
             </p>
           ) : (
             <div className="flex flex-wrap gap-2">
@@ -129,7 +131,7 @@ export function CookPlanner({
                   key={key}
                   type="button"
                   onClick={() => remove(key)}
-                  aria-label={`Remove ${displayOf(key)}`}
+                  aria-label={t('cook.removeAria', { name: displayOf(key) })}
                   className="group inline-flex items-center gap-1.5 rounded-full bg-primary py-1 pl-3 pr-2 text-sm text-primary-foreground shadow-sm transition hover:bg-primary/90"
                 >
                   {displayOf(key)}
@@ -147,7 +149,7 @@ export function CookPlanner({
       {suggestions.length > 0 && (
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Quick add — ingredients from your recipes
+            {t('cook.quickAdd')}
           </p>
           <div className="flex flex-wrap gap-2">
             {suggestions.map((label) => (
@@ -168,7 +170,7 @@ export function CookPlanner({
       {recipes.length === 0 ? (
         <div className="rounded-2xl border border-dashed p-10 text-center">
           <p className="text-sm text-muted-foreground">
-            No recipes here yet — add some recipes and we&apos;ll show which ones you can cook from your ingredients.
+            {t('cook.noRecipes')}
           </p>
         </div>
       ) : (
@@ -179,12 +181,12 @@ export function CookPlanner({
               <span className="inline-flex size-7 items-center justify-center rounded-full bg-secondary/15 text-secondary">
                 <Check className="size-4" />
               </span>
-              <h2 className="font-serif text-lg text-primary">Ready to cook</h2>
+              <h2 className="font-serif text-lg text-primary">{t('cook.ready')}</h2>
               <CountBadge tone="secondary">{ready.length}</CountBadge>
             </div>
             {ready.length === 0 ? (
               <p className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
-                Add the ingredients you have above — recipes you can make right now will appear here.
+                {t('cook.readyEmpty')}
               </p>
             ) : (
               <div className="grid gap-2 sm:grid-cols-2">
@@ -199,7 +201,7 @@ export function CookPlanner({
                       <span className="truncate font-medium">{r.title}</span>
                     </span>
                     <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
-                      {r.total} items
+                      {t('cook.items', { n: r.total })}
                       <ChevronRight className="size-4 transition group-hover:translate-x-0.5" />
                     </span>
                   </Link>
@@ -215,7 +217,7 @@ export function CookPlanner({
                 <span className="inline-flex size-7 items-center justify-center rounded-full bg-accent/25" aria-hidden>
                   🟡
                 </span>
-                <h2 className="font-serif text-lg text-primary">Almost there</h2>
+                <h2 className="font-serif text-lg text-primary">{t('cook.almost')}</h2>
                 <CountBadge tone="accent">{almost.length}</CountBadge>
               </div>
               <div className="space-y-2">
@@ -230,7 +232,7 @@ export function CookPlanner({
                       <ChevronRight className="size-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5" />
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                      <span className="text-xs text-muted-foreground">Still need:</span>
+                      <span className="text-xs text-muted-foreground">{t('cook.stillNeed')}</span>
                       {r.missing.map((m) => (
                         <span key={m} className="rounded-full bg-accent/20 px-2 py-0.5 text-xs font-medium text-foreground">
                           {displayOf(m)}

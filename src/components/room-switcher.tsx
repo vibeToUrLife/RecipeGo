@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { buttonVariants } from '@/components/ui/button'
+import { useT } from '@/components/i18n-provider'
 
 interface RoomSwitcherProps {
   rooms: Room[]
@@ -21,10 +22,11 @@ interface RoomSwitcherProps {
 
 export function RoomSwitcher({ rooms, roomId }: RoomSwitcherProps) {
   const hookRoomId = useCurrentRoomId()
+  const t = useT()
   // An explicit prop (even null = personal) wins over the URL-derived value.
   const currentRoomId = roomId !== undefined ? roomId : hookRoomId
   const currentRoom = currentRoomId ? rooms.find((r) => r.id === currentRoomId) : null
-  const currentLabel = currentRoom ? currentRoom.name : 'My Recipes'
+  const currentLabel = currentRoom ? currentRoom.name : t('nav.myRecipes')
 
   return (
     <DropdownMenu>
@@ -35,14 +37,14 @@ export function RoomSwitcher({ rooms, roomId }: RoomSwitcherProps) {
         <ChevronDown className="size-3.5 opacity-60" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
-        <DropdownMenuItem render={<Link href="/" />}>My Recipes</DropdownMenuItem>
+        <DropdownMenuItem render={<Link href="/" />}>{t('nav.myRecipes')}</DropdownMenuItem>
         {rooms.map((room) => (
           <DropdownMenuItem key={room.id} render={<Link href={`/rooms/${room.id}`} />}>
             {room.name}
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
-        <DropdownMenuItem render={<Link href="/rooms" />}>Manage rooms</DropdownMenuItem>
+        <DropdownMenuItem render={<Link href="/rooms" />}>{t('nav.manageRooms')}</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

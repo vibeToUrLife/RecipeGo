@@ -5,10 +5,12 @@ import { inviteAction } from '@/app/rooms/actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useT } from '@/components/i18n-provider'
 
 export function InviteForm({ roomId }: { roomId: string }) {
   const [pending, startTransition] = useTransition()
   const formRef = useRef<HTMLFormElement>(null)
+  const t = useT()
 
   function onSubmit(formData: FormData) {
     startTransition(async () => {
@@ -16,7 +18,7 @@ export function InviteForm({ roomId }: { roomId: string }) {
       if (res?.error) {
         toast.error(res.error)
       } else {
-        toast.success('Invitation sent — waiting for them to accept.')
+        toast.success(t('invite.sent'))
         formRef.current?.reset()
       }
     })
@@ -25,17 +27,17 @@ export function InviteForm({ roomId }: { roomId: string }) {
   return (
     <form ref={formRef} action={onSubmit} className="flex gap-2">
       <div className="flex-1 space-y-1">
-        <Label htmlFor="invite-email" className="sr-only">Email address</Label>
+        <Label htmlFor="invite-email" className="sr-only">{t('invite.emailLabel')}</Label>
         <Input
           id="invite-email"
           name="email"
           type="email"
-          placeholder="friend@example.com"
+          placeholder={t('invite.emailPlaceholder')}
           required
           disabled={pending}
         />
       </div>
-      <Button type="submit" disabled={pending}>{pending ? 'Inviting…' : 'Invite'}</Button>
+      <Button type="submit" disabled={pending}>{pending ? t('invite.inviting') : t('invite.invite')}</Button>
     </form>
   )
 }

@@ -4,11 +4,13 @@ import { useRouter } from 'next/navigation'
 import { acceptInviteAction, declineInviteAction } from '@/app/rooms/actions'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { useT } from '@/components/i18n-provider'
 
 export function InviteActions({ inviteId }: { inviteId: string }) {
   const [acceptPending, startAccept] = useTransition()
   const [declinePending, startDecline] = useTransition()
   const router = useRouter()
+  const t = useT()
 
   return (
     <div className="flex gap-2">
@@ -19,15 +21,15 @@ export function InviteActions({ inviteId }: { inviteId: string }) {
           startAccept(async () => {
             try {
               await acceptInviteAction(inviteId)
-              toast.success('Invite accepted')
+              toast.success(t('invite.accepted'))
               router.refresh()
             } catch {
-              toast.error('Something went wrong. Please try again.')
+              toast.error(t('common.errorRetry'))
             }
           })
         }
       >
-        {acceptPending ? 'Saving…' : 'Accept'}
+        {acceptPending ? t('common.saving') : t('invite.accept')}
       </Button>
       <Button
         size="sm"
@@ -37,15 +39,15 @@ export function InviteActions({ inviteId }: { inviteId: string }) {
           startDecline(async () => {
             try {
               await declineInviteAction(inviteId)
-              toast.success('Invite declined')
+              toast.success(t('invite.declined'))
               router.refresh()
             } catch {
-              toast.error('Something went wrong. Please try again.')
+              toast.error(t('common.errorRetry'))
             }
           })
         }
       >
-        {declinePending ? 'Declining…' : 'Decline'}
+        {declinePending ? t('invite.declining') : t('invite.decline')}
       </Button>
     </div>
   )

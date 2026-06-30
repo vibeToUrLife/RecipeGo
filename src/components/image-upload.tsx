@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/client'
 import { publicImageUrl } from '@/lib/image-url'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { useT } from '@/components/i18n-provider'
 
 export function ImageUpload({
   name = 'image_path',
@@ -14,6 +15,7 @@ export function ImageUpload({
   defaultPath?: string | null
   compact?: boolean
 }) {
+  const t = useT()
   const [path, setPath] = useState<string>(defaultPath ?? '')
   const [busy, setBusy] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -24,14 +26,14 @@ export function ImageUpload({
     setBusy(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { toast.error('Please sign in again'); setBusy(false); return }
+    if (!user) { toast.error(t('img.signInAgain')); setBusy(false); return }
     const ext = file.name.split('.').pop() ?? 'jpg'
     const key = `${user.id}/${crypto.randomUUID()}.${ext}`
     const { error } = await supabase.storage.from('recipe-images').upload(key, file, { upsert: true })
     setBusy(false)
-    if (error) { toast.error('Upload failed'); return }
+    if (error) { toast.error(t('img.uploadFailed')); return }
     setPath(key)
-    toast.success('Image uploaded')
+    toast.success(t('img.uploaded'))
   }
 
   const preview = publicImageUrl(path || null)
@@ -55,7 +57,7 @@ export function ImageUpload({
         disabled={busy}
         onClick={() => inputRef.current?.click()}
       >
-        {busy ? 'Uploading…' : preview ? (compact ? 'Change' : 'Change image') : (compact ? '＋ Photo' : 'Upload image')}
+        {busy ? t('img.uploading') : preview ? (compact ? t('img.change') : t('img.changeImage')) : (compact ? t('form.photo') : t('form.uploadImage'))}
       </Button>
     </div>
   )

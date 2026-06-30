@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { removeMemberAction } from '@/app/rooms/actions'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { useT } from '@/components/i18n-provider'
 
 interface MemberRowProps {
   roomId: string
@@ -17,6 +18,7 @@ export function MemberRow({ roomId, userId, name, role, canRemove }: MemberRowPr
   const [confirming, setConfirming] = useState(false)
   const [pending, start] = useTransition()
   const router = useRouter()
+  const t = useT()
 
   return (
     <div className="flex items-center justify-between py-2">
@@ -38,15 +40,15 @@ export function MemberRow({ roomId, userId, name, role, canRemove }: MemberRowPr
                 start(async () => {
                   try {
                     await removeMemberAction(roomId, userId)
-                    toast.success('Member removed')
+                    toast.success(t('rooms.memberRemoved'))
                     router.refresh()
                   } catch {
-                    toast.error('Something went wrong. Please try again.')
+                    toast.error(t('common.errorRetry'))
                   }
                 })
               }
             >
-              {pending ? 'Removing…' : 'Confirm'}
+              {pending ? t('common.removing') : t('common.confirm')}
             </Button>
             <Button
               variant="ghost"
@@ -54,12 +56,12 @@ export function MemberRow({ roomId, userId, name, role, canRemove }: MemberRowPr
               disabled={pending}
               onClick={() => setConfirming(false)}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
           </div>
         ) : (
           <Button variant="outline" size="sm" onClick={() => setConfirming(true)}>
-            Remove
+            {t('rooms.removeMember')}
           </Button>
         )
       )}

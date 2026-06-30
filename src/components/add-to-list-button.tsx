@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { addToListAction } from '@/app/shopping-list/actions'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { useT } from '@/components/i18n-provider'
 
 export function AddToListButton({
   recipeId,
@@ -14,6 +15,7 @@ export function AddToListButton({
   servings: number
   recipeRoomId?: string | null
 }) {
+  const t = useT()
   const [pending, start] = useTransition()
   const router = useRouter()
   return (
@@ -23,14 +25,14 @@ export function AddToListButton({
       onClick={() => start(async () => {
         try {
           await addToListAction(recipeId, servings)
-          toast.success('Added to shopping list')
+          toast.success(t('detail.addedToList'))
           router.push(recipeRoomId ? `/rooms/${recipeRoomId}/shopping-list` : '/shopping-list')
         } catch {
-          toast.error('Failed to add to shopping list')
+          toast.error(t('detail.addToListFailed'))
         }
       })}
     >
-      🛒 {pending ? 'Adding…' : 'Add ingredients to shopping list'}
+      {pending ? t('detail.addingToList') : t('detail.addToList')}
     </Button>
   )
 }

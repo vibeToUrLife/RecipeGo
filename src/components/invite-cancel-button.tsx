@@ -3,9 +3,11 @@ import { useTransition } from 'react'
 import { toast } from 'sonner'
 import { cancelInviteAction } from '@/app/rooms/actions'
 import { Button } from '@/components/ui/button'
+import { useT } from '@/components/i18n-provider'
 
 export function InviteCancelButton({ roomId, inviteId }: { roomId: string; inviteId: string }) {
   const [pending, startTransition] = useTransition()
+  const t = useT()
   return (
     <Button
       type="button"
@@ -16,14 +18,14 @@ export function InviteCancelButton({ roomId, inviteId }: { roomId: string; invit
         startTransition(async () => {
           try {
             await cancelInviteAction(roomId, inviteId)
-            toast.success('Invite cancelled.')
+            toast.success(t('invite.cancelled'))
           } catch {
-            toast.error('Could not cancel the invite.')
+            toast.error(t('invite.cancelFailed'))
           }
         })
       }
     >
-      {pending ? 'Removing…' : 'Cancel'}
+      {pending ? t('common.removing') : t('common.cancel')}
     </Button>
   )
 }
