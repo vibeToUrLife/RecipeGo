@@ -13,7 +13,7 @@ export default async function EditRecipePage({ params }: { params: Promise<{ id:
   const remove = removeRecipe.bind(null, id)
   return (
     <>
-      <AppNav />
+      <AppNav roomId={recipe.room_id} />
       <main className="mx-auto max-w-2xl px-4 py-6">
         <h1 className="mb-4 font-serif text-2xl text-primary">Edit recipe</h1>
         <RecipeForm recipe={recipe} rooms={rooms} />

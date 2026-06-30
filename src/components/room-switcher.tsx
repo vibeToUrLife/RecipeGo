@@ -16,10 +16,13 @@ import { buttonVariants } from '@/components/ui/button'
 
 interface RoomSwitcherProps {
   rooms: Room[]
+  roomId?: string | null
 }
 
-export function RoomSwitcher({ rooms }: RoomSwitcherProps) {
-  const currentRoomId = useCurrentRoomId()
+export function RoomSwitcher({ rooms, roomId }: RoomSwitcherProps) {
+  const hookRoomId = useCurrentRoomId()
+  // An explicit prop (even null = personal) wins over the URL-derived value.
+  const currentRoomId = roomId !== undefined ? roomId : hookRoomId
   const currentRoom = currentRoomId ? rooms.find((r) => r.id === currentRoomId) : null
   const currentLabel = currentRoom ? currentRoom.name : 'My Recipes'
 
