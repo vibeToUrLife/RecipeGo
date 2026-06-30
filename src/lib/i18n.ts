@@ -187,6 +187,17 @@ const EN: Record<string, string> = {
   'login.signUp': 'Sign up',
   'login.continueGoogle': 'Continue with Google',
 
+  // spin wheel
+  'spin.button': '🎲 Surprise me',
+  'spin.title': 'Can’t decide what to eat?',
+  'spin.subtitle': 'Spin the wheel and let it pick for you.',
+  'spin.spin': 'Spin',
+  'spin.spinning': 'Spinning…',
+  'spin.again': 'Spin again',
+  'spin.result': 'Tonight, make:',
+  'spin.view': 'View recipe',
+  'spin.empty': 'Add a few recipes first, then come back and give it a spin.',
+
   // common (extra)
   'common.errorRetry': 'Something went wrong. Please try again.',
   'common.saving': 'Saving…',
@@ -401,6 +412,16 @@ const ZH: Record<string, string> = {
   'login.logIn': '登录',
   'login.signUp': '注册',
   'login.continueGoogle': '使用 Google 继续',
+
+  'spin.button': '🎲 帮我选',
+  'spin.title': '不知道吃什么？',
+  'spin.subtitle': '转动转盘，让它帮你决定。',
+  'spin.spin': '开始转',
+  'spin.spinning': '转动中…',
+  'spin.again': '再转一次',
+  'spin.result': '今晚就做：',
+  'spin.view': '查看食谱',
+  'spin.empty': '先添加几个食谱，再回来转转看吧。',
 
   'common.errorRetry': '出错了，请重试。',
   'common.saving': '保存中…',

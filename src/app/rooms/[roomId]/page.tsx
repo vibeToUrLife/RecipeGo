@@ -37,7 +37,7 @@ export default async function RoomPage({
           </Button>
         </div>
 
-        <RecipeLibrary recipes={recipes} addHref={`/recipes/new?room=${roomId}`} />
+        <RecipeLibrary recipes={recipes} addHref={`/recipes/new?room=${roomId}`} spinHref={`/rooms/${roomId}/spin`} />
       </main>
     </>
   )

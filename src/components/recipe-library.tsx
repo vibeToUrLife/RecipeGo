@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useT } from '@/components/i18n-provider'
 
-export function RecipeLibrary({ recipes, addHref = '/recipes/new' }: { recipes: Recipe[]; addHref?: string }) {
+export function RecipeLibrary({ recipes, addHref = '/recipes/new', spinHref = '/spin' }: { recipes: Recipe[]; addHref?: string; spinHref?: string }) {
   const t = useT()
   const [q, setQ] = useState('')
   const filtered = recipes.filter((r) => r.title.toLowerCase().includes(q.toLowerCase()))
@@ -24,9 +24,12 @@ export function RecipeLibrary({ recipes, addHref = '/recipes/new' }: { recipes: 
 
   return (
     <>
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <Input placeholder={t('home.searchPlaceholder')} value={q} onChange={(e) => setQ(e.target.value)} className="max-w-sm" />
-        <Button asChild><Link href={addHref}>{t('lib.addRecipe')}</Link></Button>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <Input placeholder={t('home.searchPlaceholder')} value={q} onChange={(e) => setQ(e.target.value)} className="min-w-[12rem] max-w-sm flex-1" />
+        <div className="flex shrink-0 gap-2">
+          <Button asChild variant="outline"><Link href={spinHref}>{t('spin.button')}</Link></Button>
+          <Button asChild><Link href={addHref}>{t('lib.addRecipe')}</Link></Button>
+        </div>
       </div>
       {filtered.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t('home.noMatch', { q })}</p>
