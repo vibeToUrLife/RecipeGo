@@ -272,3 +272,33 @@ using ( bucket_id = 'recipe-images' and (storage.foldername(name))[1] = (select 
 create policy "Users delete own files"
 on storage.objects for delete to authenticated
 using ( bucket_id = 'recipe-images' and (storage.foldername(name))[1] = (select auth.uid())::text );
+
+-- ============ shareable recipe read (share-by-link) ============
+-- See migration 20260630160000_share_recipe.sql. Read-only importable content
+-- for any recipe id; SECURITY DEFINER bypasses RLS for the share-by-link path.
+create or replace function public.get_shareable_recipe(rid uuid)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select jsonb_build_object(
+    'title', r.title,
+    'description', r.description,
+    'servings', r.servings,
+    'prep_minutes', r.prep_minutes,
+    'cook_minutes', r.cook_minutes,
+    'source_url', r.source_url,
+    'ingredients', coalesce(
+      (select jsonb_agg(jsonb_build_object('name', i.name, 'quantity', i.quantity, 'unit', i.unit) order by i.position)
+       from public.ingredients i where i.recipe_id = r.id), '[]'::jsonb),
+    'steps', coalesce(
+      (select jsonb_agg(s.text order by s.step_number)
+       from public.steps s where s.recipe_id = r.id), '[]'::jsonb)
+  )
+  from public.recipes r
+  where r.id = rid;
+$$;
+
+grant execute on function public.get_shareable_recipe(uuid) to authenticated;

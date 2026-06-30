@@ -16,9 +16,11 @@ type StepRow = { id: string; text: string; image: string }
 
 export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?: RecipeWithChildren; imported?: ImportedRecipe | null; rooms: Room[]; defaultRoomId?: string | null }) {
   const [ings, setIngs] = useState<Row[]>(
-    imported && imported.ingredients.length
-      ? imported.ingredients.map((line, i) => { const p = parseIngredientLine(line); return { id: `ing-${i}`, name: p.name, qty: p.quantity?.toString() ?? '', unit: p.unit ?? '' } })
-      : (recipe?.ingredients.map((ing, i) => ({ id: `ing-${i}`, name: ing.name, qty: ing.quantity?.toString() ?? '', unit: ing.unit ?? '' })) ?? [{ id: 'ing-0', name: '', qty: '', unit: '' }])
+    imported?.structuredIngredients?.length
+      ? imported.structuredIngredients.map((ing, i) => ({ id: `ing-${i}`, name: ing.name, qty: ing.quantity?.toString() ?? '', unit: ing.unit ?? '' }))
+      : imported && imported.ingredients.length
+        ? imported.ingredients.map((line, i) => { const p = parseIngredientLine(line); return { id: `ing-${i}`, name: p.name, qty: p.quantity?.toString() ?? '', unit: p.unit ?? '' } })
+        : (recipe?.ingredients.map((ing, i) => ({ id: `ing-${i}`, name: ing.name, qty: ing.quantity?.toString() ?? '', unit: ing.unit ?? '' })) ?? [{ id: 'ing-0', name: '', qty: '', unit: '' }])
   )
   const [steps, setSteps] = useState<StepRow[]>(
     imported && imported.instructions.length
@@ -26,7 +28,7 @@ export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?
       : (recipe?.steps.map((s, i) => ({ id: `step-${i}`, text: s.text, image: s.image_path ?? '' })) ?? [{ id: 'step-0', text: '', image: '' }])
   )
   const nextIngId = useRef(
-    imported && imported.ingredients.length ? imported.ingredients.length : (recipe?.ingredients.length ?? 1)
+    imported?.structuredIngredients?.length ?? (imported && imported.ingredients.length ? imported.ingredients.length : (recipe?.ingredients.length ?? 1))
   )
   const nextStepId = useRef(
     imported && imported.instructions.length ? imported.instructions.length : (recipe?.steps.length ?? 1)
@@ -44,7 +46,7 @@ export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?
       </div>
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
-        <Textarea id="description" name="description" defaultValue={recipe?.description ?? ''} />
+        <Textarea id="description" name="description" defaultValue={imported?.description ?? recipe?.description ?? ''} />
       </div>
       <div className={`grid gap-3 ${recipe ? 'grid-cols-3' : 'grid-cols-2'}`}>
         {recipe && (
