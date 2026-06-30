@@ -1,7 +1,7 @@
 'use server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { createRecipe, updateRecipe, deleteRecipe } from '@/lib/data/recipes'
+import { createRecipe, updateRecipe, deleteRecipe, getRecipe } from '@/lib/data/recipes'
 import { categorizeIngredient } from '@/lib/aisles'
 import type { RecipeFormData } from '@/lib/db-types'
 
@@ -57,7 +57,17 @@ export async function saveRecipe(formData: FormData) {
 }
 
 export async function removeRecipe(id: string) {
+  // Look up the recipe's room BEFORE deleting, so we refresh the correct list
+  // and return the user to where they were (the room, not personal recipes).
+  const recipe = await getRecipe(id)
+  const roomId = recipe?.room_id ?? null
   await deleteRecipe(id)
-  revalidatePath('/')
-  redirect('/')
+  revalidatePath(`/recipes/${id}`)
+  if (roomId) {
+    revalidatePath(`/rooms/${roomId}`)
+    redirect(`/rooms/${roomId}`)
+  } else {
+    revalidatePath('/')
+    redirect('/')
+  }
 }
