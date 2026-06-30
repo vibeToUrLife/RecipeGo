@@ -9,15 +9,16 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ImageUpload } from '@/components/image-upload'
 import { parseIngredientLine } from '@/lib/recipe/parse-ingredient'
+import { UNIT_GROUPS } from '@/lib/unit-options'
 
-type Row = { id: string; name: string; qty: string }
+type Row = { id: string; name: string; qty: string; unit: string }
 type StepRow = { id: string; text: string; image: string }
 
 export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?: RecipeWithChildren; imported?: ImportedRecipe | null; rooms: Room[]; defaultRoomId?: string | null }) {
   const [ings, setIngs] = useState<Row[]>(
     imported && imported.ingredients.length
-      ? imported.ingredients.map((line, i) => { const p = parseIngredientLine(line); return { id: `ing-${i}`, name: p.name, qty: p.quantity?.toString() ?? '' } })
-      : (recipe?.ingredients.map((ing, i) => ({ id: `ing-${i}`, name: ing.name, qty: ing.quantity?.toString() ?? '' })) ?? [{ id: 'ing-0', name: '', qty: '' }])
+      ? imported.ingredients.map((line, i) => { const p = parseIngredientLine(line); return { id: `ing-${i}`, name: p.name, qty: p.quantity?.toString() ?? '', unit: p.unit ?? '' } })
+      : (recipe?.ingredients.map((ing, i) => ({ id: `ing-${i}`, name: ing.name, qty: ing.quantity?.toString() ?? '', unit: ing.unit ?? '' })) ?? [{ id: 'ing-0', name: '', qty: '', unit: '' }])
   )
   const [steps, setSteps] = useState<StepRow[]>(
     imported && imported.instructions.length
@@ -76,12 +77,20 @@ export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?
         <legend className="text-sm font-semibold">Ingredients</legend>
         {ings.map((row) => (
           <div key={row.id} className="flex gap-2">
-            <Input name="ing_qty" type="number" min={0} step="any" inputMode="decimal" placeholder="Qty" defaultValue={row.qty} className="w-24" />
+            <Input name="ing_qty" type="number" min={0} step="any" inputMode="decimal" placeholder="Qty" defaultValue={row.qty} className="w-16" />
+            <select name="ing_unit" defaultValue={row.unit} aria-label="Unit" className="h-9 w-20 shrink-0 rounded-md border border-input bg-background px-2 text-sm">
+              <option value="">unit</option>
+              {UNIT_GROUPS.map((g) => (
+                <optgroup key={g.label} label={g.label}>
+                  {g.units.map((u) => <option key={u} value={u}>{u}</option>)}
+                </optgroup>
+              ))}
+            </select>
             <Input name="ing_name" placeholder="Ingredient" defaultValue={row.name} className="flex-1" />
             <Button type="button" variant="ghost" size="icon" onClick={() => setIngs(ings.filter((r) => r.id !== row.id))}>✕</Button>
           </div>
         ))}
-        <Button type="button" variant="outline" size="sm" onClick={() => setIngs([...ings, { id: `ing-${nextIngId.current++}`, name: '', qty: '' }])}>＋ Add ingredient</Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => setIngs([...ings, { id: `ing-${nextIngId.current++}`, name: '', qty: '', unit: '' }])}>＋ Add ingredient</Button>
       </fieldset>
 
       <fieldset className="space-y-2">

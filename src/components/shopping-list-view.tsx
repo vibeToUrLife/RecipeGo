@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react'
 import type { ShoppingListRow } from '@/lib/data/shopping'
 import type { Unit } from '@/lib/types'
 import { AISLE_ORDER, categorizeIngredient } from '@/lib/aisles'
+import { UNIT_GROUPS } from '@/lib/unit-options'
 import { toggleItemAction, removeItemAction, completeShoppingAction, addShoppingItemAction } from '@/app/shopping-list/actions'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -14,12 +15,6 @@ function fmtQty(q: number | null) {
   if (q === null) return ''
   return Number.isInteger(q) ? String(q) : q.toFixed(2).replace(/\.?0+$/, '')
 }
-
-const UNIT_GROUPS: { label: string; units: string[] }[] = [
-  { label: 'Mass', units: ['g', 'kg', 'oz', 'lb'] },
-  { label: 'Volume', units: ['ml', 'l', 'tsp', 'tbsp', 'cup'] },
-  { label: 'Count', units: ['piece', 'clove', 'pinch', 'slice'] },
-]
 
 export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; roomId?: string | null }) {
   const [optimistic, setOptimistic] = useOptimistic(items)

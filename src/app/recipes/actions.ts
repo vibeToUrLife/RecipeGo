@@ -3,16 +3,19 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createRecipe, updateRecipe, deleteRecipe, getRecipe } from '@/lib/data/recipes'
 import { categorizeIngredient } from '@/lib/aisles'
+import { VALID_UNITS } from '@/lib/unit-options'
 import type { RecipeFormData } from '@/lib/db-types'
+import type { Unit } from '@/lib/types'
 
 function parseForm(formData: FormData): RecipeFormData {
   const names = formData.getAll('ing_name') as string[]
   const qtys = formData.getAll('ing_qty') as string[]
+  const units = formData.getAll('ing_unit') as string[]
   const ingredients = names
     .map((name, i) => ({
       name: name.trim(),
       quantity: qtys[i] ? Number(qtys[i]) : null,
-      unit: null,
+      unit: VALID_UNITS.includes(units[i] as NonNullable<Unit>) ? (units[i] as Unit) : null,
       category: categorizeIngredient(name),
       position: i,
     }))

@@ -8,10 +8,7 @@ import {
   completeShopping,
 } from '@/lib/data/shopping'
 import type { Unit } from '@/lib/types'
-
-const VALID_UNITS: NonNullable<Unit>[] = [
-  'g', 'kg', 'oz', 'lb', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'piece', 'clove', 'pinch', 'slice',
-]
+import { VALID_UNITS } from '@/lib/unit-options'
 
 export async function addToListAction(recipeId: string, servings: number) {
   await addRecipeToList(recipeId, servings)
