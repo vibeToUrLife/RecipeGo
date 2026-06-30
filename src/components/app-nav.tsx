@@ -17,7 +17,7 @@ export async function AppNav({ roomId }: { roomId?: string | null } = {}) {
     <header className="sticky top-0 z-20 border-b bg-card/80 backdrop-blur">
       <nav className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
-          <BackButton />
+          <BackButton roomId={roomId} />
           <Link href="/" className="truncate font-serif text-xl font-semibold text-primary">🍳 RecipeGo</Link>
         </div>
         <div className="flex items-center gap-2 text-sm">
