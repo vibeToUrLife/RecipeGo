@@ -11,7 +11,7 @@ export default async function CookPage() {
     <>
       <AppNav />
       <main className="mx-auto max-w-3xl px-4 py-6">
-        <h1 className="mb-1 font-serif text-2xl text-primary">What can I cook?</h1>
+        <h1 className="mb-1 font-serif text-2xl text-primary">Ingredients</h1>
         <p className="mb-5 text-sm text-muted-foreground">
           Add the ingredients you have at home — we&apos;ll show what you can cook right now and what you&apos;re almost ready for.
         </p>

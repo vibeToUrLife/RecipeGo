@@ -19,7 +19,7 @@ export default async function RoomCookPage({ params }: { params: Promise<{ roomI
     <>
       <AppNav />
       <main className="mx-auto max-w-3xl px-4 py-6">
-        <h1 className="mb-1 font-serif text-2xl text-primary">{room.name} — What can I cook?</h1>
+        <h1 className="mb-1 font-serif text-2xl text-primary">{room.name} — Ingredients</h1>
         <p className="mb-5 text-sm text-muted-foreground">
           Add the ingredients you have — we&apos;ll show which of this room&apos;s recipes you can make.
         </p>

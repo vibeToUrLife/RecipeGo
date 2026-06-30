@@ -15,7 +15,7 @@ export function NavLinks() {
   return (
     <>
       <Button asChild variant="ghost" size="sm"><Link href={recipesHref}>Recipes</Link></Button>
-      <Button asChild variant="ghost" size="sm"><Link href={cookHref}>Cook</Link></Button>
+      <Button asChild variant="ghost" size="sm"><Link href={cookHref}>Ingredients</Link></Button>
       <Button asChild variant="ghost" size="sm"><Link href={shoppingHref}>Shopping List</Link></Button>
     </>
   )
