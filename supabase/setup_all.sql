@@ -228,6 +228,7 @@ create table public.shopping_list_items (
   category text not null default 'Other',
   checked boolean not null default false,
   source_recipe_ids uuid[] not null default '{}',
+  is_food boolean not null default true,
   created_at timestamptz not null default now(),
   room_id uuid references public.rooms(id) on delete cascade
 );

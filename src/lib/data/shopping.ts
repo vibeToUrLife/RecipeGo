@@ -1,9 +1,10 @@
 import 'server-only'
 import { createClient } from '@/utils/supabase/server'
 import { getRecipe } from '@/lib/data/recipes'
+import { addPantryItem } from '@/lib/data/pantry'
 import { scaleIngredients } from '@/lib/scaling'
 import { mergeIngredients } from '@/lib/merge'
-import { AISLE_ORDER } from '@/lib/aisles'
+import { AISLE_ORDER, categorizeIngredient } from '@/lib/aisles'
 import type { IngredientInput, Aisle, Unit } from '@/lib/types'
 
 export interface ShoppingListRow {
@@ -14,6 +15,7 @@ export interface ShoppingListRow {
   category: Aisle
   checked: boolean
   source_recipe_ids: string[]
+  is_food: boolean
   room_id: string | null
 }
 
@@ -42,8 +44,9 @@ export async function addRecipeToList(recipeId: string, servings: number): Promi
   }))
   const scaled = scaleIngredients(base, recipe.servings, servings)
 
-  // Merge new ingredients with existing UNCHECKED rows so duplicates combine.
-  const existingQ = supabase.from('shopping_list_items').select('*').eq('checked', false)
+  // Merge new ingredients with existing UNCHECKED *food* rows so duplicates
+  // combine. Non-food (daily) rows and checked rows are never touched here.
+  const existingQ = supabase.from('shopping_list_items').select('*').eq('checked', false).eq('is_food', true)
   const { data: existing } = await (roomId ? existingQ.eq('room_id', roomId) : existingQ.is('room_id', null))
   const existingRows = (existing ?? []) as ShoppingListRow[]
 
@@ -56,19 +59,64 @@ export async function addRecipeToList(recipeId: string, servings: number): Promi
   ]
   const merged = mergeIngredients(combined)
 
-  // Replace unchecked rows with the merged set (checked rows are left alone).
-  const delQ = supabase.from('shopping_list_items').delete().eq('checked', false)
+  // Replace unchecked FOOD rows with the merged set (checked rows and non-food
+  // daily rows are left alone).
+  const delQ = supabase.from('shopping_list_items').delete().eq('checked', false).eq('is_food', true)
   const { error: delError } = await (roomId ? delQ.eq('room_id', roomId) : delQ.is('room_id', null))
   if (delError) throw delError
   if (merged.length) {
     const { error: insError } = await supabase.from('shopping_list_items').insert(
       merged.map((m) => ({
         name: m.name, total_quantity: m.totalQuantity, unit: m.unit,
-        category: m.category, source_recipe_ids: m.sourceRecipeIds, checked: false, room_id: roomId,
+        category: m.category, source_recipe_ids: m.sourceRecipeIds, checked: false, is_food: true, room_id: roomId,
       })),
     )
     if (insError) throw insError
   }
+}
+
+// Manually add an extra item (food or non-food "daily") to the list.
+export async function addShoppingItem(
+  name: string,
+  isFood: boolean,
+  roomId: string | null = null,
+): Promise<void> {
+  const supabase = await createClient()
+  const clean = name.trim()
+  const { error } = await supabase.from('shopping_list_items').insert({
+    name: clean,
+    total_quantity: null,
+    unit: null,
+    category: isFood ? categorizeIngredient(clean) : 'Other',
+    checked: false,
+    source_recipe_ids: [],
+    is_food: isFood,
+    room_id: roomId,
+  })
+  if (error) throw error
+}
+
+// Finish a shopping trip: save the ticked FOOD items to the pantry (Ingredients),
+// then remove all ticked items. Returns how many were saved/cleared.
+export async function completeShopping(
+  roomId: string | null = null,
+): Promise<{ saved: number; cleared: number }> {
+  const supabase = await createClient()
+  let q = supabase.from('shopping_list_items').select('name, is_food').eq('checked', true)
+  q = roomId ? q.eq('room_id', roomId) : q.is('room_id', null)
+  const { data, error } = await q
+  if (error) throw error
+  const rows = (data ?? []) as { name: string; is_food: boolean }[]
+
+  // Dedupe food names (case-insensitively) so the saved count is accurate.
+  const foods = [...new Set(rows.filter((r) => r.is_food).map((r) => r.name.trim().toLowerCase()))]
+  for (const name of foods) await addPantryItem(name)
+
+  const delQ = supabase.from('shopping_list_items').delete().eq('checked', true)
+  const { error: delErr } = await (roomId ? delQ.eq('room_id', roomId) : delQ.is('room_id', null))
+  if (delErr) throw delErr
+
+  return { saved: foods.length, cleared: rows.length }
 }
 
 export async function setItemChecked(id: string, checked: boolean): Promise<void> {
@@ -80,12 +128,5 @@ export async function setItemChecked(id: string, checked: boolean): Promise<void
 export async function removeItem(id: string): Promise<void> {
   const supabase = await createClient()
   const { error } = await supabase.from('shopping_list_items').delete().eq('id', id)
-  if (error) throw error
-}
-
-export async function clearChecked(roomId: string | null = null): Promise<void> {
-  const supabase = await createClient()
-  const q = supabase.from('shopping_list_items').delete().eq('checked', true)
-  const { error } = await (roomId ? q.eq('room_id', roomId) : q.is('room_id', null))
   if (error) throw error
 }
