@@ -21,7 +21,7 @@ export default async function RoomCookPage({ params }: { params: Promise<{ roomI
       <main className="mx-auto max-w-3xl px-4 py-6">
         <h1 className="mb-1 font-serif text-2xl text-primary">{room.name} — What can I cook?</h1>
         <p className="mb-5 text-sm text-muted-foreground">
-          Tap the ingredients you have — we&apos;ll show which of this room&apos;s recipes you can make.
+          Add the ingredients you have — we&apos;ll show which of this room&apos;s recipes you can make.
         </p>
         <CookPlanner recipes={recipes} universe={universe} initialHave={pantry} />
       </main>

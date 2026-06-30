@@ -4,6 +4,12 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { setPantryItemAction } from '@/app/cook/actions'
 import { matchRecipes, normalizeIng, type RecipeIngredients } from '@/lib/cook/match'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+
+function titleCase(s: string) {
+  return s.replace(/\b\w/g, (c) => c.toUpperCase())
+}
 
 export function CookPlanner({
   recipes,
@@ -15,86 +21,140 @@ export function CookPlanner({
   initialHave: string[]
 }) {
   const [have, setHave] = useState<Set<string>>(() => new Set(initialHave.map(normalizeIng)))
+  const [draft, setDraft] = useState('')
   const [, startTransition] = useTransition()
 
-  // normalized name -> nice display label (from the recipe ingredient list)
+  // normalized name -> nice display label (recipe casing if known, else title-cased)
   const displayOf = useMemo(() => {
     const m = new Map<string, string>()
     for (const label of universe) m.set(normalizeIng(label), label)
-    return (n: string) => m.get(n) ?? n
+    return (n: string) => m.get(n) ?? titleCase(n)
   }, [universe])
 
   const { ready, almost } = useMemo(() => matchRecipes(recipes, [...have]), [recipes, have])
 
-  function toggle(label: string) {
-    const key = normalizeIng(label)
-    const present = !have.has(key)
-    setHave((prev) => {
-      const next = new Set(prev)
-      if (present) next.add(key)
-      else next.delete(key)
-      return next
-    })
+  function persist(key: string, present: boolean, revert: () => void) {
     startTransition(async () => {
       try {
         await setPantryItemAction(key, present)
       } catch {
-        toast.error('Could not save your pantry — please try again.')
-        setHave((prev) => {
-          const next = new Set(prev)
-          if (present) next.delete(key)
-          else next.add(key)
-          return next
-        })
+        toast.error('Could not save your ingredients — please try again.')
+        revert()
       }
     })
   }
 
-  if (universe.length === 0) {
+  function add(name: string) {
+    const key = normalizeIng(name)
+    if (!key || have.has(key)) return
+    setHave((prev) => new Set(prev).add(key))
+    persist(key, true, () =>
+      setHave((prev) => {
+        const n = new Set(prev)
+        n.delete(key)
+        return n
+      }),
+    )
+  }
+
+  function remove(key: string) {
+    if (!have.has(key)) return
+    setHave((prev) => {
+      const n = new Set(prev)
+      n.delete(key)
+      return n
+    })
+    persist(key, false, () => setHave((prev) => new Set(prev).add(key)))
+  }
+
+  function onAdd() {
+    const v = draft.trim()
+    if (!v) return
+    add(v)
+    setDraft('')
+  }
+
+  if (recipes.length === 0) {
     return (
       <div className="rounded-xl border border-dashed p-10 text-center">
-        <p className="text-lg">No ingredients yet.</p>
+        <p className="text-lg">No recipes yet.</p>
         <p className="text-sm text-muted-foreground">Add a recipe or two first, then come back to see what you can cook.</p>
       </div>
     )
   }
 
+  const haveList = [...have].sort((a, b) => displayOf(a).localeCompare(displayOf(b)))
+  const suggestions = universe.filter((label) => !have.has(normalizeIng(label)))
+
   return (
     <div className="space-y-8">
-      {/* Ingredient picker */}
+      {/* Your ingredients — type to add */}
       <section>
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">
           Ingredients I have ({have.size})
         </h2>
-        <div className="flex flex-wrap gap-2">
-          {universe.map((label) => {
-            const on = have.has(normalizeIng(label))
-            return (
+        <div className="mb-3 flex gap-2">
+          <Input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                onAdd()
+              }
+            }}
+            placeholder="Add an ingredient you have — e.g. eggs"
+          />
+          <Button type="button" onClick={onAdd}>Add</Button>
+        </div>
+        {haveList.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Type the ingredients you have above — we&apos;ll match them to your recipes below.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {haveList.map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => remove(key)}
+                aria-label={`Remove ${displayOf(key)}`}
+                className="rounded-full border border-primary bg-primary px-3 py-1 text-sm text-primary-foreground hover:opacity-90"
+              >
+                {displayOf(key)} ✕
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Quick add — exact ingredient names from your recipes (ensures matches) */}
+      {suggestions.length > 0 && (
+        <section>
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Quick add (ingredients from your recipes)
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((label) => (
               <button
                 key={label}
                 type="button"
-                onClick={() => toggle(label)}
-                aria-pressed={on}
-                className={
-                  'rounded-full border px-3 py-1 text-sm transition-colors ' +
-                  (on
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border bg-background hover:bg-muted')
-                }
+                onClick={() => add(label)}
+                className="rounded-full border border-border bg-background px-3 py-1 text-sm hover:bg-muted"
               >
-                {on ? '✓ ' : ''}{label}
+                + {label}
               </button>
-            )
-          })}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Ready to cook */}
       <section>
         <h2 className="mb-2 font-serif text-lg text-primary">✅ Ready to cook ({ready.length})</h2>
         {ready.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Tap the ingredients you have above — recipes you can make right now will appear here.
+            Add the ingredients you have above — recipes you can make right now will appear here.
           </p>
         ) : (
           <ul className="grid gap-2 sm:grid-cols-2">

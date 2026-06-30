@@ -13,7 +13,7 @@ export default async function CookPage() {
       <main className="mx-auto max-w-3xl px-4 py-6">
         <h1 className="mb-1 font-serif text-2xl text-primary">What can I cook?</h1>
         <p className="mb-5 text-sm text-muted-foreground">
-          Tap the ingredients you have at home — we&apos;ll show what you can make right now and what you&apos;re almost ready for.
+          Add the ingredients you have at home — we&apos;ll show what you can cook right now and what you&apos;re almost ready for.
         </p>
         <CookPlanner recipes={recipes} universe={universe} initialHave={pantry} />
       </main>
