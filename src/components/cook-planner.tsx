@@ -127,7 +127,9 @@ export function CookPlanner({
   const suggestions = universe.filter((label) => !have.has(normalizeIng(label)))
 
   return (
-    <div className="space-y-6">
+    <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+      {/* LEFT: your ingredients */}
+      <div className="space-y-6">
       {/* Your ingredients — type to add (always available) */}
       <Card>
         <CardHeader>
@@ -225,7 +227,10 @@ export function CookPlanner({
           </div>
         </div>
       )}
+      </div>
 
+      {/* RIGHT: what you can cook */}
+      <div className="space-y-6">
       {/* Matches */}
       {recipes.length === 0 ? (
         <div className="rounded-2xl border border-dashed p-10 text-center">
@@ -306,6 +311,7 @@ export function CookPlanner({
           )}
         </div>
       )}
+      </div>
     </div>
   )
 }
