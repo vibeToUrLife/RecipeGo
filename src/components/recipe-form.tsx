@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useActionState } from 'react'
 import { saveRecipe } from '@/app/recipes/actions'
 import type { RecipeWithChildren, Room } from '@/lib/db-types'
 import type { ImportedRecipe } from '@/lib/recipe/types'
@@ -35,9 +35,10 @@ export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?
     imported && imported.instructions.length ? imported.instructions.length : (recipe?.steps.length ?? 1)
   )
   const t = useT()
+  const [state, formAction] = useActionState(saveRecipe, null)
 
   return (
-    <form action={saveRecipe} className="space-y-5">
+    <form action={formAction} className="space-y-5">
       {recipe && <input type="hidden" name="id" value={recipe.id} />}
       <input type="hidden" name="source_url" value={imported?.sourceUrl ?? recipe?.source_url ?? ''} />
       <ImageUpload name="image_path" defaultPath={recipe?.image_path} />
@@ -85,8 +86,8 @@ export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?
             <select name="ing_unit" defaultValue={row.unit} aria-label={t('form.unit')} className="h-9 w-20 shrink-0 rounded-md border border-input bg-background px-2 text-sm">
               <option value="">{t('form.unit')}</option>
               {UNIT_GROUPS.map((g) => (
-                <optgroup key={g.label} label={g.label}>
-                  {g.units.map((u) => <option key={u} value={u}>{u}</option>)}
+                <optgroup key={g.label} label={t('unitGroup.' + g.label)}>
+                  {g.units.map((u) => <option key={u} value={u}>{t('unit.' + u)}</option>)}
                 </optgroup>
               ))}
             </select>
@@ -112,6 +113,9 @@ export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?
         <Button type="button" variant="outline" size="sm" onClick={() => setSteps([...steps, { id: `step-${nextStepId.current++}`, text: '', image: '' }])}>{t('form.addStep')}</Button>
       </fieldset>
 
+      {state?.error && (
+        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{state.error}</p>
+      )}
       <Button type="submit" className="w-full">{recipe ? t('form.saveChanges') : t('form.create')}</Button>
     </form>
   )

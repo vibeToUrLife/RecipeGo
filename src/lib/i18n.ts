@@ -226,6 +226,16 @@ const EN: Record<string, string> = {
   'rooms.renameRoom': 'Rename room',
   'rooms.deleteRoom': 'Delete room',
   'rooms.leaveRoom': 'Leave room',
+
+  // unit dropdown (group labels + per-unit display; the stored value stays the code)
+  'unitGroup.Mass': 'Mass',
+  'unitGroup.Volume': 'Volume',
+  'unitGroup.Count': 'Count',
+  'unit.g': 'g', 'unit.kg': 'kg', 'unit.oz': 'oz', 'unit.lb': 'lb',
+  'unit.ml': 'ml', 'unit.l': 'l', 'unit.tsp': 'tsp', 'unit.tbsp': 'tbsp', 'unit.cup': 'cup',
+  'unit.piece': 'piece', 'unit.clove': 'clove', 'unit.pinch': 'pinch', 'unit.slice': 'slice',
+
+  'form.duplicateName': 'A recipe with this name already exists in this collection — please use a different name.',
 }
 
 // Chinese overrides. Anything not listed falls back to the English string.
@@ -424,6 +434,15 @@ const ZH: Record<string, string> = {
   'rooms.renameRoom': '重命名房间',
   'rooms.deleteRoom': '删除房间',
   'rooms.leaveRoom': '离开房间',
+
+  'unitGroup.Mass': '重量',
+  'unitGroup.Volume': '容量',
+  'unitGroup.Count': '计数',
+  'unit.g': '克', 'unit.kg': '千克', 'unit.oz': '盎司', 'unit.lb': '磅',
+  'unit.ml': '毫升', 'unit.l': '升', 'unit.tsp': '茶匙', 'unit.tbsp': '汤匙', 'unit.cup': '杯',
+  'unit.piece': '个', 'unit.clove': '瓣', 'unit.pinch': '撮', 'unit.slice': '片',
+
+  'form.duplicateName': '这个收藏夹里已经有同名的食谱了——请换一个名字。',
 }
 
 const DICTS: Record<Locale, Record<string, string>> = { en: EN, zh: ZH }

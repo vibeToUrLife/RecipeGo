@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createRecipe, updateRecipe, deleteRecipe, getRecipe } from '@/lib/data/recipes'
 import { categorizeIngredient } from '@/lib/aisles'
 import { VALID_UNITS } from '@/lib/unit-options'
+import { getT } from '@/lib/i18n-server'
 import type { RecipeFormData } from '@/lib/db-types'
 import type { Unit } from '@/lib/types'
 
@@ -45,18 +46,32 @@ function parseForm(formData: FormData): RecipeFormData {
   }
 }
 
-export async function saveRecipe(formData: FormData) {
+export type SaveRecipeState = { error?: string } | null
+
+export async function saveRecipe(_prev: SaveRecipeState, formData: FormData): Promise<SaveRecipeState> {
   const id = formData.get('id') as string | null
   const data = parseForm(formData)
-  if (id) {
-    await updateRecipe(id, data)
-    revalidatePath(`/recipes/${id}`)
-    redirect(`/recipes/${id}`)
-  } else {
-    const newId = await createRecipe(data)
-    revalidatePath('/')
-    redirect(`/recipes/${newId}`)
+
+  // DB write inside try/catch so a unique-name violation becomes a friendly
+  // message. redirect()/revalidatePath() run AFTER, never inside the catch
+  // (redirect throws NEXT_REDIRECT, which the catch must not swallow).
+  let targetId = id
+  try {
+    if (id) {
+      await updateRecipe(id, data)
+    } else {
+      targetId = await createRecipe(data)
+    }
+  } catch (e: unknown) {
+    if ((e as { code?: string })?.code === '23505') {
+      const t = await getT()
+      return { error: t('form.duplicateName') }
+    }
+    throw e
   }
+
+  revalidatePath(id ? `/recipes/${id}` : '/')
+  redirect(`/recipes/${targetId}`)
 }
 
 export async function removeRecipe(id: string) {

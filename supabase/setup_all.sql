@@ -160,6 +160,14 @@ create policy "recipes update" on public.recipes for update to authenticated
 create policy "recipes delete" on public.recipes for delete to authenticated
   using ( (room_id is null and user_id = (select auth.uid())) or (room_id is not null and public.is_room_member(room_id)) );
 
+-- Recipe name must be unique within a collection (room, or a user's personal
+-- list); the same name may exist in different collections. See migration
+-- 20260630170000_recipe_unique_title.sql.
+create unique index if not exists recipes_unique_room_title
+  on public.recipes (room_id, lower(btrim(title))) where room_id is not null;
+create unique index if not exists recipes_unique_personal_title
+  on public.recipes (user_id, lower(btrim(title))) where room_id is null;
+
 create table public.ingredients (
   id uuid primary key default gen_random_uuid(),
   recipe_id uuid not null references public.recipes(id) on delete cascade,

@@ -176,9 +176,9 @@ export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; 
           >
             <option value="">{t('form.unit')}</option>
             {UNIT_GROUPS.map((g) => (
-              <optgroup key={g.label} label={g.label}>
+              <optgroup key={g.label} label={t('unitGroup.' + g.label)}>
                 {g.units.map((u) => (
-                  <option key={u} value={u}>{u}</option>
+                  <option key={u} value={u}>{t('unit.' + u)}</option>
                 ))}
               </optgroup>
             ))}
