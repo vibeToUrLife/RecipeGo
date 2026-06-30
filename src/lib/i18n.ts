@@ -31,6 +31,7 @@ const EN: Record<string, string> = {
   'nav.ingredients': 'Ingredients',
   'nav.shoppingList': 'Shopping List',
   'nav.signOut': 'Sign out',
+  'nav.menu': 'Menu',
 
   // home / recipe library
   'home.fromYourKitchen': 'FROM YOUR KITCHEN',
@@ -255,6 +256,7 @@ const ZH: Record<string, string> = {
   'nav.ingredients': '食材',
   'nav.shoppingList': '购物清单',
   'nav.signOut': '退出登录',
+  'nav.menu': '菜单',
 
   'home.fromYourKitchen': '来自你的厨房',
   'home.recipesSaved': '已保存 {n} 个食谱',

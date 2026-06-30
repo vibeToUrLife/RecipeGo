@@ -25,7 +25,7 @@ export default async function RoomPage({
           <h1 className="mt-1 font-serif text-3xl">{room.name}</h1>
         </section>
 
-        <div className="mb-6 flex gap-3">
+        <div className="mb-6 flex flex-wrap gap-3">
           <Button asChild variant="secondary" size="sm">
             <Link href={`/rooms/${roomId}/members`}>{t('rooms.members')}</Link>
           </Button>

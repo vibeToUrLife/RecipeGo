@@ -36,9 +36,9 @@ export function RecipeDetail({ recipe }: { recipe: RecipeWithChildren }) {
         {img ? <Image src={img} alt={recipe.title} fill className="object-cover" sizes="100vw" /> : <span>🍽️</span>}
       </div>
 
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
         <h1 className="font-serif text-3xl text-primary">{recipe.title}</h1>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
           <ShareRecipeButton recipeId={recipe.id} />
           <Button asChild variant="outline" size="sm"><Link href={`/recipes/${recipe.id}/edit`}>{t('common.edit')}</Link></Button>
           <DeleteRecipeButton recipeId={recipe.id} />
