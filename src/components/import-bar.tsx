@@ -28,9 +28,22 @@ export function ImportBar({ onImported }: { onImported: (r: ImportedRecipe) => v
   }
 
   return (
-    <div className="mb-5 flex gap-2 rounded-xl border border-dashed p-3">
-      <Input placeholder="Paste a recipe URL to auto-import…" value={url} onChange={(e) => setUrl(e.target.value)} />
-      <Button type="button" onClick={run} disabled={busy}>{busy ? 'Importing…' : 'Import'}</Button>
+    <div className="mb-5 rounded-xl border-2 border-dashed border-primary/30 bg-accent/10 p-4">
+      <p className="text-sm font-semibold text-primary">🔗 Import from a website</p>
+      <p className="mb-3 text-xs text-muted-foreground">
+        Paste a recipe link from a cooking site and we&apos;ll auto-fill the title, ingredients, and steps for you. Or skip this and fill in the form below yourself.
+      </p>
+      <div className="flex gap-2">
+        <Input
+          type="url"
+          inputMode="url"
+          placeholder="https://example.com/best-pancakes"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); run() } }}
+        />
+        <Button type="button" onClick={run} disabled={busy}>{busy ? 'Importing…' : 'Import'}</Button>
+      </div>
     </div>
   )
 }

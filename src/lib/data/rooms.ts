@@ -106,3 +106,10 @@ export async function declineInvite(inviteId: string): Promise<void> {
   const { error } = await s.from('room_invites').update({ status: 'declined' }).eq('id', inviteId)
   if (error) throw error
 }
+
+// Owner cancels a pending invite they sent (RLS "invites delete" gates this to the room owner).
+export async function cancelInvite(inviteId: string): Promise<void> {
+  const s = await createClient()
+  const { error } = await s.from('room_invites').delete().eq('id', inviteId)
+  if (error) throw error
+}

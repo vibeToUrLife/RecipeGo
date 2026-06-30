@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MemberRow } from '@/components/member-row'
+import { InviteForm } from '@/components/invite-form'
+import { InviteCancelButton } from '@/components/invite-cancel-button'
 import { getRoom, listMembers, listRoomInvites } from '@/lib/data/rooms'
 import { createClient } from '@/utils/supabase/server'
 import {
-  inviteAction,
   renameRoomAction,
   deleteRoomAction,
   leaveRoomAction,
@@ -38,7 +39,6 @@ export default async function MembersPage({
 
   const isOwner = room.owner_id === user?.id
 
-  const invite = inviteAction.bind(null, roomId)
   const rename = renameRoomAction.bind(null, roomId)
   const deleteRoom = deleteRoomAction.bind(null, roomId)
   const leaveRoom = leaveRoomAction.bind(null, roomId)
@@ -93,11 +93,12 @@ export default async function MembersPage({
             <CardHeader>
               <CardTitle className="font-serif text-lg text-primary">Pending invites</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-1">
+            <CardContent className="divide-y">
               {invites.map((i) => (
-                <p key={i.id} className="text-sm text-muted-foreground">
-                  {i.email}
-                </p>
+                <div key={i.id} className="flex items-center justify-between gap-2 py-1.5">
+                  <p className="text-sm text-muted-foreground">{i.email}</p>
+                  <InviteCancelButton roomId={roomId} inviteId={i.id} />
+                </div>
               ))}
             </CardContent>
           </Card>
@@ -111,21 +112,7 @@ export default async function MembersPage({
                 <CardTitle className="font-serif text-lg text-primary">Invite by email</CardTitle>
               </CardHeader>
               <CardContent>
-                <form action={invite} className="flex gap-2">
-                  <div className="flex-1 space-y-1">
-                    <Label htmlFor="invite-email" className="sr-only">
-                      Email address
-                    </Label>
-                    <Input
-                      id="invite-email"
-                      name="email"
-                      type="email"
-                      placeholder="friend@example.com"
-                      required
-                    />
-                  </div>
-                  <Button type="submit">Invite</Button>
-                </form>
+                <InviteForm roomId={roomId} />
               </CardContent>
             </Card>
 

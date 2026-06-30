@@ -10,6 +10,11 @@ export function NewRecipeClient({ rooms, defaultRoomId }: { rooms: Room[]; defau
   return (
     <>
       <ImportBar onImported={setImported} />
+      <div className="mb-5 flex items-center gap-3 text-xs uppercase tracking-wider text-muted-foreground">
+        <span className="h-px flex-1 bg-border" />
+        or enter details manually
+        <span className="h-px flex-1 bg-border" />
+      </div>
       <RecipeForm key={imported?.sourceUrl ?? 'blank'} imported={imported} rooms={rooms} defaultRoomId={defaultRoomId} />
     </>
   )

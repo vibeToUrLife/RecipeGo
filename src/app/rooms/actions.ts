@@ -12,12 +12,24 @@ export async function createRoomAction(formData: FormData) {
   redirect(`/rooms/${id}`)
 }
 
-export async function inviteAction(roomId: string, formData: FormData) {
+export async function inviteAction(
+  roomId: string,
+  formData: FormData,
+): Promise<{ ok?: true; error?: string }> {
   const email = (formData.get('email') as string) ?? ''
-  if (!isValidEmail(email)) redirect(`/rooms/${roomId}/members?error=` + encodeURIComponent('Enter a valid email'))
-  await rooms.inviteToRoom(roomId, email)
+  if (!isValidEmail(email)) return { error: 'Enter a valid email address.' }
+  try {
+    await rooms.inviteToRoom(roomId, email)
+  } catch {
+    return { error: 'Could not send the invite. Please try again.' }
+  }
   revalidatePath(`/rooms/${roomId}/members`)
-  redirect(`/rooms/${roomId}/members?message=` + encodeURIComponent('Invite sent'))
+  return { ok: true }
+}
+
+export async function cancelInviteAction(roomId: string, inviteId: string) {
+  await rooms.cancelInvite(inviteId)
+  revalidatePath(`/rooms/${roomId}/members`)
 }
 
 export async function acceptInviteAction(id: string) {
