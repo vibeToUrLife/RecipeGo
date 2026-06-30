@@ -1,22 +1,87 @@
 'use client'
-import { useOptimistic, useTransition } from 'react'
+import { useOptimistic, useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
+import { Plus } from 'lucide-react'
 import type { ShoppingListRow } from '@/lib/data/shopping'
-import { AISLE_ORDER } from '@/lib/aisles'
-import { toggleItemAction, removeItemAction, completeShoppingAction } from '@/app/shopping-list/actions'
-import { AddShoppingItem } from '@/components/add-shopping-item'
+import type { Unit } from '@/lib/types'
+import { AISLE_ORDER, categorizeIngredient } from '@/lib/aisles'
+import { toggleItemAction, removeItemAction, completeShoppingAction, addShoppingItemAction } from '@/app/shopping-list/actions'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
 
 function fmtQty(q: number | null) {
   if (q === null) return ''
   return Number.isInteger(q) ? String(q) : q.toFixed(2).replace(/\.?0+$/, '')
 }
 
+const UNIT_GROUPS: { label: string; units: string[] }[] = [
+  { label: 'Mass', units: ['g', 'kg', 'oz', 'lb'] },
+  { label: 'Volume', units: ['ml', 'l', 'tsp', 'tbsp', 'cup'] },
+  { label: 'Count', units: ['piece', 'clove', 'pinch', 'slice'] },
+]
+
 export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; roomId?: string | null }) {
   const [optimistic, setOptimistic] = useOptimistic(items)
   const [, start] = useTransition()
   const rid = roomId ?? null
+
+  // Add-item form state
+  const [name, setName] = useState('')
+  const [qty, setQty] = useState('')
+  const [unit, setUnit] = useState('')
+  const [kind, setKind] = useState<'food' | 'other'>('food')
+  const [adding, setAdding] = useState(false)
+  const addingRef = useRef(false) // synchronous guard against double-submit
+
+  function submitAdd() {
+    const v = name.trim()
+    if (!v) return // empty: nothing to add (silent)
+    if (addingRef.current) {
+      // re-entrant (e.g. Enter mashed while the previous add is in flight)
+      toast.info('Still adding the previous item — one sec.')
+      return
+    }
+    if (v.length > 200) {
+      toast.error('Name too long (max 200 characters).')
+      return
+    }
+    const q = qty.trim() === '' ? null : Number(qty)
+    if (q !== null && (!Number.isFinite(q) || q < 0 || q > 100000)) {
+      toast.error('Enter a valid quantity.')
+      return
+    }
+    addingRef.current = true
+    setAdding(true)
+    const u = (unit === '' ? null : unit) as Unit
+    const isFood = kind === 'food'
+    // clear the text fields right away so the next item can be typed immediately
+    setName('')
+    setQty('')
+    const optimisticRow: ShoppingListRow = {
+      id: `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      name: v,
+      total_quantity: q,
+      unit: u,
+      category: isFood ? categorizeIngredient(v) : 'Other',
+      checked: false,
+      source_recipe_ids: [],
+      is_food: isFood,
+      room_id: rid,
+    }
+    start(async () => {
+      try {
+        setOptimistic((prev) => [...prev, optimisticRow]) // shows instantly
+        const res = await addShoppingItemAction(rid, { name: v, isFood, quantity: q, unit: u })
+        if (res?.error) toast.error(res.error)
+      } catch {
+        toast.error('Could not add the item. Please try again.')
+      } finally {
+        addingRef.current = false
+        setAdding(false)
+      }
+    })
+  }
 
   function toggle(row: ShoppingListRow) {
     start(async () => {
@@ -73,7 +138,68 @@ export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; 
 
   return (
     <div className="space-y-5">
-      <AddShoppingItem roomId={rid} />
+      {/* Add an extra item (name + optional quantity/unit + food/daily) */}
+      <div className="rounded-xl border border-dashed p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                submitAdd()
+              }
+            }}
+            placeholder="Add an extra item — e.g. milk, toilet paper"
+            aria-label="Item name"
+            className="min-w-[10rem] flex-1"
+          />
+          <Input
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="any"
+            value={qty}
+            onChange={(e) => setQty(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                submitAdd()
+              }
+            }}
+            placeholder="Qty"
+            aria-label="Quantity"
+            className="w-20"
+          />
+          <select
+            value={unit}
+            onChange={(e) => setUnit(e.target.value)}
+            aria-label="Unit"
+            className="h-8 rounded-lg border border-input bg-background px-2 text-sm"
+          >
+            <option value="">unit</option>
+            {UNIT_GROUPS.map((g) => (
+              <optgroup key={g.label} label={g.label}>
+                {g.units.map((u) => (
+                  <option key={u} value={u}>{u}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          <select
+            value={kind}
+            onChange={(e) => setKind(e.target.value as 'food' | 'other')}
+            aria-label="Item type"
+            className="h-8 rounded-lg border border-input bg-background px-2 text-sm"
+          >
+            <option value="food">🍎 Food</option>
+            <option value="other">🧺 Daily / other</option>
+          </select>
+          <Button type="button" onClick={submitAdd} disabled={adding} className="shrink-0">
+            <Plus className="size-4" /> {adding ? 'Adding…' : 'Add'}
+          </Button>
+        </div>
+      </div>
 
       {optimistic.length === 0 ? (
         <div className="rounded-xl border border-dashed p-10 text-center">

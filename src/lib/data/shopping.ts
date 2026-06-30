@@ -75,23 +75,26 @@ export async function addRecipeToList(recipeId: string, servings: number): Promi
   }
 }
 
-// Manually add an extra item (food or non-food "daily") to the list.
-export async function addShoppingItem(
-  name: string,
-  isFood: boolean,
-  roomId: string | null = null,
-): Promise<void> {
+// Manually add an extra item (food or non-food "daily") to the list, with an
+// optional quantity + unit.
+export async function addShoppingItem(input: {
+  name: string
+  isFood: boolean
+  quantity: number | null
+  unit: Unit
+  roomId: string | null
+}): Promise<void> {
   const supabase = await createClient()
-  const clean = name.trim()
+  const clean = input.name.trim()
   const { error } = await supabase.from('shopping_list_items').insert({
     name: clean,
-    total_quantity: null,
-    unit: null,
-    category: isFood ? categorizeIngredient(clean) : 'Other',
+    total_quantity: input.quantity,
+    unit: input.unit,
+    category: input.isFood ? categorizeIngredient(clean) : 'Other',
     checked: false,
     source_recipe_ids: [],
-    is_food: isFood,
-    room_id: roomId,
+    is_food: input.isFood,
+    room_id: input.roomId,
   })
   if (error) throw error
 }
