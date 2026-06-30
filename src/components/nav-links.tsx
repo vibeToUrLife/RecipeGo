@@ -1,14 +1,13 @@
 'use client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { useCurrentRoomId } from '@/lib/use-current-room-id'
 
 // Recipes / Cook / Shopping List point at the current context: your personal
 // recipes by default, or the current room when you're inside one — so a room's
 // Cook and Shopping List stay independent from your personal ones.
 export function NavLinks() {
-  const pathname = usePathname()
-  const roomId = pathname.match(/^\/rooms\/([^/]+)/)?.[1] ?? null
+  const roomId = useCurrentRoomId()
   const recipesHref = roomId ? `/rooms/${roomId}` : '/'
   const cookHref = roomId ? `/rooms/${roomId}/cook` : '/cook'
   const shoppingHref = roomId ? `/rooms/${roomId}/shopping-list` : '/shopping-list'

@@ -1,9 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
 import type { Room } from '@/lib/db-types'
+import { useCurrentRoomId } from '@/lib/use-current-room-id'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,11 +19,7 @@ interface RoomSwitcherProps {
 }
 
 export function RoomSwitcher({ rooms }: RoomSwitcherProps) {
-  const pathname = usePathname()
-
-  // Determine current context from pathname
-  const roomMatch = pathname.match(/^\/rooms\/([^/]+)/)
-  const currentRoomId = roomMatch ? roomMatch[1] : null
+  const currentRoomId = useCurrentRoomId()
   const currentRoom = currentRoomId ? rooms.find((r) => r.id === currentRoomId) : null
   const currentLabel = currentRoom ? currentRoom.name : 'My Recipes'
 
