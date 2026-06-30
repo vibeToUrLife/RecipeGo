@@ -264,6 +264,7 @@ create table public.pantry_items (
 alter table public.pantry_items enable row level security;
 create policy "pantry select" on public.pantry_items for select to authenticated using ( user_id = (select auth.uid()) );
 create policy "pantry insert" on public.pantry_items for insert to authenticated with check ( user_id = (select auth.uid()) );
+create policy "pantry update" on public.pantry_items for update to authenticated using ( user_id = (select auth.uid()) ) with check ( user_id = (select auth.uid()) );
 create policy "pantry delete" on public.pantry_items for delete to authenticated using ( user_id = (select auth.uid()) );
 
 -- ========== 5. IMAGE STORAGE ==========
