@@ -13,14 +13,15 @@ export default async function PlanPage({
   searchParams: Promise<{ week?: string }>
 }) {
   const { week } = await searchParams
-  const weekStartISO = toISODate(startOfWeek(week && ISO.test(week) ? fromISODate(week) : new Date()))
+  const todayWeekISO = toISODate(startOfWeek(new Date()))
+  const weekStartISO = week && ISO.test(week) ? toISODate(startOfWeek(fromISODate(week))) : todayWeekISO
   const [entries, recipes, t] = await Promise.all([getWeekPlan(weekStartISO), listRecipes(), getT()])
   return (
     <>
       <AppNav />
       <main className="mx-auto max-w-3xl px-4 py-6">
         <h1 className="mb-4 font-serif text-2xl text-primary">{t('plan.title')}</h1>
-        <WeekPlanner weekStartISO={weekStartISO} entries={entries} recipes={recipes} roomId={null} />
+        <WeekPlanner weekStartISO={weekStartISO} todayWeekISO={todayWeekISO} entries={entries} recipes={recipes} roomId={null} />
       </main>
     </>
   )

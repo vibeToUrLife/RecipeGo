@@ -8,22 +8,24 @@ import { Button } from '@/components/ui/button'
 import { AddMealDialog } from '@/components/add-meal-dialog'
 import { PlannedMeal } from '@/components/planned-meal'
 import {
-  weekDays, fromISODate, toISODate, addWeeks, startOfWeek,
+  weekDays, fromISODate, toISODate, addWeeks,
   groupEntriesByDayAndSlot, MEAL_SLOTS, type MealSlot,
 } from '@/lib/plan/week'
 import { addWeekToShoppingListAction } from '@/app/plan/actions'
 import type { Recipe, MealPlanEntryView } from '@/lib/db-types'
-import { useT } from '@/components/i18n-provider'
+import { useT, useLocale } from '@/components/i18n-provider'
 
 export function WeekPlanner({
-  weekStartISO, entries, recipes, roomId,
+  weekStartISO, todayWeekISO, entries, recipes, roomId,
 }: {
   weekStartISO: string
+  todayWeekISO: string
   entries: MealPlanEntryView[]
   recipes: Recipe[]
   roomId: string | null
 }) {
   const t = useT()
+  const locale = useLocale()
   const router = useRouter()
   const [pending, start] = useTransition()
   const base = roomId ? `/rooms/${roomId}/plan` : '/plan'
@@ -32,11 +34,17 @@ export function WeekPlanner({
   const grouped = groupEntriesByDayAndSlot(entries)
   const prev = toISODate(addWeeks(weekStart, -1))
   const next = toISODate(addWeeks(weekStart, 1))
-  const thisWeek = toISODate(startOfWeek(new Date()))
+  const thisWeek = todayWeekISO
   const slotLabel: Record<MealSlot, string> = {
     breakfast: t('plan.breakfast'), lunch: t('plan.lunch'), dinner: t('plan.dinner'),
   }
-  const dayFmt = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
+  // Pin an explicit locale (matching the app's i18n locale, which is identical
+  // on server and client) so both renders produce the same date string. Passing
+  // `undefined` resolves to the runtime default — different on Node vs the
+  // browser — which caused a hydration mismatch.
+  const dayFmt = new Intl.DateTimeFormat(locale === 'zh' ? 'zh-CN' : 'en-GB', {
+    weekday: 'short', day: 'numeric', month: 'short',
+  })
 
   return (
     <div className="flex flex-col gap-4">

@@ -18,7 +18,8 @@ export default async function RoomPlanPage({
 }) {
   const { roomId } = await params
   const { week } = await searchParams
-  const weekStartISO = toISODate(startOfWeek(week && ISO.test(week) ? fromISODate(week) : new Date()))
+  const todayWeekISO = toISODate(startOfWeek(new Date()))
+  const weekStartISO = week && ISO.test(week) ? toISODate(startOfWeek(fromISODate(week))) : todayWeekISO
   const [room, entries, recipes, t] = await Promise.all([
     getRoom(roomId), getWeekPlan(weekStartISO, roomId), listRecipes(roomId), getT(),
   ])
@@ -28,7 +29,7 @@ export default async function RoomPlanPage({
       <AppNav roomId={roomId} />
       <main className="mx-auto max-w-3xl px-4 py-6">
         <h1 className="mb-4 font-serif text-2xl text-primary">{t('plan.roomTitle', { room: room.name })}</h1>
-        <WeekPlanner weekStartISO={weekStartISO} entries={entries} recipes={recipes} roomId={roomId} />
+        <WeekPlanner weekStartISO={weekStartISO} todayWeekISO={todayWeekISO} entries={entries} recipes={recipes} roomId={roomId} />
       </main>
     </>
   )
