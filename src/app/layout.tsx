@@ -11,6 +11,10 @@ export const metadata: Metadata = {
   description: "Save recipes and build smart shopping lists.",
 };
 
+// Run server functions next to the Supabase database (Tokyo, ap-northeast-1)
+// so per-request DB round-trips stay local instead of crossing the Pacific.
+export const preferredRegion = "hnd1";
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${inter.variable} ${fraunces.variable}`} suppressHydrationWarning>
