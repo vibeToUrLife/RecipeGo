@@ -146,6 +146,7 @@ const EN: Record<string, string> = {
   'cook.removeAria': 'Remove {name}',
   'cook.amountPlaceholder': 'amount, e.g. 2 kg',
   'cook.amountAria': 'Amount of {name}',
+  'cook.amountNote': 'ℹ️ Amounts are just a note for you — they don’t affect which recipes show below.',
 
   // shopping (extra: aria labels, badges, room title)
   'shop.quantityAria': 'Quantity',
@@ -381,6 +382,7 @@ const ZH: Record<string, string> = {
   'cook.removeAria': '移除 {name}',
   'cook.amountPlaceholder': '数量，如 2 kg',
   'cook.amountAria': '{name} 的数量',
+  'cook.amountNote': 'ℹ️ 数量只是给你看的备注——不会影响下面显示哪些可以做的食谱。',
 
   'shop.quantityAria': '数量',
   'shop.unitAria': '单位',

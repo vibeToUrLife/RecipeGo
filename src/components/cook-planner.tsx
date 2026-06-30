@@ -166,6 +166,7 @@ export function CookPlanner({
               <Plus className="size-4" /> {t('common.add')}
             </Button>
           </div>
+          <p className="text-xs text-muted-foreground">{t('cook.amountNote')}</p>
           {haveList.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               {t('cook.haveHint')}
