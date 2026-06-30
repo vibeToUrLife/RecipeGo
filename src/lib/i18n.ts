@@ -144,6 +144,8 @@ const EN: Record<string, string> = {
   'cook.stillNeed': 'Still need:',
   'cook.saveFailed': 'Could not save your ingredients — please try again.',
   'cook.removeAria': 'Remove {name}',
+  'cook.amountPlaceholder': 'amount, e.g. 2 kg',
+  'cook.amountAria': 'Amount of {name}',
 
   // shopping (extra: aria labels, badges, room title)
   'shop.quantityAria': 'Quantity',
@@ -377,6 +379,8 @@ const ZH: Record<string, string> = {
   'cook.stillNeed': '还需要：',
   'cook.saveFailed': '无法保存你的食材，请重试。',
   'cook.removeAria': '移除 {name}',
+  'cook.amountPlaceholder': '数量，如 2 kg',
+  'cook.amountAria': '{name} 的数量',
 
   'shop.quantityAria': '数量',
   'shop.unitAria': '单位',

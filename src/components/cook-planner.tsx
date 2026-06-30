@@ -3,7 +3,7 @@ import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Plus, X, Check, ChevronRight } from 'lucide-react'
-import { setPantryItemAction } from '@/app/cook/actions'
+import { setPantryItemAction, setPantryAmountAction } from '@/app/cook/actions'
 import { matchRecipes, normalizeIng, type RecipeIngredients } from '@/lib/cook/match'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -34,11 +34,17 @@ export function CookPlanner({
 }: {
   recipes: RecipeIngredients[]
   universe: string[]
-  initialHave: string[]
+  initialHave: { name: string; amount: string | null }[]
 }) {
   const t = useT()
-  const [have, setHave] = useState<Set<string>>(() => new Set(initialHave.map(normalizeIng)))
+  // normalized name -> free-text amount ('' = no amount noted)
+  const [have, setHave] = useState<Map<string, string>>(() => {
+    const m = new Map<string, string>()
+    for (const it of initialHave) m.set(normalizeIng(it.name), it.amount ?? '')
+    return m
+  })
   const [draft, setDraft] = useState('')
+  const [draftAmount, setDraftAmount] = useState('')
   const [, startTransition] = useTransition()
 
   // normalized name -> nice display label (recipe casing if known, else title-cased)
@@ -48,9 +54,15 @@ export function CookPlanner({
     return (n: string) => m.get(n) ?? titleCase(n)
   }, [universe])
 
-  const { ready, almost } = useMemo(() => matchRecipes(recipes, [...have]), [recipes, have])
+  // Matching depends only on WHICH ingredients you have, not their amounts, so
+  // editing an amount doesn't re-run the match.
+  const haveKeysStr = useMemo(() => [...have.keys()].sort().join('\n'), [have])
+  const { ready, almost } = useMemo(
+    () => matchRecipes(recipes, haveKeysStr ? haveKeysStr.split('\n') : []),
+    [recipes, haveKeysStr],
+  )
 
-  function persist(key: string, present: boolean, revert: () => void) {
+  function persistPresence(key: string, present: boolean, revert: () => void) {
     startTransition(async () => {
       try {
         await setPantryItemAction(key, present)
@@ -61,37 +73,57 @@ export function CookPlanner({
     })
   }
 
-  function add(name: string) {
+  function persistAmount(key: string, amount: string, revert?: () => void) {
+    startTransition(async () => {
+      try {
+        await setPantryAmountAction(key, amount)
+      } catch {
+        toast.error(t('cook.saveFailed'))
+        revert?.()
+      }
+    })
+  }
+
+  function add(name: string, amount = '') {
     const key = normalizeIng(name)
-    if (!key || have.has(key)) return
-    setHave((prev) => new Set(prev).add(key))
-    persist(key, true, () =>
-      setHave((prev) => {
-        const n = new Set(prev)
-        n.delete(key)
-        return n
-      }),
-    )
+    if (!key) return
+    if (have.has(key)) {
+      if (amount) {
+        setHave((prev) => new Map(prev).set(key, amount))
+        persistAmount(key, amount)
+      }
+      return
+    }
+    setHave((prev) => new Map(prev).set(key, amount))
+    const revert = () => setHave((prev) => { const m = new Map(prev); m.delete(key); return m })
+    if (amount) persistAmount(key, amount, revert)
+    else persistPresence(key, true, revert)
   }
 
   function remove(key: string) {
     if (!have.has(key)) return
-    setHave((prev) => {
-      const n = new Set(prev)
-      n.delete(key)
-      return n
-    })
-    persist(key, false, () => setHave((prev) => new Set(prev).add(key)))
+    const prevAmount = have.get(key) ?? ''
+    setHave((prev) => { const m = new Map(prev); m.delete(key); return m })
+    persistPresence(key, false, () => setHave((prev) => new Map(prev).set(key, prevAmount)))
+  }
+
+  // controlled amount field: update locally on type, save on blur/Enter
+  function editAmount(key: string, amount: string) {
+    setHave((prev) => new Map(prev).set(key, amount))
+  }
+  function commitAmount(key: string) {
+    persistAmount(key, have.get(key) ?? '')
   }
 
   function onAdd() {
     const v = draft.trim()
     if (!v) return
-    add(v)
+    add(v, draftAmount.trim())
     setDraft('')
+    setDraftAmount('')
   }
 
-  const haveList = [...have].sort((a, b) => displayOf(a).localeCompare(displayOf(b)))
+  const haveList = [...have.keys()].sort((a, b) => displayOf(a).localeCompare(displayOf(b)))
   const suggestions = universe.filter((label) => !have.has(normalizeIng(label)))
 
   return (
@@ -104,7 +136,7 @@ export function CookPlanner({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
@@ -115,6 +147,20 @@ export function CookPlanner({
                 }
               }}
               placeholder={t('cook.addPlaceholder')}
+              className="min-w-[10rem] flex-1"
+            />
+            <Input
+              value={draftAmount}
+              onChange={(e) => setDraftAmount(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  onAdd()
+                }
+              }}
+              placeholder={t('cook.amountPlaceholder')}
+              aria-label={t('cook.amountPlaceholder')}
+              className="w-32"
             />
             <Button type="button" onClick={onAdd} className="shrink-0">
               <Plus className="size-4" /> {t('common.add')}
@@ -125,20 +171,33 @@ export function CookPlanner({
               {t('cook.haveHint')}
             </p>
           ) : (
-            <div className="flex flex-wrap gap-2">
+            <div className="space-y-1.5">
               {haveList.map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => remove(key)}
-                  aria-label={t('cook.removeAria', { name: displayOf(key) })}
-                  className="group inline-flex items-center gap-1.5 rounded-full bg-primary py-1 pl-3 pr-2 text-sm text-primary-foreground shadow-sm transition hover:bg-primary/90"
-                >
-                  {displayOf(key)}
-                  <span className="inline-flex size-4 items-center justify-center rounded-full bg-primary-foreground/20 transition group-hover:bg-primary-foreground/30">
-                    <X className="size-3" />
-                  </span>
-                </button>
+                <div key={key} className="flex items-center gap-2 rounded-lg border bg-background px-3 py-1.5">
+                  <span className="flex-1 truncate text-sm font-medium">{displayOf(key)}</span>
+                  <Input
+                    value={have.get(key) ?? ''}
+                    onChange={(e) => editAmount(key, e.target.value)}
+                    onBlur={() => commitAmount(key)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        e.currentTarget.blur()
+                      }
+                    }}
+                    placeholder={t('cook.amountPlaceholder')}
+                    aria-label={t('cook.amountAria', { name: displayOf(key) })}
+                    className="h-8 w-28 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => remove(key)}
+                    aria-label={t('cook.removeAria', { name: displayOf(key) })}
+                    className="shrink-0 text-muted-foreground transition hover:text-destructive"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
               ))}
             </div>
           )}

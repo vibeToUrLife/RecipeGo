@@ -257,6 +257,7 @@ create policy "list delete" on public.shopping_list_items for delete to authenti
 create table public.pantry_items (
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   name text not null,
+  amount text,
   created_at timestamptz not null default now(),
   primary key (user_id, name)
 );
