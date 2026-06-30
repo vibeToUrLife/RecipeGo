@@ -54,6 +54,15 @@ describe('matchRecipes', () => {
     expect([...ready, ...almost].some((r) => r.id === 'd')).toBe(false)
   })
 
+  it('does not show a recipe in almost when you have none of its ingredients', () => {
+    // empty pantry → nothing is "almost", even small recipes
+    const { almost } = matchRecipes(recipes, [])
+    expect(almost).toHaveLength(0)
+    // a 1-ingredient recipe you have none of is also excluded
+    const { almost: a2 } = matchRecipes(recipes, ['egg'])
+    expect(a2.some((r) => r.id === 'c')).toBe(false) // Toast (bread) — you have 0 of it
+  })
+
   it('excludes recipes missing more than 3 ingredients', () => {
     const big: RecipeIngredients = { id: 'big', title: 'Big', room_id: null, ingredients: ['a', 'b', 'c', 'd', 'e'] }
     const { ready, almost } = matchRecipes([big], ['a'])

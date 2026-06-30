@@ -243,11 +243,14 @@ const EN: Record<string, string> = {
   'unitGroup.Mass': 'Mass',
   'unitGroup.Volume': 'Volume',
   'unitGroup.Count': 'Count',
+  'unitGroup.Other': 'Other',
   'unit.g': 'g', 'unit.kg': 'kg', 'unit.oz': 'oz', 'unit.lb': 'lb',
   'unit.ml': 'ml', 'unit.l': 'l', 'unit.tsp': 'tsp', 'unit.tbsp': 'tbsp', 'unit.cup': 'cup',
   'unit.piece': 'piece', 'unit.clove': 'clove', 'unit.pinch': 'pinch', 'unit.slice': 'slice',
+  'unit.to taste': 'to taste',
 
   'form.duplicateName': 'A recipe with this name already exists in this collection — please use a different name.',
+  'form.saving': 'Saving…',
 }
 
 // Chinese overrides. Anything not listed falls back to the English string.
@@ -461,11 +464,14 @@ const ZH: Record<string, string> = {
   'unitGroup.Mass': '重量',
   'unitGroup.Volume': '容量',
   'unitGroup.Count': '计数',
+  'unitGroup.Other': '其他',
   'unit.g': '克', 'unit.kg': '千克', 'unit.oz': '盎司', 'unit.lb': '磅',
   'unit.ml': '毫升', 'unit.l': '升', 'unit.tsp': '茶匙', 'unit.tbsp': '汤匙', 'unit.cup': '杯',
   'unit.piece': '个', 'unit.clove': '瓣', 'unit.pinch': '撮', 'unit.slice': '片',
+  'unit.to taste': '适量',
 
   'form.duplicateName': '这个收藏夹里已经有同名的食谱了——请换一个名字。',
+  'form.saving': '保存中…',
 }
 
 const DICTS: Record<Locale, Record<string, string>> = { en: EN, zh: ZH }

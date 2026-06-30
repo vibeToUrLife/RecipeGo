@@ -2,7 +2,8 @@ export type Unit =
   | 'g' | 'kg' | 'oz' | 'lb'                 // mass
   | 'ml' | 'l' | 'tsp' | 'tbsp' | 'cup'      // volume
   | 'piece' | 'clove' | 'pinch' | 'slice'    // count-ish (no conversion)
-  | null;                                     // unitless ("to taste")
+  | 'to taste'                               // qualitative amount (适量), no conversion
+  | null;                                     // no unit specified
 
 export type Aisle =
   | 'Produce' | 'Dairy & Eggs' | 'Meat & Seafood' | 'Pantry'

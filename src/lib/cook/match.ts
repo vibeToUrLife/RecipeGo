@@ -32,8 +32,9 @@ export function ingredientUniverse(recipes: RecipeIngredients[]): string[] {
 
 /**
  * Split recipes into "ready" (you have every ingredient) and "almost"
- * (missing 1–3 ingredients). Recipes with no ingredients are skipped.
- * `have` is the list of ingredient names the user currently has.
+ * (missing 1–3 ingredients AND you already have at least one of them, so an
+ * empty pantry never makes a recipe "almost"). Recipes with no ingredients are
+ * skipped. `have` is the list of ingredient names the user currently has.
  */
 export function matchRecipes(
   recipes: RecipeIngredients[],
@@ -49,7 +50,8 @@ export function matchRecipes(
     const missing = unique.filter((n) => !haveSet.has(n))
     const match: CookMatch = { id: r.id, title: r.title, room_id: r.room_id, total: unique.length, missing }
     if (missing.length === 0) ready.push(match)
-    else if (missing.length <= 3) almost.push(match)
+    // "almost" only if you're missing 1–3 AND already have at least one of them
+    else if (missing.length <= 3 && missing.length < unique.length) almost.push(match)
   }
 
   ready.sort((a, b) => a.title.localeCompare(b.title))

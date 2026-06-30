@@ -6,6 +6,7 @@ export const UNIT_GROUPS: { label: string; units: NonNullable<Unit>[] }[] = [
   { label: 'Mass', units: ['g', 'kg', 'oz', 'lb'] },
   { label: 'Volume', units: ['ml', 'l', 'tsp', 'tbsp', 'cup'] },
   { label: 'Count', units: ['piece', 'clove', 'pinch', 'slice'] },
+  { label: 'Other', units: ['to taste'] },
 ]
 
 // Flat allow-list for server-side validation.

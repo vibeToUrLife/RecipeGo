@@ -120,7 +120,7 @@ export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; 
             {t('shop.merged', { n: row.source_recipe_ids.length })}
           </span>
         )}
-        <span className="ml-auto text-muted-foreground">{fmtQty(row.total_quantity)} {row.unit ?? ''}</span>
+        <span className="ml-auto text-muted-foreground">{fmtQty(row.total_quantity)} {row.unit ? t('unit.' + row.unit) : ''}</span>
         <button onClick={() => removeRow(row.id)} className="text-muted-foreground hover:text-destructive">✕</button>
       </li>
     )

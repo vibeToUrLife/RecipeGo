@@ -35,7 +35,7 @@ export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?
     imported && imported.instructions.length ? imported.instructions.length : (recipe?.steps.length ?? 1)
   )
   const t = useT()
-  const [state, formAction] = useActionState(saveRecipe, null)
+  const [state, formAction, isPending] = useActionState(saveRecipe, null)
 
   return (
     <form action={formAction} className="space-y-5">
@@ -116,7 +116,9 @@ export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?
       {state?.error && (
         <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{state.error}</p>
       )}
-      <Button type="submit" className="w-full">{recipe ? t('form.saveChanges') : t('form.create')}</Button>
+      <Button type="submit" className="w-full" disabled={isPending}>
+        {isPending ? t('form.saving') : recipe ? t('form.saveChanges') : t('form.create')}
+      </Button>
     </form>
   )
 }

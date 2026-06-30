@@ -63,7 +63,7 @@ export function RecipeDetail({ recipe }: { recipe: RecipeWithChildren }) {
           <ul className="space-y-1 text-sm">
             {scaled.map((ing, idx) => (
               <li key={idx} className="border-b py-1">
-                {fmtQty(ing.quantity)} {ing.unit ?? ''} {ing.name}
+                {fmtQty(ing.quantity)} {ing.unit ? t('unit.' + ing.unit) : ''} {ing.name}
               </li>
             ))}
           </ul>
