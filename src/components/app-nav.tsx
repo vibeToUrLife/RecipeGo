@@ -17,6 +17,7 @@ export async function AppNav() {
         <div className="flex items-center gap-2 text-sm">
           <RoomSwitcher rooms={myRooms} />
           <Button asChild variant="ghost" size="sm"><Link href="/">Recipes</Link></Button>
+          <Button asChild variant="ghost" size="sm"><Link href="/cook">Cook</Link></Button>
           <Button asChild variant="ghost" size="sm"><Link href="/shopping-list">Shopping List</Link></Button>
           <form action={signOut}>
             <Button type="submit" variant="ghost" size="sm">Sign out</Button>

@@ -244,6 +244,18 @@ create policy "list update" on public.shopping_list_items for update to authenti
 create policy "list delete" on public.shopping_list_items for delete to authenticated
   using ( (room_id is null and user_id = (select auth.uid())) or (room_id is not null and public.is_room_member(room_id)) );
 
+-- ========== 4b. PANTRY (ingredients the user currently has) ==========
+create table public.pantry_items (
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  name text not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, name)
+);
+alter table public.pantry_items enable row level security;
+create policy "pantry select" on public.pantry_items for select to authenticated using ( user_id = (select auth.uid()) );
+create policy "pantry insert" on public.pantry_items for insert to authenticated with check ( user_id = (select auth.uid()) );
+create policy "pantry delete" on public.pantry_items for delete to authenticated using ( user_id = (select auth.uid()) );
+
 -- ========== 5. IMAGE STORAGE ==========
 insert into storage.buckets (id, name, public)
 values ('recipe-images', 'recipe-images', true)

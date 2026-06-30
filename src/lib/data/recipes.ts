@@ -11,6 +11,28 @@ export async function listRecipes(roomId: string | null = null): Promise<Recipe[
   return data ?? []
 }
 
+// All recipes the user can see (personal + rooms) with just their ingredient
+// names — used by the "What can I cook?" planner. RLS scopes both queries.
+export async function listRecipesWithIngredients(): Promise<
+  { id: string; title: string; room_id: string | null; ingredients: string[] }[]
+> {
+  const supabase = await createClient()
+  const { data: recipes, error } = await supabase.from('recipes').select('id, title, room_id')
+  if (error) throw error
+  const list = recipes ?? []
+  if (list.length === 0) return []
+  const { data: ings, error: iErr } = await supabase
+    .from('ingredients')
+    .select('recipe_id, name')
+    .in('recipe_id', list.map((r) => r.id))
+  if (iErr) throw iErr
+  const byRecipe: Record<string, string[]> = {}
+  for (const ing of ings ?? []) {
+    ;(byRecipe[ing.recipe_id] ??= []).push(ing.name)
+  }
+  return list.map((r) => ({ id: r.id, title: r.title, room_id: r.room_id, ingredients: byRecipe[r.id] ?? [] }))
+}
+
 export async function getRecipe(id: string): Promise<RecipeWithChildren | null> {
   const supabase = await createClient()
   const { data, error } = await supabase
