@@ -45,8 +45,11 @@ export function SpinWheel({ recipes }: { recipes: Recipe[] }) {
     }, 4200)
   }
 
-  const maxChars = n <= 6 ? 12 : n <= 10 ? 8 : 6
-  const fontSize = n <= 8 ? 9 : n <= 14 ? 7 : 6
+  // With many recipes the labels become an unreadable ring — hide them and let
+  // the result card reveal the winner instead.
+  const showLabels = n <= 12
+  const maxChars = n <= 6 ? 12 : 8
+  const fontSize = n <= 8 ? 9 : 7
 
   return (
     <div className="mx-auto max-w-sm space-y-6">
@@ -89,18 +92,20 @@ export function SpinWheel({ recipes }: { recipes: Recipe[] }) {
                       stroke="#fff"
                       strokeWidth="1.5"
                     />
-                    <text
-                      x={lx}
-                      y={ly}
-                      fill="#fff"
-                      fontSize={fontSize}
-                      fontWeight={600}
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      transform={`rotate(${flip ? mid + 180 : mid}, ${lx.toFixed(2)}, ${ly.toFixed(2)})`}
-                    >
-                      {label}
-                    </text>
+                    {showLabels && (
+                      <text
+                        x={lx}
+                        y={ly}
+                        fill="#fff"
+                        fontSize={fontSize}
+                        fontWeight={600}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        transform={`rotate(${flip ? mid + 180 : mid}, ${lx.toFixed(2)}, ${ly.toFixed(2)})`}
+                      >
+                        {label}
+                      </text>
+                    )}
                   </g>
                 )
               })
