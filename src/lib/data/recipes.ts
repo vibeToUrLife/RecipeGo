@@ -11,13 +11,16 @@ export async function listRecipes(roomId: string | null = null): Promise<Recipe[
   return data ?? []
 }
 
-// All recipes the user can see (personal + rooms) with just their ingredient
-// names — used by the "What can I cook?" planner. RLS scopes both queries.
-export async function listRecipesWithIngredients(): Promise<
-  { id: string; title: string; room_id: string | null; ingredients: string[] }[]
-> {
+// Recipes (with just their ingredient names) for the "What can I cook?" planner,
+// scoped to one context: personal recipes (roomId null) or a single room. RLS
+// also scopes both queries. roomId ? eq : is(null) mirrors listRecipes.
+export async function listRecipesWithIngredients(
+  roomId: string | null = null,
+): Promise<{ id: string; title: string; room_id: string | null; ingredients: string[] }[]> {
   const supabase = await createClient()
-  const { data: recipes, error } = await supabase.from('recipes').select('id, title, room_id')
+  let rq = supabase.from('recipes').select('id, title, room_id')
+  rq = roomId ? rq.eq('room_id', roomId) : rq.is('room_id', null)
+  const { data: recipes, error } = await rq
   if (error) throw error
   const list = recipes ?? []
   if (list.length === 0) return []

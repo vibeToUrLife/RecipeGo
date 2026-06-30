@@ -29,6 +29,9 @@ export default async function RoomPage({
             <Link href={`/rooms/${roomId}/members`}>Members</Link>
           </Button>
           <Button asChild variant="secondary" size="sm">
+            <Link href={`/rooms/${roomId}/cook`}>What can I cook?</Link>
+          </Button>
+          <Button asChild variant="secondary" size="sm">
             <Link href={`/rooms/${roomId}/shopping-list`}>Shopping list</Link>
           </Button>
         </div>
