@@ -2,13 +2,28 @@
 import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { Plus, X, Check, ChevronRight } from 'lucide-react'
 import { setPantryItemAction } from '@/app/cook/actions'
 import { matchRecipes, normalizeIng, type RecipeIngredients } from '@/lib/cook/match'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 function titleCase(s: string) {
   return s.replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+function CountBadge({ children, tone = 'primary' }: { children: React.ReactNode; tone?: 'primary' | 'secondary' | 'accent' }) {
+  const tones = {
+    primary: 'bg-primary/10 text-primary',
+    secondary: 'bg-secondary/15 text-secondary',
+    accent: 'bg-accent/25 text-accent-foreground',
+  }
+  return (
+    <span className={`inline-flex min-w-6 items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold ${tones[tone]}`}>
+      {children}
+    </span>
+  )
 }
 
 export function CookPlanner({
@@ -78,121 +93,156 @@ export function CookPlanner({
   const suggestions = universe.filter((label) => !have.has(normalizeIng(label)))
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Your ingredients — type to add (always available) */}
-      <section>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">
-          Ingredients I have ({have.size})
-        </h2>
-        <div className="mb-3 flex gap-2">
-          <Input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                onAdd()
-              }
-            }}
-            placeholder="Add an ingredient you have — e.g. eggs"
-          />
-          <Button type="button" onClick={onAdd}>Add</Button>
-        </div>
-        {haveList.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Type an ingredient and press Add (or Enter). Add a few and we&apos;ll match them to your recipes below.
-          </p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {haveList.map((key) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => remove(key)}
-                aria-label={`Remove ${displayOf(key)}`}
-                className="rounded-full border border-primary bg-primary px-3 py-1 text-sm text-primary-foreground hover:opacity-90"
-              >
-                {displayOf(key)} ✕
-              </button>
-            ))}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 font-serif text-lg text-primary">
+            <span aria-hidden>🧺</span> My ingredients <CountBadge>{have.size}</CountBadge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2">
+            <Input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  onAdd()
+                }
+              }}
+              placeholder="Add an ingredient you have — e.g. eggs"
+            />
+            <Button type="button" onClick={onAdd} className="shrink-0">
+              <Plus className="size-4" /> Add
+            </Button>
           </div>
-        )}
-      </section>
+          {haveList.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Type an ingredient and press Add (or Enter). Add a few and we&apos;ll match them to your recipes below.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {haveList.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => remove(key)}
+                  aria-label={`Remove ${displayOf(key)}`}
+                  className="group inline-flex items-center gap-1.5 rounded-full bg-primary py-1 pl-3 pr-2 text-sm text-primary-foreground shadow-sm transition hover:bg-primary/90"
+                >
+                  {displayOf(key)}
+                  <span className="inline-flex size-4 items-center justify-center rounded-full bg-primary-foreground/20 transition group-hover:bg-primary-foreground/30">
+                    <X className="size-3" />
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Quick add — exact ingredient names from your recipes (ensures matches) */}
       {suggestions.length > 0 && (
-        <section>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Quick add (ingredients from your recipes)
-          </h2>
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Quick add — ingredients from your recipes
+          </p>
           <div className="flex flex-wrap gap-2">
             {suggestions.map((label) => (
               <button
                 key={label}
                 type="button"
                 onClick={() => add(label)}
-                className="rounded-full border border-border bg-background px-3 py-1 text-sm hover:bg-muted"
+                className="inline-flex items-center gap-1 rounded-full border border-dashed border-primary/40 bg-background px-3 py-1 text-sm text-foreground transition hover:border-primary hover:bg-accent/15"
               >
-                + {label}
+                <Plus className="size-3.5 text-primary" /> {label}
               </button>
             ))}
           </div>
-        </section>
+        </div>
       )}
 
       {/* Matches */}
       {recipes.length === 0 ? (
-        <div className="rounded-xl border border-dashed p-8 text-center">
+        <div className="rounded-2xl border border-dashed p-10 text-center">
           <p className="text-sm text-muted-foreground">
             No recipes here yet — add some recipes and we&apos;ll show which ones you can cook from your ingredients.
           </p>
         </div>
       ) : (
-        <>
+        <div className="space-y-6">
+          {/* Ready to cook */}
           <section>
-            <h2 className="mb-2 font-serif text-lg text-primary">✅ Ready to cook ({ready.length})</h2>
+            <div className="mb-3 flex items-center gap-2">
+              <span className="inline-flex size-7 items-center justify-center rounded-full bg-secondary/15 text-secondary">
+                <Check className="size-4" />
+              </span>
+              <h2 className="font-serif text-lg text-primary">Ready to cook</h2>
+              <CountBadge tone="secondary">{ready.length}</CountBadge>
+            </div>
             {ready.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
                 Add the ingredients you have above — recipes you can make right now will appear here.
               </p>
             ) : (
-              <ul className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 {ready.map((r) => (
-                  <li key={r.id}>
-                    <Link
-                      href={`/recipes/${r.id}`}
-                      className="flex items-center justify-between rounded-lg border bg-card px-3 py-2 text-sm hover:bg-muted"
-                    >
-                      <span className="font-medium">{r.title}</span>
-                      <span className="text-xs text-muted-foreground">{r.total} ingredients</span>
-                    </Link>
-                  </li>
+                  <Link
+                    key={r.id}
+                    href={`/recipes/${r.id}`}
+                    className="group flex items-center justify-between gap-2 rounded-xl border border-secondary/30 bg-secondary/5 px-4 py-3 transition hover:border-secondary/60 hover:bg-secondary/10 hover:shadow-sm"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      <Check className="size-4 shrink-0 text-secondary" />
+                      <span className="truncate font-medium">{r.title}</span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+                      {r.total} items
+                      <ChevronRight className="size-4 transition group-hover:translate-x-0.5" />
+                    </span>
+                  </Link>
                 ))}
-              </ul>
+              </div>
             )}
           </section>
 
+          {/* Almost there */}
           {almost.length > 0 && (
             <section>
-              <h2 className="mb-2 font-serif text-lg text-primary">🟡 Almost there ({almost.length})</h2>
-              <ul className="space-y-2">
+              <div className="mb-3 flex items-center gap-2">
+                <span className="inline-flex size-7 items-center justify-center rounded-full bg-accent/25" aria-hidden>
+                  🟡
+                </span>
+                <h2 className="font-serif text-lg text-primary">Almost there</h2>
+                <CountBadge tone="accent">{almost.length}</CountBadge>
+              </div>
+              <div className="space-y-2">
                 {almost.map((r) => (
-                  <li key={r.id}>
-                    <Link
-                      href={`/recipes/${r.id}`}
-                      className="block rounded-lg border bg-card px-3 py-2 text-sm hover:bg-muted"
-                    >
-                      <span className="font-medium">{r.title}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        missing {r.missing.length}: {r.missing.map(displayOf).join(', ')}
-                      </span>
-                    </Link>
-                  </li>
+                  <Link
+                    key={r.id}
+                    href={`/recipes/${r.id}`}
+                    className="group block rounded-xl border bg-card px-4 py-3 transition hover:border-accent/50 hover:bg-accent/5 hover:shadow-sm"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate font-medium">{r.title}</span>
+                      <ChevronRight className="size-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5" />
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <span className="text-xs text-muted-foreground">Still need:</span>
+                      {r.missing.map((m) => (
+                        <span key={m} className="rounded-full bg-accent/20 px-2 py-0.5 text-xs font-medium text-foreground">
+                          {displayOf(m)}
+                        </span>
+                      ))}
+                    </div>
+                  </Link>
                 ))}
-              </ul>
+              </div>
             </section>
           )}
-        </>
+        </div>
       )}
     </div>
   )
