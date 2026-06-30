@@ -30,6 +30,7 @@ const EN: Record<string, string> = {
   'nav.recipes': 'Recipes',
   'nav.ingredients': 'Ingredients',
   'nav.shoppingList': 'Shopping List',
+  'nav.plan': 'Plan',
   'nav.signOut': 'Sign out',
   'nav.menu': 'Menu',
 
@@ -155,6 +156,23 @@ const EN: Record<string, string> = {
   'shop.merged': 'merged ×{n}',
   'shop.roomTitle': '🛒 {room} — Shopping list',
 
+  // meal planner
+  'plan.title': 'Meal Plan',
+  'plan.roomTitle': '{room} — Meal Plan',
+  'plan.thisWeek': 'This week',
+  'plan.prevWeek': 'Previous week',
+  'plan.nextWeek': 'Next week',
+  'plan.breakfast': 'Breakfast',
+  'plan.lunch': 'Lunch',
+  'plan.dinner': 'Dinner',
+  'plan.addMeal': 'Add',
+  'plan.pickRecipe': 'Pick a recipe',
+  'plan.forPeople': 'For how many people',
+  'plan.addWeekToList': 'Add this week to shopping list',
+  'plan.addedMeals': '{n} meals added to your shopping list',
+  'plan.empty': 'Nothing planned yet. Tap “Add” to plan a meal.',
+  'plan.remove': 'Remove',
+
   // aisles (shopping list section headings)
   'aisle.Produce': 'Produce',
   'aisle.Meat & Seafood': 'Meat & Seafood',
@@ -272,6 +290,7 @@ const ZH: Record<string, string> = {
   'nav.recipes': '食谱',
   'nav.ingredients': '食材',
   'nav.shoppingList': '购物清单',
+  'nav.plan': '计划',
   'nav.signOut': '退出登录',
   'nav.menu': '菜单',
 
@@ -389,6 +408,23 @@ const ZH: Record<string, string> = {
   'shop.itemTypeAria': '物品类型',
   'shop.merged': '已合并 ×{n}',
   'shop.roomTitle': '🛒 {room} — 购物清单',
+
+  // meal planner
+  'plan.title': '膳食计划',
+  'plan.roomTitle': '{room} — 膳食计划',
+  'plan.thisWeek': '本周',
+  'plan.prevWeek': '上一周',
+  'plan.nextWeek': '下一周',
+  'plan.breakfast': '早餐',
+  'plan.lunch': '午餐',
+  'plan.dinner': '晚餐',
+  'plan.addMeal': '添加',
+  'plan.pickRecipe': '选择食谱',
+  'plan.forPeople': '几人份',
+  'plan.addWeekToList': '把本周加入购物清单',
+  'plan.addedMeals': '已将 {n} 餐加入购物清单',
+  'plan.empty': '本周还没有计划。点击“添加”来安排一餐。',
+  'plan.remove': '移除',
 
   'aisle.Produce': '蔬果',
   'aisle.Meat & Seafood': '肉类与海鲜',
