@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Fraunces } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { I18nProvider } from "@/components/i18n-provider";
+import { ThemeProvider } from "@/components/theme-provider";
 import { getLocale } from "@/lib/i18n-server";
 import "./globals.css";
 
@@ -23,8 +24,10 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     <html lang={locale} className={`${inter.variable} ${fraunces.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased min-h-screen">
         <I18nProvider locale={locale}>
-          {children}
-          <Toaster richColors />
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            {children}
+            <Toaster richColors />
+          </ThemeProvider>
         </I18nProvider>
       </body>
     </html>

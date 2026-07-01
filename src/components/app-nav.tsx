@@ -6,6 +6,7 @@ import { RoomSwitcher } from '@/components/room-switcher'
 import { BackButton } from '@/components/back-button'
 import { NavLinks } from '@/components/nav-links'
 import { LanguageSwitcher } from '@/components/language-switcher'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { MobileMenu } from '@/components/mobile-menu'
 import { getT } from '@/lib/i18n-server'
 
@@ -30,6 +31,7 @@ export async function AppNav({ roomId }: { roomId?: string | null } = {}) {
             </form>
           </div>
           {/* Always visible (compact) */}
+          <ThemeToggle />
           <LanguageSwitcher />
           {/* Mobile: everything in a hamburger */}
           <MobileMenu rooms={myRooms} signOut={signOut} />

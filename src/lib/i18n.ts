@@ -228,6 +228,9 @@ const EN: Record<string, string> = {
   // language switcher
   'lang.switcherLabel': 'Language',
 
+  // theme
+  'theme.toggle': 'Toggle dark mode',
+
   // recipe card
   'card.noTimeSet': 'No time set',
   'card.servingsCount': '{n} servings',
@@ -474,6 +477,8 @@ const ZH: Record<string, string> = {
   'common.confirm': '确认',
 
   'lang.switcherLabel': '语言',
+
+  'theme.toggle': '切换深色模式',
 
   'card.noTimeSet': '未设置时间',
   'card.servingsCount': '{n} 份',
