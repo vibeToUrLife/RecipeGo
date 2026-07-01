@@ -55,24 +55,26 @@
 }
 
 .dark {
-  --background: oklch(0.24 0.02 66);
-  --foreground: oklch(0.95 0.01 80);
-  --card: oklch(0.29 0.025 66);
-  --card-foreground: oklch(0.95 0.01 80);
-  --popover: oklch(0.29 0.025 66);
-  --popover-foreground: oklch(0.95 0.01 80);
-  --primary: oklch(0.65 0.14 45);
-  --primary-foreground: oklch(0.24 0.02 66);
-  --secondary: oklch(0.62 0.09 121);
-  --secondary-foreground: oklch(0.18 0.015 66);
-  --muted: oklch(0.33 0.02 66);
-  --muted-foreground: oklch(0.74 0.02 80);
+  /* True-black ("OLED") theme: pure black page, near-black lifted surfaces so
+     cards/menus stay visible, warm terracotta accent kept for the brand. */
+  --background: oklch(0 0 0);
+  --foreground: oklch(0.96 0.005 80);
+  --card: oklch(0.15 0.004 80);
+  --card-foreground: oklch(0.96 0.005 80);
+  --popover: oklch(0.15 0.004 80);
+  --popover-foreground: oklch(0.96 0.005 80);
+  --primary: oklch(0.68 0.15 45);
+  --primary-foreground: oklch(0.14 0.01 60);
+  --secondary: oklch(0.64 0.10 121);
+  --secondary-foreground: oklch(0.14 0.01 60);
+  --muted: oklch(0.20 0.004 80);
+  --muted-foreground: oklch(0.72 0.01 80);
   --accent: oklch(0.72 0.12 54);
-  --accent-foreground: oklch(0.24 0.02 66);
+  --accent-foreground: oklch(0.14 0.01 60);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.65 0.14 45);
+  --border: oklch(1 0 0 / 14%);
+  --input: oklch(1 0 0 / 18%);
+  --ring: oklch(0.68 0.15 45);
 }
 
 @layer base {
