@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react'
 import { useT } from '@/components/i18n-provider'
 import type { ShoppingListRow } from '@/lib/data/shopping'
 import type { Unit } from '@/lib/types'
+import { findStackTarget, stackedTotal } from '@/lib/stack'
 import { AISLE_ORDER, categorizeIngredient } from '@/lib/aisles'
 import { UNIT_GROUPS } from '@/lib/unit-options'
 import { toggleItemAction, removeItemAction, completeShoppingAction, addShoppingItemAction } from '@/app/shopping-list/actions'
@@ -15,6 +16,22 @@ import { Input } from '@/components/ui/input'
 function fmtQty(q: number | null) {
   if (q === null) return ''
   return Number.isInteger(q) ? String(q) : q.toFixed(2).replace(/\.?0+$/, '')
+}
+
+// Mirror the server's stacking rule so the optimistic list matches what will
+// come back after revalidation (no duplicate row flicker on re-add). Only
+// unchecked rows of the same kind (food/daily) are eligible to stack onto.
+function stackInto(rows: ShoppingListRow[], added: ShoppingListRow): ShoppingListRow[] {
+  const eligible = rows.filter((r) => !r.checked && r.is_food === added.is_food)
+  const addition = { name: added.name, unit: added.unit, quantity: added.total_quantity }
+  const hit = findStackTarget(
+    eligible.map((r) => ({ name: r.name, unit: r.unit, totalQuantity: r.total_quantity })),
+    addition,
+  )
+  if (hit === -1) return [...rows, added]
+  const match = eligible[hit]
+  const total = stackedTotal({ name: match.name, unit: match.unit, totalQuantity: match.total_quantity }, addition)
+  return rows.map((r) => (r.id === match.id ? { ...r, total_quantity: total } : r))
 }
 
 export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; roomId?: string | null }) {
@@ -68,7 +85,7 @@ export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; 
     }
     start(async () => {
       try {
-        setOptimistic((prev) => [...prev, optimisticRow]) // shows instantly
+        setOptimistic((prev) => stackInto(prev, optimisticRow)) // shows instantly, stacking duplicates
         const res = await addShoppingItemAction(rid, { name: v, isFood, quantity: q, unit: u })
         if (res?.error) toast.error(res.error)
       } catch {

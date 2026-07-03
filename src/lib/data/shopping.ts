@@ -4,6 +4,7 @@ import { getRecipe } from '@/lib/data/recipes'
 import { addPantryItem } from '@/lib/data/pantry'
 import { scaleIngredients } from '@/lib/scaling'
 import { mergeIngredients } from '@/lib/merge'
+import { findStackTarget, stackedTotal } from '@/lib/stack'
 import { AISLE_ORDER, categorizeIngredient } from '@/lib/aisles'
 import type { IngredientInput, Aisle, Unit } from '@/lib/types'
 
@@ -86,6 +87,35 @@ export async function addShoppingItem(input: {
 }): Promise<void> {
   const supabase = await createClient()
   const clean = input.name.trim()
+
+  // Try to stack onto an existing UNCHECKED row of the same kind (food/daily)
+  // and name in the same list, so re-adding e.g. "鸡腿 3" combines with the
+  // earlier one instead of creating a separate duplicate line. Checked rows are
+  // left alone (they belong to the trip in progress).
+  const existingQ = supabase.from('shopping_list_items').select('*').eq('checked', false).eq('is_food', input.isFood)
+  const { data: existing, error: selError } = await (input.roomId
+    ? existingQ.eq('room_id', input.roomId)
+    : existingQ.is('room_id', null))
+  if (selError) throw selError
+
+  const rows = (existing ?? []) as ShoppingListRow[]
+  const added = { name: clean, unit: input.unit, quantity: input.quantity }
+  const idx = findStackTarget(
+    rows.map((r) => ({ name: r.name, unit: r.unit, totalQuantity: r.total_quantity })),
+    added,
+  )
+
+  if (idx !== -1) {
+    const match = rows[idx]
+    const total = stackedTotal({ name: match.name, unit: match.unit, totalQuantity: match.total_quantity }, added)
+    const { error } = await supabase
+      .from('shopping_list_items')
+      .update({ total_quantity: total })
+      .eq('id', match.id)
+    if (error) throw error
+    return
+  }
+
   const { error } = await supabase.from('shopping_list_items').insert({
     name: clean,
     total_quantity: input.quantity,
