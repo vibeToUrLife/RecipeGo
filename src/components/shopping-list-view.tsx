@@ -8,7 +8,7 @@ import type { Unit } from '@/lib/types'
 import { findStackTarget, stackedTotal } from '@/lib/stack'
 import { AISLE_ORDER, categorizeIngredient } from '@/lib/aisles'
 import { UNIT_GROUPS } from '@/lib/unit-options'
-import { toggleItemAction, removeItemAction, completeShoppingAction, addShoppingItemAction } from '@/app/shopping-list/actions'
+import { toggleItemAction, removeItemAction, completeShoppingAction, addShoppingItemAction, updateItemQuantityAction } from '@/app/shopping-list/actions'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -127,6 +127,18 @@ export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; 
     })
   }
 
+  function setQuantity(id: string, quantity: number | null) {
+    start(async () => {
+      setOptimistic((prev) => prev.map((i) => (i.id === id ? { ...i, total_quantity: quantity } : i)))
+      try {
+        const res = await updateItemQuantityAction(id, quantity)
+        if (res?.error) toast.error(res.error)
+      } catch {
+        toast.error(t('shop.qtyUpdateFailed'))
+      }
+    })
+  }
+
   function renderRow(row: ShoppingListRow) {
     return (
       <li key={row.id} className="flex items-center gap-3 border-b py-2 text-sm">
@@ -137,7 +149,7 @@ export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; 
             {t('shop.merged', { n: row.source_recipe_ids.length })}
           </span>
         )}
-        <span className="ml-auto text-muted-foreground">{fmtQty(row.total_quantity)} {row.unit ? t('unit.' + row.unit) : ''}</span>
+        <QtyEditor row={row} unitLabel={row.unit ? t('unit.' + row.unit) : ''} onCommit={setQuantity} />
         <button onClick={() => removeRow(row.id)} className="text-muted-foreground hover:text-destructive">✕</button>
       </li>
     )
@@ -261,5 +273,70 @@ export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; 
         </>
       )}
     </div>
+  )
+}
+
+// Inline, editable quantity for a row. Commits on blur or Enter; Escape reverts.
+// An empty field clears the quantity (unspecified). The unit is shown but not
+// editable here.
+function QtyEditor({
+  row,
+  unitLabel,
+  onCommit,
+}: {
+  row: ShoppingListRow
+  unitLabel: string
+  onCommit: (id: string, quantity: number | null) => void
+}) {
+  const t = useT()
+  const [val, setVal] = useState(fmtQty(row.total_quantity))
+  // Re-sync the field when the row's quantity changes elsewhere (stacking a
+  // duplicate, a server revalidation, or reverting a rejected edit).
+  const [synced, setSynced] = useState(row.total_quantity)
+  if (synced !== row.total_quantity) {
+    setSynced(row.total_quantity)
+    setVal(fmtQty(row.total_quantity))
+  }
+
+  function commit() {
+    const raw = val.trim()
+    const q = raw === '' ? null : Number(raw)
+    if (q !== null && (!Number.isFinite(q) || q < 0 || q > 100000)) {
+      setVal(fmtQty(row.total_quantity)) // reject invalid input, restore stored value
+      toast.error(t('shop.badQty'))
+      return
+    }
+    const next = q === null ? null : Math.round(q * 100) / 100
+    if (next === row.total_quantity) {
+      setVal(fmtQty(row.total_quantity)) // normalise display (e.g. "3.0" -> "3")
+      return
+    }
+    onCommit(row.id, next)
+  }
+
+  return (
+    <span className="ml-auto flex items-center gap-1 text-muted-foreground">
+      <Input
+        type="number"
+        inputMode="decimal"
+        min="0"
+        step="any"
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            e.currentTarget.blur()
+          } else if (e.key === 'Escape') {
+            setVal(fmtQty(row.total_quantity))
+            e.currentTarget.blur()
+          }
+        }}
+        aria-label={t('shop.editQtyAria')}
+        className="h-7 w-16 px-2 py-0 text-right"
+      />
+      {unitLabel && <span className="min-w-8">{unitLabel}</span>}
+    </span>
   )
 }

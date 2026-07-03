@@ -153,6 +153,8 @@ const EN: Record<string, string> = {
   'shop.quantityAria': 'Quantity',
   'shop.unitAria': 'Unit',
   'shop.itemTypeAria': 'Item type',
+  'shop.editQtyAria': 'Edit quantity',
+  'shop.qtyUpdateFailed': 'Could not update the quantity. Please try again.',
   'shop.merged': 'merged ×{n}',
   'shop.roomTitle': '🛒 {room} — Shopping list',
 
@@ -409,6 +411,8 @@ const ZH: Record<string, string> = {
   'shop.quantityAria': '数量',
   'shop.unitAria': '单位',
   'shop.itemTypeAria': '物品类型',
+  'shop.editQtyAria': '编辑数量',
+  'shop.qtyUpdateFailed': '无法更新数量，请重试。',
   'shop.merged': '已合并 ×{n}',
   'shop.roomTitle': '🛒 {room} — 购物清单',
 

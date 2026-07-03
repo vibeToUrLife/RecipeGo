@@ -158,6 +158,14 @@ export async function setItemChecked(id: string, checked: boolean): Promise<void
   if (error) throw error
 }
 
+// Adjust the quantity of an item already on the list. A null quantity means
+// "unspecified" (the amount is hidden); the unit is left unchanged.
+export async function setItemQuantity(id: string, quantity: number | null): Promise<void> {
+  const supabase = await createClient()
+  const { error } = await supabase.from('shopping_list_items').update({ total_quantity: quantity }).eq('id', id)
+  if (error) throw error
+}
+
 export async function removeItem(id: string): Promise<void> {
   const supabase = await createClient()
   const { error } = await supabase.from('shopping_list_items').delete().eq('id', id)

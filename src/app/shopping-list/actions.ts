@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache'
 import {
   addRecipeToList,
   setItemChecked,
+  setItemQuantity,
   removeItem,
   addShoppingItem,
   completeShopping,
@@ -21,6 +22,23 @@ export async function toggleItemAction(id: string, checked: boolean) {
 export async function removeItemAction(id: string) {
   await removeItem(id)
   revalidatePath('/', 'layout')
+}
+export async function updateItemQuantityAction(
+  id: string,
+  quantity: number | null,
+): Promise<{ ok?: true; error?: string }> {
+  let q = quantity
+  if (q != null) {
+    if (typeof q !== 'number' || !Number.isFinite(q) || q < 0 || q > 100000) {
+      return { error: 'Enter a valid quantity.' }
+    }
+    q = Math.round(q * 100) / 100
+  } else {
+    q = null
+  }
+  await setItemQuantity(id, q)
+  revalidatePath('/', 'layout')
+  return { ok: true }
 }
 export async function addShoppingItemAction(
   roomId: string | null,
