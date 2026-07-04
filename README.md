@@ -181,6 +181,7 @@ Run through this checklist after your first deployment (or after any migration c
 - [ ] **Shopping list merging and aisle grouping.** Add two recipes that share a common ingredient (e.g. both call for garlic) to the shopping list. The list shows a single garlic line with the combined quantity, and all ingredients are grouped by supermarket aisle.
 - [ ] **Check and clear.** Check off individual items on the shopping list → the progress bar advances. Click "Clear checked" → checked items are removed.
 - [ ] **Plan a week.** Open "Plan", add a recipe to Monday Dinner (set the servings), add another to Tuesday Lunch, then click "Add this week to shopping list" → the shopping list shows the combined, aisle-grouped ingredients, scaled to the servings you set. (Requires the `20260630190000_meal_plan.sql` migration to be applied.)
+- [ ] **Live room sync (two browsers).** Sign in as two different members of the same room in two separate browsers (or a normal + incognito window), both open the same room. In browser A: check a shopping-list item, add a recipe, rename the room, or accept an invite → browser B reflects the change within ~1 second **without reloading**. (Requires the `20260704120000_realtime_rooms.sql` migration to be applied and Realtime enabled for the project.)
 - [ ] **Sign out.** Click sign out → you are redirected to `/login`. Navigating to a protected page (e.g. `/recipes`) while signed out also redirects to `/login`.
 
 ---
