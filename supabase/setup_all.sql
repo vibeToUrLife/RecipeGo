@@ -312,3 +312,35 @@ as $$
 $$;
 
 grant execute on function public.get_shareable_recipe(uuid) to authenticated;
+
+-- ========== 6. REALTIME (room live sync) ==========
+-- (paste the two do-blocks from 20260704120000_realtime_rooms.sql here)
+do $$
+begin
+  if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    create publication supabase_realtime;
+  end if;
+end $$;
+
+do $$
+declare
+  t text;
+  room_tables text[] := array[
+    'recipes', 'shopping_list_items', 'meal_plan_entries',
+    'room_members', 'room_invites', 'rooms'
+  ];
+  pub_all boolean;
+begin
+  select puballtables into pub_all from pg_publication where pubname = 'supabase_realtime';
+  foreach t in array room_tables loop
+    if coalesce(pub_all, false) = false
+       and not exists (
+         select 1 from pg_publication_tables
+         where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
+       ) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+    execute format('alter table public.%I replica identity full', t);
+  end loop;
+end $$;
+
