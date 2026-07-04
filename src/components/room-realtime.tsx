@@ -64,7 +64,7 @@ export function RoomRealtime({ roomId }: { roomId: string }) {
       })
     }
 
-    void start()
+    start().catch(() => {})
 
     return () => {
       cancelled = true
