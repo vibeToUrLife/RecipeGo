@@ -333,6 +333,11 @@ declare
 begin
   select puballtables into pub_all from pg_publication where pubname = 'supabase_realtime';
   foreach t in array room_tables loop
+    -- Skip tables not present in this database (keeps the aggregate
+    -- setup_all.sql runnable even if a table's DDL was not folded in yet).
+    if to_regclass('public.' || t) is null then
+      continue;
+    end if;
     if coalesce(pub_all, false) = false
        and not exists (
          select 1 from pg_publication_tables
