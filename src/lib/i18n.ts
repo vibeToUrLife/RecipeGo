@@ -174,6 +174,11 @@ const EN: Record<string, string> = {
   'plan.addedMeals': '{n} meals added to your shopping list',
   'plan.empty': 'Nothing planned yet. Tap “Add” to plan a meal.',
   'plan.remove': 'Remove',
+  'plan.moveTo': 'Move to another day',
+  'plan.day': 'Day',
+  'plan.meal': 'Meal',
+  'plan.move': 'Move',
+  'plan.moved': 'Meal moved',
 
   // aisles (shopping list section headings)
   'aisle.Produce': 'Produce',
@@ -432,6 +437,11 @@ const ZH: Record<string, string> = {
   'plan.addedMeals': '已将 {n} 餐加入购物清单',
   'plan.empty': '本周还没有计划。点击“添加”来安排一餐。',
   'plan.remove': '移除',
+  'plan.moveTo': '移到其他日期',
+  'plan.day': '日期',
+  'plan.meal': '餐次',
+  'plan.move': '移动',
+  'plan.moved': '已移动',
 
   'aisle.Produce': '蔬果',
   'aisle.Meat & Seafood': '肉类与海鲜',

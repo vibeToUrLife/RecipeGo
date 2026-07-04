@@ -50,6 +50,20 @@ export async function updatePlanServings(id: string, servings: number): Promise<
   if (error) throw error
 }
 
+// Move an entry to a different day and/or meal slot.
+export async function movePlanEntry(
+  id: string,
+  planDate: string,
+  slot: MealSlot,
+): Promise<void> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('meal_plan_entries')
+    .update({ plan_date: planDate, meal_slot: slot })
+    .eq('id', id)
+  if (error) throw error
+}
+
 export async function removePlanEntry(id: string): Promise<void> {
   const supabase = await createClient()
   const { error } = await supabase.from('meal_plan_entries').delete().eq('id', id)

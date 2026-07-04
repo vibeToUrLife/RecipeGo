@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache'
 import {
   addPlanEntry,
   updatePlanServings,
+  movePlanEntry,
   removePlanEntry,
   addWeekToShoppingList,
 } from '@/lib/data/meal-plan'
@@ -46,6 +47,18 @@ export async function updatePlanServingsAction(
   const v = cleanServings(servings)
   if (v === null) return { error: 'Enter a valid number of people (1–1000).' }
   await updatePlanServings(id, v)
+  revalidatePath('/', 'layout')
+  return { ok: true }
+}
+
+export async function movePlanEntryAction(
+  id: string,
+  planDate: string,
+  slot: string,
+): Promise<{ ok?: true; error?: string }> {
+  if (!ISO_DATE.test(planDate ?? '')) return { error: 'Invalid date.' }
+  if (!MEAL_SLOTS.includes(slot as MealSlot)) return { error: 'Invalid meal.' }
+  await movePlanEntry(id, planDate, slot as MealSlot)
   revalidatePath('/', 'layout')
   return { ok: true }
 }
