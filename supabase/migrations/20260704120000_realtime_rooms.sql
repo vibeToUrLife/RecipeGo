@@ -26,6 +26,7 @@ begin
     -- Skip tables not present in this database (keeps the aggregate
     -- setup_all.sql runnable even if a table's DDL was not folded in yet).
     if to_regclass('public.' || t) is null then
+      raise notice 'realtime: skipping missing table %', t;
       continue;
     end if;
     -- Add to the publication only if it isn't already covered.

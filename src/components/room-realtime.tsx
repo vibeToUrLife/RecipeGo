@@ -64,7 +64,7 @@ export function RoomRealtime({ roomId }: { roomId: string }) {
       })
     }
 
-    start().catch(() => {})
+    start().catch((err) => console.warn('RoomRealtime setup failed', err))
 
     return () => {
       cancelled = true

@@ -266,6 +266,8 @@ export default async function RoomLayout({
   Realtime makes this moot for *other* members (they get a `recipes` event), and the
   acting user gets a fresh room page from the subscriber on return. No change required,
   but noted.
+- **Recipe moved *out* of a room is not pushed to the old room's members:** `updateRecipe` can change `room_id`. On that UPDATE, the change event matches the *new* record's `room_id`, so members still viewing the *old* room won't receive it and keep seeing the moved recipe until they navigate away. Moving a recipe *into* a room syncs correctly. Acceptable; the mover and the new room update fine.
+- **A removed member does not receive their own removal event:** the `room_members` DELETE is RLS-evaluated as the now-non-member, so they don't get the event and their stale room view persists until they navigate. Their subsequent server actions fail RLS anyway (no data leak). Consistent with presence being out of scope.
 
 ## Security
 
