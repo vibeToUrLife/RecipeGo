@@ -1,29 +1,20 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
 import type { Room } from '@/lib/db-types'
 import { useCurrentRoomId } from '@/lib/use-current-room-id'
-import { roomSectionKey, personalSectionKey } from '@/lib/nav-section'
 import { useT } from '@/components/i18n-provider'
 
 // Hamburger menu shown only on small screens (the inline nav is hidden there).
 export function MobileMenu({ rooms, signOut }: { rooms: Room[]; signOut: () => void }) {
   const [open, setOpen] = useState(false)
   const roomId = useCurrentRoomId()
-  const pathname = usePathname()
   const t = useT()
-  // Heading at the top of the menu: which room + page you're on right now.
-  // In a room: "Room name – Section". Personal: "My Recipes" (+ section on a
-  // sub-page; plain on the recipes home to avoid "My Recipes – Recipes").
+  // Each page option is prefixed with where it lives — the current room's name,
+  // or "My Recipes" when personal — e.g. "Southbay Kitchen – 计划".
   const currentRoom = roomId ? rooms.find((r) => r.id === roomId) : null
-  const contextLabel = roomId
-    ? `${currentRoom?.name ?? t('nav.myRecipes')} – ${t(roomSectionKey(pathname, roomId))}`
-    : (() => {
-        const key = personalSectionKey(pathname)
-        return key ? `${t('nav.myRecipes')} – ${t(key)}` : t('nav.myRecipes')
-      })()
+  const collectionLabel = currentRoom ? currentRoom.name : t('nav.myRecipes')
   const recipesHref = roomId ? `/rooms/${roomId}` : '/'
   const cookHref = roomId ? `/rooms/${roomId}/cook` : '/cook'
   const shoppingHref = roomId ? `/rooms/${roomId}/shopping-list` : '/shopping-list'
@@ -46,12 +37,10 @@ export function MobileMenu({ rooms, signOut }: { rooms: Room[]; signOut: () => v
         <>
           <div className="fixed inset-0 z-30" onClick={close} aria-hidden />
           <div className="absolute right-0 top-full z-40 mt-2 w-56 rounded-xl border bg-card p-2 text-foreground shadow-lg">
-            <p className="truncate px-3 py-2 text-sm font-semibold text-primary">{contextLabel}</p>
-            <div className="my-1 border-t" />
-            <Link href={recipesHref} onClick={close} className={item}>{t('nav.recipes')}</Link>
-            <Link href={planHref} onClick={close} className={item}>{t('nav.plan')}</Link>
-            <Link href={cookHref} onClick={close} className={item}>{t('nav.ingredients')}</Link>
-            <Link href={shoppingHref} onClick={close} className={item}>{t('nav.shoppingList')}</Link>
+            <Link href={recipesHref} onClick={close} className={item}>{`${collectionLabel} – ${t('nav.recipes')}`}</Link>
+            <Link href={planHref} onClick={close} className={item}>{`${collectionLabel} – ${t('nav.plan')}`}</Link>
+            <Link href={cookHref} onClick={close} className={item}>{`${collectionLabel} – ${t('nav.ingredients')}`}</Link>
+            <Link href={shoppingHref} onClick={close} className={item}>{`${collectionLabel} – ${t('nav.shoppingList')}`}</Link>
             <div className="my-1 border-t" />
             <Link href="/" onClick={close} className={item}>{t('nav.myRecipes')}</Link>
             {rooms.map((r) => (
