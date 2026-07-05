@@ -23,7 +23,7 @@ export default async function PlanPage({
       <AppNav />
       <main className="mx-auto max-w-3xl px-4 py-6">
         <h1 className="mb-4 font-serif text-2xl text-primary">{t('plan.title')}</h1>
-        <WeekPlanner weekStartISO={weekStartISO} todayWeekISO={todayWeekISO} entries={entries} recipes={recipes} roomId={null} />
+        <WeekPlanner weekStartISO={weekStartISO} todayWeekISO={todayWeekISO} entries={entries} recipes={recipes} roomId={null} weekStartsOn={weekStartsOn} />
       </main>
     </>
   )

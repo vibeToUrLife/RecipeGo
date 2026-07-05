@@ -12,17 +12,19 @@ import {
   groupEntriesByDayAndSlot, MEAL_SLOTS, type MealSlot,
 } from '@/lib/plan/week'
 import { addWeekToShoppingListAction } from '@/app/plan/actions'
+import { WeekStartSelector } from '@/components/week-start-selector'
 import type { Recipe, MealPlanEntryView } from '@/lib/db-types'
 import { useT, useLocale } from '@/components/i18n-provider'
 
 export function WeekPlanner({
-  weekStartISO, todayWeekISO, entries, recipes, roomId,
+  weekStartISO, todayWeekISO, entries, recipes, roomId, weekStartsOn,
 }: {
   weekStartISO: string
   todayWeekISO: string
   entries: MealPlanEntryView[]
   recipes: Recipe[]
   roomId: string | null
+  weekStartsOn: number
 }) {
   const t = useT()
   const locale = useLocale()
@@ -49,14 +51,17 @@ export function WeekPlanner({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-1">
-          <Button asChild variant="outline" size="icon" className="h-8 w-8" aria-label={t('plan.prevWeek')}>
-            <Link href={`${base}?week=${prev}`}><ChevronLeft className="size-4" /></Link>
-          </Button>
-          <Button asChild variant="outline" size="sm"><Link href={`${base}?week=${thisWeek}`}>{t('plan.thisWeek')}</Link></Button>
-          <Button asChild variant="outline" size="icon" className="h-8 w-8" aria-label={t('plan.nextWeek')}>
-            <Link href={`${base}?week=${next}`}><ChevronRight className="size-4" /></Link>
-          </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1">
+            <Button asChild variant="outline" size="icon" className="h-8 w-8" aria-label={t('plan.prevWeek')}>
+              <Link href={`${base}?week=${prev}`}><ChevronLeft className="size-4" /></Link>
+            </Button>
+            <Button asChild variant="outline" size="sm"><Link href={`${base}?week=${thisWeek}`}>{t('plan.thisWeek')}</Link></Button>
+            <Button asChild variant="outline" size="icon" className="h-8 w-8" aria-label={t('plan.nextWeek')}>
+              <Link href={`${base}?week=${next}`}><ChevronRight className="size-4" /></Link>
+            </Button>
+          </div>
+          <WeekStartSelector value={weekStartsOn} />
         </div>
         <Button
           disabled={pending || entries.length === 0}
