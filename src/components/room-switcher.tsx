@@ -38,7 +38,7 @@ export function RoomSwitcher({ rooms, roomId }: RoomSwitcherProps) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
         <DropdownMenuItem
-          render={<Link href="/" />}
+          render={<Link href="/?home=1" />}
           className={cn(!currentRoomId && 'font-semibold text-primary')}
         >
           {t('nav.myRecipes')}

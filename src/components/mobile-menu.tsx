@@ -43,7 +43,7 @@ export function MobileMenu({ rooms, signOut }: { rooms: Room[]; signOut: () => v
             <Link href={cookHref} onClick={close} className={item}>{`${collectionLabel} – ${t('nav.ingredients')}`}</Link>
             <Link href={shoppingHref} onClick={close} className={item}>{`${collectionLabel} – ${t('nav.shoppingList')}`}</Link>
             <div className="my-1 border-t" />
-            <Link href="/" onClick={close} className={cn(item, !roomId && 'font-semibold text-primary')}>{t('nav.myRecipes')}</Link>
+            <Link href="/?home=1" onClick={close} className={cn(item, !roomId && 'font-semibold text-primary')}>{t('nav.myRecipes')}</Link>
             {rooms.map((r) => (
               <Link key={r.id} href={`/rooms/${r.id}`} onClick={close} className={cn(item, roomId === r.id && 'font-semibold text-primary')}>{r.name}</Link>
             ))}

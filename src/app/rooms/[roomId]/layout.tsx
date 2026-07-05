@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { RoomRealtime } from '@/components/room-realtime'
+import { RememberCollection } from '@/components/remember-collection'
 
 export default async function RoomLayout({
   children,
@@ -12,6 +13,7 @@ export default async function RoomLayout({
   return (
     <>
       <RoomRealtime roomId={roomId} />
+      <RememberCollection value={roomId} />
       {children}
     </>
   )
