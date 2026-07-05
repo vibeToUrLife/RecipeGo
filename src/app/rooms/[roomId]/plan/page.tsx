@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { AppNav } from '@/components/app-nav'
+import { RoomSubNav } from '@/components/room-subnav'
 import { WeekPlanner } from '@/components/week-planner'
 import { getRoom } from '@/lib/data/rooms'
 import { getWeekPlan } from '@/lib/data/meal-plan'
@@ -29,6 +30,7 @@ export default async function RoomPlanPage({
       <AppNav roomId={roomId} />
       <main className="mx-auto max-w-3xl px-4 py-6">
         <h1 className="mb-4 font-serif text-2xl text-primary">{t('plan.roomTitle', { room: room.name })}</h1>
+        <RoomSubNav roomId={roomId} />
         <WeekPlanner weekStartISO={weekStartISO} todayWeekISO={todayWeekISO} entries={entries} recipes={recipes} roomId={roomId} />
       </main>
     </>
