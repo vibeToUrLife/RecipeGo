@@ -14,6 +14,17 @@ describe('startOfWeek', () => {
   it('returns the previous Monday for a Sunday', () => {
     expect(toISODate(startOfWeek(new Date(2026, 6, 5)))).toBe('2026-06-29') // Sun 5 Jul -> Mon 29 Jun
   })
+  it('supports a Sunday start (weekStartsOn=0)', () => {
+    expect(toISODate(startOfWeek(new Date(2026, 6, 1), 0))).toBe('2026-06-28') // Wed 1 Jul -> Sun 28 Jun
+    expect(toISODate(startOfWeek(new Date(2026, 6, 5), 0))).toBe('2026-07-05') // Sun 5 Jul -> same Sunday
+  })
+  it('supports a Wednesday start (weekStartsOn=3)', () => {
+    expect(toISODate(startOfWeek(new Date(2026, 6, 1), 3))).toBe('2026-07-01') // Wed 1 Jul -> same Wednesday
+    expect(toISODate(startOfWeek(new Date(2026, 5, 30), 3))).toBe('2026-06-24') // Tue 30 Jun -> prev Wed 24 Jun
+  })
+  it('defaults to a Monday start when weekStartsOn is omitted', () => {
+    expect(toISODate(startOfWeek(new Date(2026, 6, 1)))).toBe('2026-06-29') // Wed 1 Jul -> Mon 29 Jun
+  })
 })
 
 describe('weekDays', () => {
