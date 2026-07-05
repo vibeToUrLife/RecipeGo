@@ -350,3 +350,8 @@ begin
   end loop;
 end $$;
 
+-- ========== 7. WEEK-START PREFERENCE ==========
+alter table public.profiles
+  add column if not exists week_starts_on smallint not null default 1
+  check (week_starts_on between 0 and 6);
+
