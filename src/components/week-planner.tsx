@@ -47,6 +47,14 @@ export function WeekPlanner({
   const dayFmt = new Intl.DateTimeFormat(locale === 'zh' ? 'zh-CN' : 'en-GB', {
     weekday: 'short', day: 'numeric', month: 'short',
   })
+  // Date range of the week currently in view (start – end), shown between the
+  // arrows so the label changes as you navigate. Same pinned locale as dayFmt to
+  // stay hydration-safe (two .format() calls, matching the proven day-cell pattern).
+  const rangeFmt = new Intl.DateTimeFormat(locale === 'zh' ? 'zh-CN' : 'en-GB', {
+    day: 'numeric', month: 'short',
+  })
+  const weekRangeLabel = `${rangeFmt.format(weekStart)} – ${rangeFmt.format(days[days.length - 1])}`
+  const onCurrentWeek = weekStartISO === todayWeekISO
 
   return (
     <div className="flex flex-col gap-4">
@@ -56,10 +64,17 @@ export function WeekPlanner({
             <Button asChild variant="outline" size="icon" className="h-8 w-8" aria-label={t('plan.prevWeek')}>
               <Link href={`${base}?week=${prev}`}><ChevronLeft className="size-4" /></Link>
             </Button>
-            <Button asChild variant="outline" size="sm"><Link href={`${base}?week=${thisWeek}`}>{t('plan.thisWeek')}</Link></Button>
+            <span className="min-w-[8rem] text-center text-sm font-medium tabular-nums" aria-live="polite">
+              {weekRangeLabel}
+            </span>
             <Button asChild variant="outline" size="icon" className="h-8 w-8" aria-label={t('plan.nextWeek')}>
               <Link href={`${base}?week=${next}`}><ChevronRight className="size-4" /></Link>
             </Button>
+            {!onCurrentWeek && (
+              <Button asChild variant="outline" size="sm">
+                <Link href={`${base}?week=${thisWeek}`}>{t('plan.thisWeek')}</Link>
+              </Button>
+            )}
           </div>
           <WeekStartSelector value={weekStartsOn} />
         </div>
