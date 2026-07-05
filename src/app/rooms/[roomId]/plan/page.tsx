@@ -5,6 +5,7 @@ import { WeekPlanner } from '@/components/week-planner'
 import { getRoom } from '@/lib/data/rooms'
 import { getWeekPlan } from '@/lib/data/meal-plan'
 import { listRecipes } from '@/lib/data/recipes'
+import { getWeekStartsOn } from '@/lib/data/profile'
 import { startOfWeek, fromISODate, toISODate } from '@/lib/plan/week'
 import { getT } from '@/lib/i18n-server'
 
@@ -19,8 +20,9 @@ export default async function RoomPlanPage({
 }) {
   const { roomId } = await params
   const { week } = await searchParams
-  const todayWeekISO = toISODate(startOfWeek(new Date()))
-  const weekStartISO = week && ISO.test(week) ? toISODate(startOfWeek(fromISODate(week))) : todayWeekISO
+  const weekStartsOn = await getWeekStartsOn()
+  const todayWeekISO = toISODate(startOfWeek(new Date(), weekStartsOn))
+  const weekStartISO = week && ISO.test(week) ? toISODate(startOfWeek(fromISODate(week), weekStartsOn)) : todayWeekISO
   const [room, entries, recipes, t] = await Promise.all([
     getRoom(roomId), getWeekPlan(weekStartISO, roomId), listRecipes(roomId), getT(),
   ])

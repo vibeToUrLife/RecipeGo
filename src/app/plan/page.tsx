@@ -2,6 +2,7 @@ import { AppNav } from '@/components/app-nav'
 import { WeekPlanner } from '@/components/week-planner'
 import { getWeekPlan } from '@/lib/data/meal-plan'
 import { listRecipes } from '@/lib/data/recipes'
+import { getWeekStartsOn } from '@/lib/data/profile'
 import { startOfWeek, fromISODate, toISODate } from '@/lib/plan/week'
 import { getT } from '@/lib/i18n-server'
 
@@ -13,8 +14,9 @@ export default async function PlanPage({
   searchParams: Promise<{ week?: string }>
 }) {
   const { week } = await searchParams
-  const todayWeekISO = toISODate(startOfWeek(new Date()))
-  const weekStartISO = week && ISO.test(week) ? toISODate(startOfWeek(fromISODate(week))) : todayWeekISO
+  const weekStartsOn = await getWeekStartsOn()
+  const todayWeekISO = toISODate(startOfWeek(new Date(), weekStartsOn))
+  const weekStartISO = week && ISO.test(week) ? toISODate(startOfWeek(fromISODate(week), weekStartsOn)) : todayWeekISO
   const [entries, recipes, t] = await Promise.all([getWeekPlan(weekStartISO), listRecipes(), getT()])
   return (
     <>
