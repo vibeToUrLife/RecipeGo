@@ -26,4 +26,22 @@ describe('MobileMenu page options', () => {
     fireEvent.click(screen.getByRole('button'))
     expect(screen.getByText('nav.myRecipes – nav.plan')).toBeInTheDocument()
   })
+
+  it('highlights the current room in the switcher list', () => {
+    nav.roomId = 'r1'
+    render(<MobileMenu rooms={rooms} signOut={() => {}} />)
+    fireEvent.click(screen.getByRole('button'))
+    // Exact text "Southbay Kitchen" (no "– section") = the switcher entry.
+    expect(screen.getByText('Southbay Kitchen').className).toContain('text-primary')
+    // The personal entry is not highlighted while in a room.
+    expect(screen.getByText('nav.myRecipes').className).not.toContain('text-primary')
+  })
+
+  it('highlights My Recipes when not in a room', () => {
+    nav.roomId = null
+    render(<MobileMenu rooms={rooms} signOut={() => {}} />)
+    fireEvent.click(screen.getByRole('button'))
+    expect(screen.getByText('nav.myRecipes').className).toContain('text-primary')
+    expect(screen.getByText('Southbay Kitchen').className).not.toContain('text-primary')
+  })
 })

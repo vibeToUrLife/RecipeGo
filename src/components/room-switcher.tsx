@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ChevronDown } from 'lucide-react'
+import { Check, ChevronDown } from 'lucide-react'
 import type { Room } from '@/lib/db-types'
 import { useCurrentRoomId } from '@/lib/use-current-room-id'
 import {
@@ -37,12 +37,26 @@ export function RoomSwitcher({ rooms, roomId }: RoomSwitcherProps) {
         <ChevronDown className="size-3.5 opacity-60" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
-        <DropdownMenuItem render={<Link href="/" />}>{t('nav.myRecipes')}</DropdownMenuItem>
-        {rooms.map((room) => (
-          <DropdownMenuItem key={room.id} render={<Link href={`/rooms/${room.id}`} />}>
-            {room.name}
-          </DropdownMenuItem>
-        ))}
+        <DropdownMenuItem
+          render={<Link href="/" />}
+          className={cn(!currentRoomId && 'font-semibold text-primary')}
+        >
+          {t('nav.myRecipes')}
+          {!currentRoomId && <Check className="ml-auto size-4" />}
+        </DropdownMenuItem>
+        {rooms.map((room) => {
+          const active = room.id === currentRoomId
+          return (
+            <DropdownMenuItem
+              key={room.id}
+              render={<Link href={`/rooms/${room.id}`} />}
+              className={cn(active && 'font-semibold text-primary')}
+            >
+              {room.name}
+              {active && <Check className="ml-auto size-4" />}
+            </DropdownMenuItem>
+          )
+        })}
         <DropdownMenuSeparator />
         <DropdownMenuItem render={<Link href="/rooms" />}>{t('nav.manageRooms')}</DropdownMenuItem>
       </DropdownMenuContent>
