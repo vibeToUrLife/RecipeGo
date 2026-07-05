@@ -1,5 +1,6 @@
 'use server'
 import { revalidatePath } from 'next/cache'
+import { createClient } from '@/utils/supabase/server'
 import {
   addPlanEntry,
   updatePlanServings,
@@ -75,4 +76,24 @@ export async function addWeekToShoppingListAction(
   const result = await addWeekToShoppingList(weekStartISO, roomId)
   revalidatePath('/', 'layout')
   return result
+}
+
+export async function setWeekStartAction(
+  weekStartsOn: number,
+): Promise<{ ok?: true; error?: string }> {
+  if (!Number.isInteger(weekStartsOn) || weekStartsOn < 0 || weekStartsOn > 6) {
+    return { error: 'Invalid day.' }
+  }
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in.' }
+  const { error } = await supabase
+    .from('profiles')
+    .update({ week_starts_on: weekStartsOn })
+    .eq('id', user.id)
+  if (error) return { error: error.message }
+  revalidatePath('/', 'layout')
+  return { ok: true }
 }

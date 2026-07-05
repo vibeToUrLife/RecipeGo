@@ -11,6 +11,10 @@ export function MobileMenu({ rooms, signOut }: { rooms: Room[]; signOut: () => v
   const [open, setOpen] = useState(false)
   const roomId = useCurrentRoomId()
   const t = useT()
+  // Each page option is prefixed with where it lives — the current room's name,
+  // or "My Recipes" when personal — e.g. "Southbay Kitchen – 计划".
+  const currentRoom = roomId ? rooms.find((r) => r.id === roomId) : null
+  const collectionLabel = currentRoom ? currentRoom.name : t('nav.myRecipes')
   const recipesHref = roomId ? `/rooms/${roomId}` : '/'
   const cookHref = roomId ? `/rooms/${roomId}/cook` : '/cook'
   const shoppingHref = roomId ? `/rooms/${roomId}/shopping-list` : '/shopping-list'
@@ -33,10 +37,10 @@ export function MobileMenu({ rooms, signOut }: { rooms: Room[]; signOut: () => v
         <>
           <div className="fixed inset-0 z-30" onClick={close} aria-hidden />
           <div className="absolute right-0 top-full z-40 mt-2 w-56 rounded-xl border bg-card p-2 text-foreground shadow-lg">
-            <Link href={recipesHref} onClick={close} className={item}>{t('nav.recipes')}</Link>
-            <Link href={planHref} onClick={close} className={item}>{t('nav.plan')}</Link>
-            <Link href={cookHref} onClick={close} className={item}>{t('nav.ingredients')}</Link>
-            <Link href={shoppingHref} onClick={close} className={item}>{t('nav.shoppingList')}</Link>
+            <Link href={recipesHref} onClick={close} className={item}>{`${collectionLabel} – ${t('nav.recipes')}`}</Link>
+            <Link href={planHref} onClick={close} className={item}>{`${collectionLabel} – ${t('nav.plan')}`}</Link>
+            <Link href={cookHref} onClick={close} className={item}>{`${collectionLabel} – ${t('nav.ingredients')}`}</Link>
+            <Link href={shoppingHref} onClick={close} className={item}>{`${collectionLabel} – ${t('nav.shoppingList')}`}</Link>
             <div className="my-1 border-t" />
             <Link href="/" onClick={close} className={item}>{t('nav.myRecipes')}</Link>
             {rooms.map((r) => (

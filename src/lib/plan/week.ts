@@ -2,10 +2,11 @@
 export const MEAL_SLOTS = ['breakfast', 'lunch', 'dinner'] as const
 export type MealSlot = (typeof MEAL_SLOTS)[number]
 
-// Monday 00:00 (local time) of the week containing `date`.
-export function startOfWeek(date: Date): Date {
+// Start (00:00 local) of the week containing `date`.
+// weekStartsOn: 0=Sunday … 6=Saturday. Default 1 = Monday.
+export function startOfWeek(date: Date, weekStartsOn = 1): Date {
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  const diff = (d.getDay() + 6) % 7 // days since Monday (Sun=0 -> 6)
+  const diff = (d.getDay() - weekStartsOn + 7) % 7 // days since the chosen start day
   d.setDate(d.getDate() - diff)
   return d
 }
