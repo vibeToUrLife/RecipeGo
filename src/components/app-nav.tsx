@@ -34,7 +34,7 @@ export async function AppNav({ roomId }: { roomId?: string | null } = {}) {
           <ThemeToggle />
           <LanguageSwitcher />
           {/* Mobile: everything in a hamburger */}
-          <MobileMenu rooms={myRooms} signOut={signOut} />
+          <MobileMenu rooms={myRooms} signOut={signOut} roomId={roomId} />
         </div>
       </nav>
     </header>

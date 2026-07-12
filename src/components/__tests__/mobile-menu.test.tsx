@@ -44,4 +44,13 @@ describe('MobileMenu page options', () => {
     expect(screen.getByText('nav.myRecipes').className).toContain('text-primary')
     expect(screen.getByText('Southbay Kitchen').className).not.toContain('text-primary')
   })
+
+  it('uses the explicit roomId prop over the URL (e.g. a recipe detail page)', () => {
+    // No room in the URL — but the recipe's page tells us which room it's in.
+    nav.roomId = null
+    render(<MobileMenu rooms={rooms} signOut={() => {}} roomId="r1" />)
+    fireEvent.click(screen.getByRole('button'))
+    expect(screen.getByText('Southbay Kitchen – nav.recipes')).toBeInTheDocument()
+    expect(screen.getByText('Southbay Kitchen').className).toContain('text-primary')
+  })
 })

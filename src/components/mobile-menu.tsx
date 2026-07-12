@@ -8,9 +8,13 @@ import { useCurrentRoomId } from '@/lib/use-current-room-id'
 import { useT } from '@/components/i18n-provider'
 
 // Hamburger menu shown only on small screens (the inline nav is hidden there).
-export function MobileMenu({ rooms, signOut }: { rooms: Room[]; signOut: () => void }) {
+// Pages that know their room (e.g. a recipe's detail/edit page) can pass roomId
+// so the menu keeps the room context even when it isn't in the URL.
+export function MobileMenu({ rooms, signOut, roomId: roomIdProp }: { rooms: Room[]; signOut: () => void; roomId?: string | null }) {
   const [open, setOpen] = useState(false)
-  const roomId = useCurrentRoomId()
+  const hookRoomId = useCurrentRoomId()
+  // An explicit prop (even null = personal) wins over the URL-derived value.
+  const roomId = roomIdProp !== undefined ? roomIdProp : hookRoomId
   const t = useT()
   // Each page option is prefixed with where it lives — the current room's name,
   // or "My Recipes" when personal — e.g. "Southbay Kitchen – 计划".
