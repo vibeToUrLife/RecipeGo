@@ -8,7 +8,9 @@ import {
   removePlanEntry,
   addWeekToShoppingList,
 } from '@/lib/data/meal-plan'
+import { getRecipe } from '@/lib/data/recipes'
 import { MEAL_SLOTS, type MealSlot } from '@/lib/plan/week'
+import type { RecipeWithChildren } from '@/lib/db-types'
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -76,6 +78,15 @@ export async function addWeekToShoppingListAction(
   const result = await addWeekToShoppingList(weekStartISO, roomId)
   revalidatePath('/', 'layout')
   return result
+}
+
+// Full recipe (with ingredients + steps) for the "view recipe" modal reachable
+// from a planned meal. RLS scopes the read; a missing/forbidden id returns null.
+export async function getPlannedRecipeAction(
+  recipeId: string,
+): Promise<RecipeWithChildren | null> {
+  if (!recipeId) return null
+  return getRecipe(recipeId)
 }
 
 export async function setWeekStartAction(

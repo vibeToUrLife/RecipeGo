@@ -187,6 +187,9 @@ const EN: Record<string, string> = {
   'plan.meal': 'Meal',
   'plan.move': 'Move',
   'plan.moved': 'Meal moved',
+  'plan.viewRecipe': 'View recipe',
+  'plan.editMeal': 'Edit meal',
+  'plan.recipeLoadFailed': 'Couldn’t load recipe',
 
   // aisles (shopping list section headings)
   'aisle.Produce': 'Produce',
@@ -458,6 +461,9 @@ const ZH: Record<string, string> = {
   'plan.meal': '餐次',
   'plan.move': '移动',
   'plan.moved': '已移动',
+  'plan.viewRecipe': '查看食谱',
+  'plan.editMeal': '编辑餐次',
+  'plan.recipeLoadFailed': '无法加载食谱',
 
   'aisle.Produce': '蔬果',
   'aisle.Meat & Seafood': '肉类与海鲜',

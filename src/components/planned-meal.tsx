@@ -2,9 +2,11 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { Pencil } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { RecipeViewDialog } from '@/components/recipe-view-dialog'
 import {
   updatePlanServingsAction,
   movePlanEntryAction,
@@ -18,6 +20,7 @@ export function PlannedMeal({ entry }: { entry: MealPlanEntryView }) {
   const t = useT()
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [viewOpen, setViewOpen] = useState(false)
   const [servings, setServings] = useState(entry.servings)
   const [date, setDate] = useState(entry.plan_date)
   const [slot, setSlot] = useState<MealSlot>(entry.meal_slot)
@@ -38,14 +41,33 @@ export function PlannedMeal({ entry }: { entry: MealPlanEntryView }) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={openDialog}
-        className="flex w-full items-center justify-between gap-1 rounded-md bg-background px-2 py-1 text-left text-sm hover:bg-muted"
-      >
-        <span className="truncate">{entry.recipe_title}</span>
-        <span className="shrink-0 text-muted-foreground">× {entry.servings}</span>
-      </button>
+      <div className="flex items-stretch overflow-hidden rounded-md bg-background text-sm">
+        <button
+          type="button"
+          onClick={() => setViewOpen(true)}
+          className="flex min-w-0 flex-1 items-center justify-between gap-1 px-2 py-1 text-left hover:bg-muted"
+          aria-label={t('plan.viewRecipe')}
+        >
+          <span className="truncate">{entry.recipe_title}</span>
+          <span className="shrink-0 text-muted-foreground">× {entry.servings}</span>
+        </button>
+        <button
+          type="button"
+          onClick={openDialog}
+          aria-label={t('plan.editMeal')}
+          className="flex shrink-0 items-center border-l px-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <Pencil className="size-3.5" />
+        </button>
+      </div>
+      {viewOpen && (
+        <RecipeViewDialog
+          recipeId={entry.recipe_id}
+          title={entry.recipe_title}
+          plannedServings={entry.servings}
+          onClose={() => setViewOpen(false)}
+        />
+      )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>{entry.recipe_title}</DialogTitle></DialogHeader>
