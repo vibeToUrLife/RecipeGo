@@ -1,5 +1,6 @@
 'use client'
 import { useState, useRef, useActionState } from 'react'
+import { GripVertical } from 'lucide-react'
 import { saveRecipe } from '@/app/recipes/actions'
 import type { RecipeWithChildren, Room } from '@/lib/db-types'
 import type { ImportedRecipe } from '@/lib/recipe/types'
@@ -36,6 +37,28 @@ export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?
   )
   const t = useT()
   const [state, formAction, isPending] = useActionState(saveRecipe, null)
+
+  // Drag-and-drop step reordering (wrote a step in the wrong place → drag it,
+  // no delete-and-retype). Native HTML5 DnD; a row only becomes draggable while
+  // its grip is pressed (armed) so dragging never hijacks text selection in the
+  // textareas. Rows are keyed, so reordering state moves the real DOM nodes —
+  // typed (uncontrolled) text travels with them and the form submits in the new
+  // order; step numbers are reassigned on save.
+  const [armedStepId, setArmedStepId] = useState<string | null>(null)
+  const [dragStepId, setDragStepId] = useState<string | null>(null)
+
+  function moveStep(fromId: string, toId: string) {
+    if (fromId === toId) return
+    setSteps((prev) => {
+      const from = prev.findIndex((r) => r.id === fromId)
+      const to = prev.findIndex((r) => r.id === toId)
+      if (from < 0 || to < 0 || from === to) return prev
+      const next = [...prev]
+      const [moved] = next.splice(from, 1)
+      next.splice(to, 0, moved)
+      return next
+    })
+  }
 
   return (
     <form action={formAction} className="space-y-5">
@@ -101,7 +124,31 @@ export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?
       <fieldset className="space-y-2">
         <legend className="text-sm font-semibold">{t('form.method')}</legend>
         {steps.map((row, i) => (
-          <div key={row.id} className="flex gap-2">
+          <div
+            key={row.id}
+            draggable={armedStepId === row.id}
+            onDragStart={(e) => {
+              setDragStepId(row.id)
+              e.dataTransfer.effectAllowed = 'move'
+              e.dataTransfer.setData('text/plain', '') // Firefox needs data to start a drag
+            }}
+            onDragEnter={() => { if (dragStepId) moveStep(dragStepId, row.id) }}
+            onDragOver={(e) => { if (dragStepId) { e.preventDefault(); e.dataTransfer.dropEffect = 'move' } }}
+            onDrop={(e) => e.preventDefault()}
+            onDragEnd={() => { setDragStepId(null); setArmedStepId(null) }}
+            className={`flex gap-2 rounded-md ${dragStepId === row.id ? 'opacity-50 ring-2 ring-primary/40' : ''}`}
+          >
+            <button
+              type="button"
+              aria-label={t('form.dragToReorder')}
+              title={t('form.dragToReorder')}
+              onPointerDown={() => setArmedStepId(row.id)}
+              onPointerUp={() => setArmedStepId(null)}
+              onPointerCancel={() => setArmedStepId(null)}
+              className="cursor-grab touch-none pt-2.5 text-muted-foreground hover:text-foreground active:cursor-grabbing"
+            >
+              <GripVertical className="size-4" />
+            </button>
             <span className="pt-2 text-sm text-muted-foreground">{i + 1}.</span>
             <div className="flex-1 space-y-2">
               <Textarea name="step_text" placeholder={t('form.describeStep')} defaultValue={row.text} />
