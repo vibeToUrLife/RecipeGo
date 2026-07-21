@@ -70,6 +70,23 @@ describe('RecipeForm step drag-and-drop', () => {
     expect(rows[0]).toHaveAttribute('draggable', 'false')
   })
 
+  it('moves a step with the mobile up/down arrows and disables them at the edges', () => {
+    render(<RecipeForm recipe={recipe} rooms={[]} />)
+    const ups = screen.getAllByLabelText('form.moveStepUp')
+    const downs = screen.getAllByLabelText('form.moveStepDown')
+
+    // Edge rows can't move past the ends.
+    expect(ups[0]).toBeDisabled()
+    expect(downs[2]).toBeDisabled()
+    expect(ups[1]).toBeEnabled()
+
+    // "Step A" down one → B, A, C; then "Step C" up one → B, C, A.
+    fireEvent.click(downs[0])
+    expect(stepTexts()).toEqual(['Step B', 'Step A', 'Step C'])
+    fireEvent.click(screen.getAllByLabelText('form.moveStepUp')[2])
+    expect(stepTexts()).toEqual(['Step B', 'Step C', 'Step A'])
+  })
+
   it('does not reorder when no step drag is in flight (e.g. dragging a file over the form)', () => {
     render(<RecipeForm recipe={recipe} rooms={[]} />)
     const handles = screen.getAllByLabelText('form.dragToReorder')

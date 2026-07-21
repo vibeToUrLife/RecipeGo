@@ -1,6 +1,6 @@
 'use client'
 import { useState, useRef, useActionState } from 'react'
-import { GripVertical } from 'lucide-react'
+import { ChevronDown, ChevronUp, GripVertical } from 'lucide-react'
 import { saveRecipe } from '@/app/recipes/actions'
 import type { RecipeWithChildren, Room } from '@/lib/db-types'
 import type { ImportedRecipe } from '@/lib/recipe/types'
@@ -145,10 +145,31 @@ export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?
               onPointerDown={() => setArmedStepId(row.id)}
               onPointerUp={() => setArmedStepId(null)}
               onPointerCancel={() => setArmedStepId(null)}
-              className="cursor-grab touch-none pt-2.5 text-muted-foreground hover:text-foreground active:cursor-grabbing"
+              className="hidden cursor-grab touch-none pt-2.5 text-muted-foreground hover:text-foreground active:cursor-grabbing sm:block"
             >
               <GripVertical className="size-4" />
             </button>
+            {/* Touch drag is unreliable on phones, so small screens swap the grip for up/down arrows. */}
+            <div className="flex flex-col pt-1 sm:hidden">
+              <button
+                type="button"
+                aria-label={t('form.moveStepUp')}
+                disabled={i === 0}
+                onClick={() => { if (i > 0) moveStep(row.id, steps[i - 1].id) }}
+                className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30"
+              >
+                <ChevronUp className="size-4" />
+              </button>
+              <button
+                type="button"
+                aria-label={t('form.moveStepDown')}
+                disabled={i === steps.length - 1}
+                onClick={() => { if (i < steps.length - 1) moveStep(row.id, steps[i + 1].id) }}
+                className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30"
+              >
+                <ChevronDown className="size-4" />
+              </button>
+            </div>
             <span className="pt-2 text-sm text-muted-foreground">{i + 1}.</span>
             <div className="flex-1 space-y-2">
               <Textarea name="step_text" placeholder={t('form.describeStep')} defaultValue={row.text} />
