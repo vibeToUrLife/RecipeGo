@@ -1,0 +1,119 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
+}
+
+:root {
+  --radius: 0.75rem;
+  --background: oklch(0.975 0.012 79.79);
+  --foreground: oklch(0.311 0.027 66.57);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.311 0.027 66.57);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.311 0.027 66.57);
+  --primary: oklch(0.559 0.139 41.75);
+  --primary-foreground: oklch(0.975 0.012 79.79);
+  --secondary: oklch(0.608 0.092 121.21);
+  --secondary-foreground: oklch(0.975 0.012 79.79);
+  --muted: oklch(0.936 0.019 83.06);
+  --muted-foreground: oklch(0.50 0.03 66);
+  --accent: oklch(0.706 0.118 53.83);
+  --accent-foreground: oklch(0.311 0.027 66.57);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.897 0.025 83.42);
+  --input: oklch(0.897 0.025 83.42);
+  --ring: oklch(0.559 0.139 41.75);
+}
+
+.dark {
+  /* True-black ("OLED") theme: pure black page, near-black lifted surfaces so
+     cards/menus stay visible, warm terracotta accent kept for the brand. */
+  --background: oklch(0 0 0);
+  --foreground: oklch(0.96 0.005 80);
+  --card: oklch(0.15 0.004 80);
+  --card-foreground: oklch(0.96 0.005 80);
+  --popover: oklch(0.15 0.004 80);
+  --popover-foreground: oklch(0.96 0.005 80);
+  --primary: oklch(0.68 0.15 45);
+  --primary-foreground: oklch(0.14 0.01 60);
+  --secondary: oklch(0.64 0.10 121);
+  --secondary-foreground: oklch(0.14 0.01 60);
+  --muted: oklch(0.20 0.004 80);
+  --muted-foreground: oklch(0.72 0.01 80);
+  --accent: oklch(0.72 0.12 54);
+  --accent-foreground: oklch(0.14 0.01 60);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 14%);
+  --input: oklch(1 0 0 / 18%);
+  --ring: oklch(0.68 0.15 45);
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  body { @apply bg-background text-foreground font-sans; }
+  h1, h2, h3, h4 { @apply font-serif; }
+}
+
+/* Print / "Save as PDF" (the Print buttons on the plan and recipe pages call
+   window.print(); the browser dialog's PDF destination goes through here too).
+   Screen-only chrome — nav, dialogs, action buttons — opts out per component
+   with Tailwind's `print:hidden`; this block only fixes the palette, because
+   the dark theme would otherwise put white ink on a black sheet. Backgrounds
+   aren't printed unless the user ticks "Background graphics", so structure has
+   to come from borders and text, not fills. */
+@media print {
+  :root,
+  .dark {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.22 0.02 66);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.22 0.02 66);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.22 0.02 66);
+    --primary: oklch(0.45 0.13 41.75);
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.45 0.09 121.21);
+    --secondary-foreground: oklch(1 0 0);
+    --muted: oklch(0.95 0.008 83);
+    --muted-foreground: oklch(0.42 0.02 66);
+    --accent: oklch(0.60 0.12 53.83);
+    --accent-foreground: oklch(0.22 0.02 66);
+    --destructive: oklch(0.50 0.22 27.325);
+    --border: oklch(0.70 0.02 83.42);
+    --input: oklch(0.70 0.02 83.42);
+    --ring: oklch(0.45 0.13 41.75);
+  }
+
+  @page { margin: 14mm; }
+
+  html, body { background: #fff; }
+}

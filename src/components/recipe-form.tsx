@@ -1,0 +1,239 @@
+'use client'
+import { useState, useRef, useActionState, type KeyboardEvent } from 'react'
+import { flushSync } from 'react-dom'
+import { ChevronDown, ChevronUp, GripVertical } from 'lucide-react'
+import { saveRecipe } from '@/app/recipes/actions'
+import type { RecipeWithChildren, Room } from '@/lib/db-types'
+import type { ImportedRecipe } from '@/lib/recipe/types'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { ImageUpload } from '@/components/image-upload'
+import { parseIngredientLine } from '@/lib/recipe/parse-ingredient'
+import { UNIT_GROUPS } from '@/lib/unit-options'
+import { useT } from '@/components/i18n-provider'
+
+type Row = { id: string; name: string; qty: string; unit: string }
+type StepRow = { id: string; text: string; image: string }
+
+export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?: RecipeWithChildren; imported?: ImportedRecipe | null; rooms: Room[]; defaultRoomId?: string | null }) {
+  const [ings, setIngs] = useState<Row[]>(
+    imported?.structuredIngredients?.length
+      ? imported.structuredIngredients.map((ing, i) => ({ id: `ing-${i}`, name: ing.name, qty: ing.quantity?.toString() ?? '', unit: ing.unit ?? '' }))
+      : imported && imported.ingredients.length
+        ? imported.ingredients.map((line, i) => { const p = parseIngredientLine(line); return { id: `ing-${i}`, name: p.name, qty: p.quantity?.toString() ?? '', unit: p.unit ?? '' } })
+        : (recipe?.ingredients.map((ing, i) => ({ id: `ing-${i}`, name: ing.name, qty: ing.quantity?.toString() ?? '', unit: ing.unit ?? '' })) ?? [{ id: 'ing-0', name: '', qty: '', unit: '' }])
+  )
+  const [steps, setSteps] = useState<StepRow[]>(
+    imported && imported.instructions.length
+      ? imported.instructions.map((text, i) => ({ id: `step-${i}`, text, image: '' }))
+      : (recipe?.steps.map((s, i) => ({ id: `step-${i}`, text: s.text, image: s.image_path ?? '' })) ?? [{ id: 'step-0', text: '', image: '' }])
+  )
+  const nextIngId = useRef(
+    imported?.structuredIngredients?.length ?? (imported && imported.ingredients.length ? imported.ingredients.length : (recipe?.ingredients.length ?? 1))
+  )
+  const nextStepId = useRef(
+    imported && imported.instructions.length ? imported.instructions.length : (recipe?.steps.length ?? 1)
+  )
+  const t = useT()
+  const [state, formAction, isPending] = useActionState(saveRecipe, null)
+
+  // Drag-and-drop step reordering (wrote a step in the wrong place → drag it,
+  // no delete-and-retype). Native HTML5 DnD; a row only becomes draggable while
+  // its grip is pressed (armed) so dragging never hijacks text selection in the
+  // textareas. Rows are keyed, so reordering state moves the real DOM nodes —
+  // typed (uncontrolled) text travels with them and the form submits in the new
+  // order; step numbers are reassigned on save.
+  const [armedStepId, setArmedStepId] = useState<string | null>(null)
+  const [dragStepId, setDragStepId] = useState<string | null>(null)
+
+  // Enter in an ingredient row means "next ingredient", not "save the recipe" —
+  // implicit form submission would otherwise fire the moment you finish typing
+  // one. From the qty box Enter moves along to the name beside it; from the name
+  // it goes to the next row, adding one when you're already at the end.
+  const ingNameRefs = useRef(new Map<string, HTMLInputElement>())
+
+  function focusIngName(id: string) {
+    ingNameRefs.current.get(id)?.focus()
+  }
+
+  function ingredientKeyDown(e: KeyboardEvent<HTMLInputElement>, index: number, fromQty: boolean) {
+    if (e.key !== 'Enter') return
+    e.preventDefault()
+    if (fromQty) { focusIngName(ings[index].id); return }
+    const next = ings[index + 1]
+    if (next) { focusIngName(next.id); return }
+    // Last row: only grow the list once there's something in it, so holding
+    // Enter can't stack up blank rows.
+    if (!e.currentTarget.value.trim()) return
+    const added = { id: `ing-${nextIngId.current++}`, name: '', qty: '', unit: '' }
+    // Commit before focusing — the new row isn't in the DOM until React has
+    // rendered it, and this keystroke is the only chance to move the cursor.
+    flushSync(() => setIngs([...ings, added]))
+    focusIngName(added.id)
+  }
+
+  function moveStep(fromId: string, toId: string) {
+    if (fromId === toId) return
+    setSteps((prev) => {
+      const from = prev.findIndex((r) => r.id === fromId)
+      const to = prev.findIndex((r) => r.id === toId)
+      if (from < 0 || to < 0 || from === to) return prev
+      const next = [...prev]
+      const [moved] = next.splice(from, 1)
+      next.splice(to, 0, moved)
+      return next
+    })
+  }
+
+  return (
+    <form action={formAction} className="space-y-5">
+      {recipe && <input type="hidden" name="id" value={recipe.id} />}
+      <input type="hidden" name="source_url" value={imported?.sourceUrl ?? recipe?.source_url ?? ''} />
+      <ImageUpload name="image_path" defaultPath={recipe?.image_path} />
+
+      <div className="space-y-2">
+        <Label htmlFor="title">{t('form.title')}</Label>
+        <Input id="title" name="title" required defaultValue={imported?.name ?? recipe?.title} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="description">{t('form.description')}</Label>
+        <Textarea id="description" name="description" defaultValue={imported?.description ?? recipe?.description ?? ''} />
+      </div>
+      <div className={`grid gap-3 ${recipe ? 'grid-cols-3' : 'grid-cols-2'}`}>
+        {recipe && (
+          <div className="space-y-2"><Label htmlFor="servings">{t('form.servings')}</Label><Input id="servings" name="servings" type="number" min={1} step={1} defaultValue={recipe.servings} /></div>
+        )}
+        <div className="space-y-2"><Label htmlFor="prep_minutes">{t('form.prep')}</Label><Input id="prep_minutes" name="prep_minutes" type="number" min={0} defaultValue={imported?.prepMinutes ?? recipe?.prep_minutes ?? ''} /></div>
+        <div className="space-y-2"><Label htmlFor="cook_minutes">{t('form.cook')}</Label><Input id="cook_minutes" name="cook_minutes" type="number" min={0} defaultValue={imported?.cookMinutes ?? recipe?.cook_minutes ?? ''} /></div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="room_id">{t('form.collection')}</Label>
+        <select id="room_id" name="room_id" defaultValue={recipe?.room_id ?? defaultRoomId ?? ''}
+          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
+          <option value="">{t('form.collectionPersonal')}</option>
+          {rooms.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+        </select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="difficulty">{t('form.difficulty')}</Label>
+        <select id="difficulty" name="difficulty" defaultValue={recipe?.difficulty ?? ''}
+          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
+          <option value="">{t('form.diffNone')}</option>
+          <option value="easy">{t('form.diffEasy')}</option>
+          <option value="medium">{t('form.diffMedium')}</option>
+          <option value="hard">{t('form.diffHard')}</option>
+        </select>
+      </div>
+
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-semibold">{t('form.ingredients')}</legend>
+        {ings.map((row, i) => (
+          <div key={row.id} className="flex gap-2">
+            <Input
+              name="ing_qty"
+              type="number"
+              min={0}
+              step="any"
+              inputMode="decimal"
+              placeholder={t('form.qty')}
+              defaultValue={row.qty}
+              onKeyDown={(e) => ingredientKeyDown(e, i, true)}
+              className="w-16"
+            />
+            <select name="ing_unit" defaultValue={row.unit} aria-label={t('form.unit')} className="h-9 w-20 shrink-0 rounded-md border border-input bg-background px-2 text-sm">
+              <option value="">{t('form.unit')}</option>
+              {UNIT_GROUPS.map((g) => (
+                <optgroup key={g.label} label={t('unitGroup.' + g.label)}>
+                  {g.units.map((u) => <option key={u} value={u}>{t('unit.' + u)}</option>)}
+                </optgroup>
+              ))}
+            </select>
+            <Input
+              name="ing_name"
+              placeholder={t('form.ingredientName')}
+              defaultValue={row.name}
+              onKeyDown={(e) => ingredientKeyDown(e, i, false)}
+              ref={(el: HTMLInputElement | null) => {
+                if (el) ingNameRefs.current.set(row.id, el)
+                else ingNameRefs.current.delete(row.id)
+              }}
+              className="flex-1"
+            />
+            <Button type="button" variant="ghost" size="icon" onClick={() => setIngs(ings.filter((r) => r.id !== row.id))}>✕</Button>
+          </div>
+        ))}
+        <Button type="button" variant="outline" size="sm" onClick={() => setIngs([...ings, { id: `ing-${nextIngId.current++}`, name: '', qty: '', unit: '' }])}>{t('form.addIngredient')}</Button>
+      </fieldset>
+
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-semibold">{t('form.method')}</legend>
+        {steps.map((row, i) => (
+          <div
+            key={row.id}
+            draggable={armedStepId === row.id}
+            onDragStart={(e) => {
+              setDragStepId(row.id)
+              e.dataTransfer.effectAllowed = 'move'
+              e.dataTransfer.setData('text/plain', '') // Firefox needs data to start a drag
+            }}
+            onDragEnter={() => { if (dragStepId) moveStep(dragStepId, row.id) }}
+            onDragOver={(e) => { if (dragStepId) { e.preventDefault(); e.dataTransfer.dropEffect = 'move' } }}
+            onDrop={(e) => e.preventDefault()}
+            onDragEnd={() => { setDragStepId(null); setArmedStepId(null) }}
+            className={`flex gap-2 rounded-md ${dragStepId === row.id ? 'opacity-50 ring-2 ring-primary/40' : ''}`}
+          >
+            <button
+              type="button"
+              aria-label={t('form.dragToReorder')}
+              title={t('form.dragToReorder')}
+              onPointerDown={() => setArmedStepId(row.id)}
+              onPointerUp={() => setArmedStepId(null)}
+              onPointerCancel={() => setArmedStepId(null)}
+              className="hidden cursor-grab touch-none pt-2.5 text-muted-foreground hover:text-foreground active:cursor-grabbing sm:block"
+            >
+              <GripVertical className="size-4" />
+            </button>
+            {/* Touch drag is unreliable on phones, so small screens swap the grip for up/down arrows. */}
+            <div className="flex flex-col pt-1 sm:hidden">
+              <button
+                type="button"
+                aria-label={t('form.moveStepUp')}
+                disabled={i === 0}
+                onClick={() => { if (i > 0) moveStep(row.id, steps[i - 1].id) }}
+                className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30"
+              >
+                <ChevronUp className="size-4" />
+              </button>
+              <button
+                type="button"
+                aria-label={t('form.moveStepDown')}
+                disabled={i === steps.length - 1}
+                onClick={() => { if (i < steps.length - 1) moveStep(row.id, steps[i + 1].id) }}
+                className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30"
+              >
+                <ChevronDown className="size-4" />
+              </button>
+            </div>
+            <span className="pt-2 text-sm text-muted-foreground">{i + 1}.</span>
+            <div className="flex-1 space-y-2">
+              <Textarea name="step_text" placeholder={t('form.describeStep')} defaultValue={row.text} />
+              <ImageUpload name="step_image" defaultPath={row.image} compact />
+            </div>
+            <Button type="button" variant="ghost" size="icon" onClick={() => setSteps(steps.filter((r) => r.id !== row.id))}>✕</Button>
+          </div>
+        ))}
+        <Button type="button" variant="outline" size="sm" onClick={() => setSteps([...steps, { id: `step-${nextStepId.current++}`, text: '', image: '' }])}>{t('form.addStep')}</Button>
+      </fieldset>
+
+      {state?.error && (
+        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{state.error}</p>
+      )}
+      <Button type="submit" className="w-full" disabled={isPending}>
+        {isPending ? t('form.saving') : recipe ? t('form.saveChanges') : t('form.create')}
+      </Button>
+    </form>
+  )
+}
