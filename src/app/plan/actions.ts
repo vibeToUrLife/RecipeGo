@@ -16,6 +16,22 @@ import type { RecipeWithChildren } from '@/lib/db-types'
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
+// A rejected write used to escape these actions and land in the root error
+// boundary, so one meal that failed to save replaced the whole planner with the
+// "Something went wrong" screen. Every other write in the app reports failure as
+// a toast and leaves the page standing; these now do the same. The cause still
+// reaches the server log, where it belongs.
+async function write(run: () => Promise<void>): Promise<{ ok?: true; error?: string }> {
+  try {
+    await run()
+  } catch (e) {
+    console.error(e)
+    return { error: 'Could not update your plan. Please try again.' }
+  }
+  revalidatePath('/', 'layout')
+  return { ok: true }
+}
+
 function cleanServings(n: unknown): number | null {
   if (typeof n !== 'number' || !Number.isFinite(n)) return null
   const v = Math.round(n)
@@ -37,16 +53,16 @@ export async function addPlanEntryAction(input: {
   if (servings === null) return { error: 'Enter a valid number of people (1–1000).' }
   const note = cleanNote(input?.note)
   if (note === undefined) return { error: `Note too long (max ${NOTE_MAX} characters).` }
-  await addPlanEntry({
-    recipeId: input.recipeId,
-    planDate: input.planDate,
-    slot: input.slot as MealSlot,
-    servings,
-    roomId: input.roomId ?? null,
-    note,
-  })
-  revalidatePath('/', 'layout')
-  return { ok: true }
+  return write(() =>
+    addPlanEntry({
+      recipeId: input.recipeId,
+      planDate: input.planDate,
+      slot: input.slot as MealSlot,
+      servings,
+      roomId: input.roomId ?? null,
+      note,
+    }),
+  )
 }
 
 export async function updatePlanNoteAction(
@@ -55,9 +71,7 @@ export async function updatePlanNoteAction(
 ): Promise<{ ok?: true; error?: string }> {
   const clean = cleanNote(note)
   if (clean === undefined) return { error: `Note too long (max ${NOTE_MAX} characters).` }
-  await updatePlanNote(id, clean)
-  revalidatePath('/', 'layout')
-  return { ok: true }
+  return write(() => updatePlanNote(id, clean))
 }
 
 export async function updatePlanServingsAction(
@@ -66,9 +80,7 @@ export async function updatePlanServingsAction(
 ): Promise<{ ok?: true; error?: string }> {
   const v = cleanServings(servings)
   if (v === null) return { error: 'Enter a valid number of people (1–1000).' }
-  await updatePlanServings(id, v)
-  revalidatePath('/', 'layout')
-  return { ok: true }
+  return write(() => updatePlanServings(id, v))
 }
 
 export async function movePlanEntryAction(
@@ -78,23 +90,30 @@ export async function movePlanEntryAction(
 ): Promise<{ ok?: true; error?: string }> {
   if (!ISO_DATE.test(planDate ?? '')) return { error: 'Invalid date.' }
   if (!MEAL_SLOTS.includes(slot as MealSlot)) return { error: 'Invalid meal.' }
-  await movePlanEntry(id, planDate, slot as MealSlot)
-  revalidatePath('/', 'layout')
-  return { ok: true }
+  return write(() => movePlanEntry(id, planDate, slot as MealSlot))
 }
 
-export async function removePlanEntryAction(id: string) {
-  await removePlanEntry(id)
-  revalidatePath('/', 'layout')
+export async function removePlanEntryAction(
+  id: string,
+): Promise<{ ok?: true; error?: string }> {
+  return write(() => removePlanEntry(id))
 }
 
 export async function addWeekToShoppingListAction(
   weekStartISO: string,
   roomId: string | null = null,
-): Promise<{ meals: number }> {
-  const result = await addWeekToShoppingList(weekStartISO, roomId)
-  revalidatePath('/', 'layout')
-  return result
+): Promise<{ meals?: number; error?: string }> {
+  try {
+    const result = await addWeekToShoppingList(weekStartISO, roomId)
+    revalidatePath('/', 'layout')
+    return result
+  } catch (e) {
+    console.error(e)
+    // The meals are pushed one at a time, so an earlier one may already be on
+    // the list — refresh regardless of where it stopped.
+    revalidatePath('/', 'layout')
+    return { error: 'Could not add the week to your shopping list. Please try again.' }
+  }
 }
 
 // Full recipe (with ingredients + steps) for the "view recipe" modal reachable

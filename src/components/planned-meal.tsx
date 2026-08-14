@@ -140,7 +140,11 @@ export function PlannedMeal({ entry }: { entry: MealPlanEntryView }) {
               variant="ghost"
               className="text-destructive"
               disabled={pending}
-              onClick={() => start(async () => { await removePlanEntryAction(entry.id); setOpen(false); router.refresh() })}
+              onClick={() => start(async () => {
+                const res = await removePlanEntryAction(entry.id)
+                if (res.error) { toast.error(res.error); return }
+                setOpen(false); router.refresh()
+              })}
             >
               {t('plan.remove')}
             </Button>

@@ -267,6 +267,48 @@ create policy "pantry insert" on public.pantry_items for insert to authenticated
 create policy "pantry update" on public.pantry_items for update to authenticated using ( user_id = (select auth.uid()) ) with check ( user_id = (select auth.uid()) );
 create policy "pantry delete" on public.pantry_items for delete to authenticated using ( user_id = (select auth.uid()) );
 
+-- ========== 4c. MEAL PLANNER ==========
+-- Folds in 20260630190000_meal_plan.sql + 20260806120000_meal_plan_note.sql.
+-- Written idempotently on purpose: this section was missing from earlier copies
+-- of setup_all.sql, so databases created with those need to re-run the file (or
+-- just this block) to get the planner working — "add a recipe to the plan" fails
+-- outright without it.
+create table if not exists public.meal_plan_entries (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  room_id    uuid references public.rooms(id) on delete cascade,   -- null = personal
+  recipe_id  uuid not null references public.recipes(id) on delete cascade,
+  plan_date  date not null,
+  meal_slot  text not null check (meal_slot in ('breakfast','lunch','dinner')),
+  servings   int  not null check (servings > 0),
+  created_at timestamptz not null default now()
+);
+-- A free-text reminder per planned meal ("double the chilli"). Null = no note.
+alter table public.meal_plan_entries
+  add column if not exists note text;
+create index if not exists meal_plan_entries_scope_date_idx on public.meal_plan_entries (room_id, plan_date);
+create index if not exists meal_plan_entries_recipe_id_idx on public.meal_plan_entries (recipe_id);
+
+alter table public.meal_plan_entries enable row level security;
+drop policy if exists "plan select" on public.meal_plan_entries;
+create policy "plan select" on public.meal_plan_entries for select to authenticated
+  using ( (room_id is null and user_id = (select auth.uid()))
+          or (room_id is not null and public.is_room_member(room_id)) );
+drop policy if exists "plan insert" on public.meal_plan_entries;
+create policy "plan insert" on public.meal_plan_entries for insert to authenticated
+  with check ( (room_id is null and user_id = (select auth.uid()))
+               or (room_id is not null and public.is_room_member(room_id)) );
+drop policy if exists "plan update" on public.meal_plan_entries;
+create policy "plan update" on public.meal_plan_entries for update to authenticated
+  using ( (room_id is null and user_id = (select auth.uid()))
+          or (room_id is not null and public.is_room_member(room_id)) )
+  with check ( (room_id is null and user_id = (select auth.uid()))
+               or (room_id is not null and public.is_room_member(room_id)) );
+drop policy if exists "plan delete" on public.meal_plan_entries;
+create policy "plan delete" on public.meal_plan_entries for delete to authenticated
+  using ( (room_id is null and user_id = (select auth.uid()))
+          or (room_id is not null and public.is_room_member(room_id)) );
+
 -- ========== 5. IMAGE STORAGE ==========
 insert into storage.buckets (id, name, public, allowed_mime_types, file_size_limit)
 values ('recipe-images', 'recipe-images', true, array['image/jpeg', 'image/png', 'image/webp'], 5242880)

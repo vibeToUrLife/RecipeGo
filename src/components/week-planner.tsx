@@ -89,7 +89,8 @@ export function WeekPlanner({
             disabled={pending || entries.length === 0}
             onClick={() => start(async () => {
               const res = await addWeekToShoppingListAction(weekStartISO, roomId)
-              toast.success(t('plan.addedMeals', { n: res.meals }))
+              if (res.error) { toast.error(res.error); return }
+              toast.success(t('plan.addedMeals', { n: res.meals ?? 0 }))
               router.push(roomId ? `/rooms/${roomId}/shopping-list` : '/shopping-list')
             })}
           >
