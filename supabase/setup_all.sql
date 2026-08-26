@@ -310,6 +310,15 @@ create policy "plan delete" on public.meal_plan_entries for delete to authentica
           or (room_id is not null and public.is_room_member(room_id)) );
 
 -- ========== 5. IMAGE STORAGE ==========
+-- SETUP.md's "Image upload fails" fix points people back at this section, so it
+-- is written to survive a re-run on a database that already has some of it:
+-- every policy is dropped first. Without that, the second run died on
+-- 42710 "policy already exists" and the SQL editor rolled the whole script back,
+-- which made the documented repair look like it did nothing.
+--
+-- The bucket's limits are enforced by Storage no matter how the upload is
+-- issued. src/components/image-upload.tsx mirrors them so a rejection can say
+-- which one was hit; change them here and there together.
 insert into storage.buckets (id, name, public, allowed_mime_types, file_size_limit)
 values ('recipe-images', 'recipe-images', true, array['image/jpeg', 'image/png', 'image/webp'], 5242880)
 on conflict (id) do nothing;
@@ -318,14 +327,18 @@ on conflict (id) do nothing;
 update storage.buckets
 set allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp'], file_size_limit = 5242880
 where id = 'recipe-images';
+drop policy if exists "Anyone can read recipe images" on storage.objects;
 create policy "Anyone can read recipe images"
 on storage.objects for select using ( bucket_id = 'recipe-images' );
+drop policy if exists "Users upload to own folder" on storage.objects;
 create policy "Users upload to own folder"
 on storage.objects for insert to authenticated
 with check ( bucket_id = 'recipe-images' and (storage.foldername(name))[1] = (select auth.uid())::text );
+drop policy if exists "Users update own files" on storage.objects;
 create policy "Users update own files"
 on storage.objects for update to authenticated
 using ( bucket_id = 'recipe-images' and (storage.foldername(name))[1] = (select auth.uid())::text );
+drop policy if exists "Users delete own files" on storage.objects;
 create policy "Users delete own files"
 on storage.objects for delete to authenticated
 using ( bucket_id = 'recipe-images' and (storage.foldername(name))[1] = (select auth.uid())::text );

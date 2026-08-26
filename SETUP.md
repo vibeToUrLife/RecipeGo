@@ -320,7 +320,15 @@ Add your email as a **Test user** on the consent screen, or **Publish** the cons
 Check spam, or confirm the user manually under **Authentication → Users**. The free tier also has an hourly email limit.
 
 **Image upload fails**
-The storage bucket/policies didn't get created — re-run `supabase/setup_all.sql` (the `-- 4. IMAGE STORAGE` section).
+The message on the toast says which limit you hit:
+
+| Message | Cause | Fix |
+|---|---|---|
+| *Image storage isn't set up yet* | The bucket/policies were never created | Open **SQL Editor → New query**, paste the `-- ========== 5. IMAGE STORAGE ==========` section of `supabase/setup_all.sql`, and **Run**. That block is safe to re-run on a database that already has part of it. |
+| *That image is over 5 MB* | The bucket caps each object at 5 MiB | Shrink or re-export the photo. To raise the cap, change `file_size_limit` in that same section **and** `MAX_BYTES` in `src/components/image-upload.tsx`. |
+| *Please choose a JPEG, PNG, or WebP image* | The bucket only allows those three types — HEIC (iPhone), GIF, and SVG are refused | Convert the photo, or add the type to both `allowed_mime_types` in that section and `MIME_EXT`/`EXT_MIME` in `src/components/image-upload.tsx`. |
+| *Storage refused the upload* | Signed out, or the `recipe-images` policies are missing | Sign out and back in; if that doesn't help, re-run the section above. |
+| *Upload failed* | The request never reached Supabase | Check your connection and that `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local` match your project. The browser console has the underlying error. |
 
 **"Something went wrong" when you add a recipe to the plan**
 Your database is missing the meal-planner table (`meal_plan_entries`), or the `note` column on it. Earlier copies of `setup_all.sql` left that section out, so projects set up with Method A never got it. Fix: open **SQL Editor → New query**, paste the `-- 4c. MEAL PLANNER` section of `supabase/setup_all.sql`, and click **Run**. That block is safe to run on a database that already has some of it.

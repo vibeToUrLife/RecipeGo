@@ -119,6 +119,9 @@ const EN: Record<string, string> = {
   'img.uploadFailed': 'Upload failed',
   'img.uploaded': 'Image uploaded',
   'img.unsupportedType': 'Please choose a JPEG, PNG, or WebP image.',
+  'img.tooLarge': 'That image is over 5 MB. Please pick a smaller one.',
+  'img.notAllowed': 'Storage refused the upload. Sign in again, or check the recipe-images policies.',
+  'img.storageMissing': 'Image storage isn’t set up yet — run the IMAGE STORAGE section of supabase/setup_all.sql.',
 
   // shopping list
   'shop.title': '🛒 Shopping List',
@@ -437,6 +440,9 @@ const ZH: Record<string, string> = {
   'img.uploadFailed': '上传失败',
   'img.uploaded': '图片已上传',
   'img.unsupportedType': '请选择 JPEG、PNG 或 WebP 图片。',
+  'img.tooLarge': '图片超过 5 MB，请换一张小一点的。',
+  'img.notAllowed': '存储拒绝了这次上传。请重新登录，或检查 recipe-images 的访问策略。',
+  'img.storageMissing': '图片存储还没建好——请运行 supabase/setup_all.sql 里的 IMAGE STORAGE 部分。',
 
   'shop.title': '🛒 购物清单',
   'shop.addPlaceholder': '添加额外物品——例如 牛奶、卫生纸',
