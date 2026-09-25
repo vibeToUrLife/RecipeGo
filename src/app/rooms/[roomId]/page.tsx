@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation'
 import { AppNav } from '@/components/app-nav'
-import { RoomSubNav } from '@/components/room-subnav'
 import { RecipeLibrary } from '@/components/recipe-library'
 import { getRoom } from '@/lib/data/rooms'
 import { listRecipes } from '@/lib/data/recipes'
@@ -23,8 +22,6 @@ export default async function RoomPage({
           <p className="text-xs uppercase tracking-widest opacity-90">{t('rooms.sharedKitchen')}</p>
           <h1 className="mt-1 font-serif text-3xl">{room.name}</h1>
         </section>
-
-        <RoomSubNav roomId={roomId} />
 
         <RecipeLibrary recipes={recipes} addHref={`/recipes/new?room=${roomId}`} spinHref={`/rooms/${roomId}/spin`} />
       </main>

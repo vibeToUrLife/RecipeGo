@@ -10,7 +10,7 @@ vi.mock('@/components/i18n-provider', () => ({ useT: () => (k: string) => k }))
 const link = (label: string) => screen.getByText(label).closest('a')
 
 describe('NavLinks', () => {
-  it('points at the personal pages outside a room', () => {
+  it('points at the personal pages outside a room, with no Members link', () => {
     nav.pathname = '/'
     nav.roomId = null
     render(<NavLinks />)
@@ -18,9 +18,11 @@ describe('NavLinks', () => {
     expect(link('nav.plan')).toHaveAttribute('href', '/plan')
     expect(link('nav.ingredients')).toHaveAttribute('href', '/cook')
     expect(link('nav.shoppingList')).toHaveAttribute('href', '/shopping-list')
+    // Members is a room page — personal recipes have no members.
+    expect(screen.queryByText('rooms.members')).toBeNull()
   })
 
-  it('points at the room pages inside a room', () => {
+  it('points at the room pages inside a room, Members last', () => {
     nav.pathname = '/rooms/r1'
     nav.roomId = 'r1'
     render(<NavLinks />)
@@ -28,15 +30,22 @@ describe('NavLinks', () => {
     expect(link('nav.plan')).toHaveAttribute('href', '/rooms/r1/plan')
     expect(link('nav.ingredients')).toHaveAttribute('href', '/rooms/r1/cook')
     expect(link('nav.shoppingList')).toHaveAttribute('href', '/rooms/r1/shopping-list')
+    expect(link('rooms.members')).toHaveAttribute('href', '/rooms/r1/members')
+    // The links shared with personal keep their places; Members is added at the end.
+    expect(screen.getAllByRole('link').map((a) => a.textContent)).toEqual([
+      'nav.recipes',
+      'nav.plan',
+      'nav.ingredients',
+      'nav.shoppingList',
+      'rooms.members',
+    ])
   })
 
-  it('renders the same green pills as the room sub-nav', () => {
-    nav.pathname = '/'
-    nav.roomId = null
+  it('renders the links as green pills', () => {
+    nav.pathname = '/rooms/r1'
+    nav.roomId = 'r1'
     render(<NavLinks />)
-    for (const label of ['nav.recipes', 'nav.plan', 'nav.ingredients', 'nav.shoppingList']) {
-      expect(link(label)).toHaveClass('bg-secondary')
-    }
+    for (const a of screen.getAllByRole('link')) expect(a).toHaveClass('bg-secondary')
   })
 
   it('marks the current page active', () => {
@@ -47,6 +56,14 @@ describe('NavLinks', () => {
     // Recipes is the room's home link — a sub-page doesn't make it active.
     expect(link('nav.recipes')).not.toHaveAttribute('aria-current')
     expect(link('nav.plan')).not.toHaveAttribute('aria-current')
+  })
+
+  it('marks Members active on the members page', () => {
+    nav.pathname = '/rooms/r1/members'
+    nav.roomId = 'r1'
+    render(<NavLinks />)
+    expect(link('rooms.members')).toHaveAttribute('aria-current', 'page')
+    expect(link('nav.recipes')).not.toHaveAttribute('aria-current')
   })
 
   it('marks Recipes active on the personal home', () => {
@@ -62,6 +79,7 @@ describe('NavLinks', () => {
     nav.roomId = null
     render(<NavLinks roomId="r1" />)
     expect(link('nav.recipes')).toHaveAttribute('href', '/rooms/r1')
+    expect(link('rooms.members')).toHaveAttribute('href', '/rooms/r1/members')
     // A recipe page isn't one of the nav's pages, so nothing is marked current.
     expect(document.querySelector('[aria-current]')).toBeNull()
   })
