@@ -1,12 +1,12 @@
 'use client'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
+import { NavPill } from '@/components/nav-pill'
 import { useCurrentRoomId } from '@/lib/use-current-room-id'
 import { useT } from '@/components/i18n-provider'
 
 // Recipes / Cook / Shopping List point at the current context: your personal
 // recipes by default, or the current room when you're inside one — so a room's
-// Cook and Shopping List stay independent from your personal ones.
+// Cook and Shopping List stay independent from your personal ones. They're the
+// same green pills as a room's sub-nav, with the current page ringed.
 export function NavLinks({ roomId: roomIdProp }: { roomId?: string | null } = {}) {
   const hookRoomId = useCurrentRoomId()
   const t = useT()
@@ -18,10 +18,10 @@ export function NavLinks({ roomId: roomIdProp }: { roomId?: string | null } = {}
   const planHref = roomId ? `/rooms/${roomId}/plan` : '/plan'
   return (
     <>
-      <Button asChild variant="ghost" size="sm"><Link href={recipesHref}>{t('nav.recipes')}</Link></Button>
-      <Button asChild variant="ghost" size="sm"><Link href={planHref}>{t('nav.plan')}</Link></Button>
-      <Button asChild variant="ghost" size="sm"><Link href={cookHref}>{t('nav.ingredients')}</Link></Button>
-      <Button asChild variant="ghost" size="sm"><Link href={shoppingHref}>{t('nav.shoppingList')}</Link></Button>
+      <NavPill href={recipesHref} exact>{t('nav.recipes')}</NavPill>
+      <NavPill href={planHref}>{t('nav.plan')}</NavPill>
+      <NavPill href={cookHref}>{t('nav.ingredients')}</NavPill>
+      <NavPill href={shoppingHref}>{t('nav.shoppingList')}</NavPill>
     </>
   )
 }
