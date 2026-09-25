@@ -219,7 +219,6 @@ const EN: Record<string, string> = {
   // rooms
   'rooms.sharedKitchen': 'Shared kitchen',
   'rooms.members': 'Members',
-  'rooms.shoppingList': 'Shopping list',
   'rooms.cookEyebrow': '{room} · What can I cook?',
   'rooms.title': 'Rooms',
   'rooms.create': 'Create a room',
@@ -535,7 +534,6 @@ const ZH: Record<string, string> = {
 
   'rooms.sharedKitchen': '共享厨房',
   'rooms.members': '成员',
-  'rooms.shoppingList': '购物清单',
   'rooms.cookEyebrow': '{room} · 我能做什么菜？',
   'rooms.title': '房间',
   'rooms.create': '创建房间',

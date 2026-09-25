@@ -23,7 +23,7 @@ export async function AppNav({ roomId }: { roomId?: string | null } = {}) {
         </div>
         <div className="flex items-center gap-2 text-sm">
           {/* Desktop: full inline nav */}
-          <div className="hidden items-center gap-2 md:flex">
+          <div className="hidden items-center gap-2 lg:flex">
             <RoomSwitcher rooms={myRooms} roomId={roomId} />
             <NavLinks roomId={roomId} />
             <form action={signOut}>

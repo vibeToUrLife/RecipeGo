@@ -28,7 +28,7 @@ export function MobileMenu({ rooms, signOut, roomId: roomIdProp }: { rooms: Room
   const item = 'block rounded-md px-3 py-2 text-sm hover:bg-muted'
 
   return (
-    <div className="relative md:hidden">
+    <div className="relative lg:hidden">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -46,6 +46,9 @@ export function MobileMenu({ rooms, signOut, roomId: roomIdProp }: { rooms: Room
             <Link href={planHref} onClick={close} className={item}>{`${collectionLabel} – ${t('nav.plan')}`}</Link>
             <Link href={cookHref} onClick={close} className={item}>{`${collectionLabel} – ${t('nav.ingredients')}`}</Link>
             <Link href={shoppingHref} onClick={close} className={item}>{`${collectionLabel} – ${t('nav.shoppingList')}`}</Link>
+            {roomId && (
+              <Link href={`/rooms/${roomId}/members`} onClick={close} className={item}>{`${collectionLabel} – ${t('rooms.members')}`}</Link>
+            )}
             <div className="my-1 border-t" />
             <Link href="/?home=1" onClick={close} className={cn(item, !roomId && 'font-semibold text-primary')}>{t('nav.myRecipes')}</Link>
             {rooms.map((r) => (

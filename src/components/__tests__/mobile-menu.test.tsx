@@ -18,6 +18,7 @@ describe('MobileMenu page options', () => {
     expect(screen.getByText('Southbay Kitchen – nav.plan')).toBeInTheDocument()
     expect(screen.getByText('Southbay Kitchen – nav.ingredients')).toBeInTheDocument()
     expect(screen.getByText('Southbay Kitchen – nav.shoppingList')).toBeInTheDocument()
+    expect(screen.getByText('Southbay Kitchen – rooms.members').closest('a')).toHaveAttribute('href', '/rooms/r1/members')
   })
 
   it('prefixes with the personal label when not in a room', () => {
@@ -25,6 +26,8 @@ describe('MobileMenu page options', () => {
     render(<MobileMenu rooms={rooms} signOut={() => {}} />)
     fireEvent.click(screen.getByRole('button'))
     expect(screen.getByText('nav.myRecipes – nav.plan')).toBeInTheDocument()
+    // Members is a room page — personal recipes have no members.
+    expect(screen.queryByText(/rooms\.members/)).toBeNull()
   })
 
   it('highlights the current room in the switcher list', () => {

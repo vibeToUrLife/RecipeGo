@@ -20,8 +20,8 @@ export function NavSkeleton() {
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
         <Shimmer className="h-7 w-36" />
         <div className="flex items-center gap-2">
-          <Shimmer className="hidden h-7 w-24 md:block" />
-          <Shimmer className="hidden h-7 w-20 md:block" />
+          <Shimmer className="hidden h-7 w-24 lg:block" />
+          <Shimmer className="hidden h-7 w-20 lg:block" />
           <Shimmer className="size-7 rounded-md" />
           <Shimmer className="size-7 rounded-md" />
         </div>
