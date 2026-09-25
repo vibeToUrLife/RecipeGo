@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { AppNav } from '@/components/app-nav'
+import { RoomSubNav } from '@/components/room-subnav'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -50,6 +51,8 @@ export default async function MembersPage({
       <AppNav />
       <main className="mx-auto max-w-2xl px-4 py-6">
         <h1 className="mb-6 font-serif text-2xl text-primary">{t('rooms.membersTitle', { room: room.name })}</h1>
+
+        <RoomSubNav roomId={roomId} />
 
         {sp.error && (
           <p className="mb-4 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">

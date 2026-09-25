@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { AppNav } from '@/components/app-nav'
+import { RoomSubNav } from '@/components/room-subnav'
 import { getRoom } from '@/lib/data/rooms'
 import { listRecipesWithIngredients } from '@/lib/data/recipes'
 import { listPantry } from '@/lib/data/pantry'
@@ -28,6 +29,7 @@ export default async function RoomCookPage({ params }: { params: Promise<{ roomI
             {t('cook.introRoom')}
           </p>
         </section>
+        <RoomSubNav roomId={roomId} />
         <CookPlanner recipes={recipes} universe={universe} initialHave={pantry} />
       </main>
     </>
