@@ -22,7 +22,7 @@ export async function AppNav({ roomId }: { roomId?: string | null } = {}) {
           <Link href="/" className="truncate font-serif text-xl font-semibold text-primary">🍳 RecipeGo</Link>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          {/* Desktop: full inline nav */}
+          {/* Desktop: full inline nav (below lg, room pages show the pills under their heading — RoomSubNav) */}
           <div className="hidden items-center gap-2 lg:flex">
             <RoomSwitcher rooms={myRooms} roomId={roomId} />
             <NavLinks roomId={roomId} />
