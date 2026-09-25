@@ -1,9 +1,6 @@
 'use client'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Button } from '@/components/ui/button'
+import { NavPill } from '@/components/nav-pill'
 import { useT } from '@/components/i18n-provider'
-import { cn } from '@/lib/utils'
 
 // Defined once — the room's navigable places. Reuses existing i18n keys.
 const ROOM_NAV = [
@@ -16,28 +13,14 @@ const ROOM_NAV = [
 
 export function RoomSubNav({ roomId }: { roomId: string }) {
   const t = useT()
-  const pathname = usePathname()
   const base = `/rooms/${roomId}`
   return (
     <nav className="mb-6 flex flex-wrap gap-3 print:hidden">
-      {ROOM_NAV.map(({ suffix, labelKey }) => {
-        const href = `${base}${suffix}`
-        const active =
-          suffix === '' ? pathname === base : pathname === href || pathname.startsWith(`${href}/`)
-        return (
-          <Button
-            key={suffix || 'home'}
-            asChild
-            variant="secondary"
-            size="sm"
-            className={cn(active && 'ring-2 ring-ring font-semibold')}
-          >
-            <Link href={href} aria-current={active ? 'page' : undefined}>
-              {t(labelKey)}
-            </Link>
-          </Button>
-        )
-      })}
+      {ROOM_NAV.map(({ suffix, labelKey }) => (
+        <NavPill key={suffix || 'home'} href={`${base}${suffix}`} exact={suffix === ''}>
+          {t(labelKey)}
+        </NavPill>
+      ))}
     </nav>
   )
 }
