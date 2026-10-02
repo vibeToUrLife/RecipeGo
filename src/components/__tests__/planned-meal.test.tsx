@@ -1,8 +1,9 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { PlannedMeal } from '@/components/planned-meal'
 import { updatePlanNoteAction } from '@/app/plan/actions'
+import { PLAN_ENTRY_DRAG_TYPE } from '@/lib/plan/drag'
 import type { MealPlanEntryView } from '@/lib/db-types'
 
 // The chip pulls in a router, plan server actions, and the recipe-view modal —
@@ -98,5 +99,46 @@ describe('PlannedMeal note', () => {
 
     await waitFor(() => expect(screen.queryByText('plan.moveTo')).toBeNull())
     expect(updatePlanNoteAction).not.toHaveBeenCalled()
+  })
+})
+
+describe('PlannedMeal dragging', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  // jsdom has no matchMedia; this answers the hook's "is there a mouse?" query.
+  const mouse = (present: boolean) =>
+    vi.stubGlobal('matchMedia', () => ({
+      matches: present,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }))
+  const chip = () => screen.getByLabelText('plan.viewRecipe').parentElement!
+
+  it('drags on a computer, carrying the meal and fading while it goes', async () => {
+    mouse(true)
+    render(<PlannedMeal entry={entry} />)
+    expect(chip()).toHaveAttribute('draggable', 'true')
+
+    const data: Record<string, string> = {}
+    const dataTransfer = {
+      setData: (type: string, value: string) => { data[type] = value },
+      effectAllowed: 'all',
+    }
+    fireEvent.dragStart(chip(), { dataTransfer })
+
+    expect(data).toEqual({ [PLAN_ENTRY_DRAG_TYPE]: 'e1' })
+    expect(dataTransfer.effectAllowed).toBe('move')
+    await waitFor(() => expect(chip()).toHaveClass('opacity-50'))
+
+    fireEvent.dragEnd(chip())
+    expect(chip()).not.toHaveClass('opacity-50')
+  })
+
+  it("doesn't drag on a phone or tablet", () => {
+    mouse(false)
+    render(<PlannedMeal entry={entry} />)
+    expect(chip()).toHaveAttribute('draggable', 'false')
   })
 })

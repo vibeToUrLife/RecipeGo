@@ -2,7 +2,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Pencil } from 'lucide-react'
+import { GripVertical, Pencil } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,8 +16,11 @@ import {
 } from '@/app/plan/actions'
 import { NOTE_MAX } from '@/lib/plan/note'
 import { MEAL_SLOTS, type MealSlot } from '@/lib/plan/week'
+import { PLAN_ENTRY_DRAG_TYPE } from '@/lib/plan/drag'
+import { useFinePointer } from '@/lib/use-fine-pointer'
 import type { MealPlanEntryView } from '@/lib/db-types'
 import { useT } from '@/components/i18n-provider'
+import { cn } from '@/lib/utils'
 
 export function PlannedMeal({ entry }: { entry: MealPlanEntryView }) {
   const t = useT()
@@ -29,6 +32,10 @@ export function PlannedMeal({ entry }: { entry: MealPlanEntryView }) {
   const [slot, setSlot] = useState<MealSlot>(entry.meal_slot)
   const [note, setNote] = useState(entry.note ?? '')
   const [pending, start] = useTransition()
+  // Drag it onto another slot of the week to move it — on a computer only. On a
+  // touch screen a long press stays a long press; the edit dialog moves it there.
+  const canDrag = useFinePointer()
+  const [dragging, setDragging] = useState(false)
 
   const slotLabel: Record<MealSlot, string> = {
     breakfast: t('plan.breakfast'), lunch: t('plan.lunch'), dinner: t('plan.dinner'),
@@ -49,7 +56,26 @@ export function PlannedMeal({ entry }: { entry: MealPlanEntryView }) {
 
   return (
     <>
-      <div className="flex items-stretch overflow-hidden rounded-md bg-background text-sm">
+      <div
+        draggable={canDrag}
+        onDragStart={(e) => {
+          e.dataTransfer.setData(PLAN_ENTRY_DRAG_TYPE, entry.id)
+          e.dataTransfer.effectAllowed = 'move'
+          // Fade it only once the browser has taken its picture for the drag.
+          setTimeout(() => setDragging(true))
+        }}
+        onDragEnd={() => setDragging(false)}
+        className={cn('flex items-stretch overflow-hidden rounded-md bg-background text-sm', dragging && 'opacity-50')}
+      >
+        {/* The whole chip drags; the grip only shows that it can, and only
+            where there's a mouse. */}
+        <span
+          aria-hidden
+          title={t('plan.dragToMove')}
+          className="hidden cursor-grab items-center pl-1 text-muted-foreground active:cursor-grabbing pointer-fine:flex print:hidden"
+        >
+          <GripVertical className="size-3.5" />
+        </span>
         <button
           type="button"
           onClick={() => setViewOpen(true)}
