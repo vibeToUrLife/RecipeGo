@@ -2,7 +2,7 @@ import { render, screen, waitFor, within, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ShoppingListView } from '@/components/shopping-list-view'
-import { updateItemNameAction } from '@/app/shopping-list/actions'
+import { clearShoppingListAction, updateItemNameAction } from '@/app/shopping-list/actions'
 import { toast } from 'sonner'
 import type { ShoppingListRow } from '@/lib/data/shopping'
 
@@ -14,6 +14,7 @@ vi.mock('@/app/shopping-list/actions', () => ({
   toggleItemAction: vi.fn(),
   removeItemAction: vi.fn(),
   completeShoppingAction: vi.fn(),
+  clearShoppingListAction: vi.fn(),
   addShoppingItemAction: vi.fn(),
   updateItemQuantityAction: vi.fn(),
   updateItemNameAction: vi.fn(),
@@ -35,6 +36,8 @@ const row = (over: Partial<ShoppingListRow> = {}): ShoppingListRow => ({
 beforeEach(() => {
   vi.mocked(updateItemNameAction).mockReset()
   vi.mocked(updateItemNameAction).mockResolvedValue({ ok: true })
+  vi.mocked(clearShoppingListAction).mockReset()
+  vi.mocked(clearShoppingListAction).mockResolvedValue(undefined)
   vi.mocked(toast.error).mockClear()
 })
 
@@ -134,5 +137,71 @@ describe('ShoppingListView inline rename', () => {
     expect(nameButton('carrot')).toHaveClass('line-through')
     await userEvent.click(nameButton('carrot'))
     expect(nameField()).toBeInTheDocument()
+  })
+})
+
+describe('ShoppingListView clear all', () => {
+  const twoRows = [
+    row(),
+    row({ id: 'it2', name: 'bin bags', is_food: false, category: 'Other', checked: true }),
+  ]
+  const clearAll = () => screen.getByRole('button', { name: 'shop.clearAll' })
+  const confirm = () => screen.getByRole('button', { name: 'shop.confirmClearAll' })
+
+  it('asks first, then empties the whole list, ticked or not', async () => {
+    let release!: () => void
+    vi.mocked(clearShoppingListAction).mockImplementation(
+      () => new Promise((res) => { release = () => res(undefined) }),
+    )
+    const { rerender } = render(<ShoppingListView items={twoRows} />)
+
+    await userEvent.click(clearAll())
+    expect(clearShoppingListAction).not.toHaveBeenCalled()
+
+    await userEvent.click(confirm())
+    expect(clearShoppingListAction).toHaveBeenCalledWith(null)
+    // Optimistic: the list empties without waiting on the server.
+    expect(screen.getByText('shop.empty')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'carrot' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'bin bags' })).toBeNull()
+
+    await act(async () => { release() })
+    rerender(<ShoppingListView items={[]} />)
+    expect(screen.getByText('shop.empty')).toBeInTheDocument()
+  })
+
+  it("clears the room's list on a room page", async () => {
+    render(<ShoppingListView items={[row({ room_id: 'room-1' })]} roomId="room-1" />)
+    await userEvent.click(clearAll())
+    await userEvent.click(confirm())
+    expect(clearShoppingListAction).toHaveBeenCalledWith('room-1')
+  })
+
+  it('backs out on Cancel', async () => {
+    render(<ShoppingListView items={twoRows} />)
+    await userEvent.click(clearAll())
+    const cancel = screen.getByRole('button', { name: 'common.cancel' })
+    expect(cancel).toHaveFocus() // the safe choice, not the destructive one
+    await userEvent.click(cancel)
+
+    expect(clearShoppingListAction).not.toHaveBeenCalled()
+    expect(clearAll()).toBeInTheDocument()
+    expect(nameButton('carrot')).toBeInTheDocument()
+  })
+
+  it('brings the items back and says so when clearing fails', async () => {
+    vi.mocked(clearShoppingListAction).mockRejectedValue(new Error('offline'))
+    render(<ShoppingListView items={twoRows} />)
+    await userEvent.click(clearAll())
+    await userEvent.click(confirm())
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('shop.clearFailed'))
+    expect(await screen.findByRole('button', { name: 'carrot' })).toBeInTheDocument()
+    expect(nameButton('bin bags')).toBeInTheDocument()
+  })
+
+  it('is not offered when the list is already empty', () => {
+    render(<ShoppingListView items={[]} />)
+    expect(screen.queryByRole('button', { name: 'shop.clearAll' })).toBeNull()
   })
 })

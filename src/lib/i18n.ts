@@ -145,6 +145,9 @@ const EN: Record<string, string> = {
   'shop.doneCleared': 'Done! {n} item(s) cleared.',
   'shop.completeFailed': 'Could not complete the shopping trip. Please try again.',
   'shop.addFailed': 'Could not add the item. Please try again.',
+  'shop.clearAll': 'Clear all',
+  'shop.confirmClearAll': 'Yes, clear all {n}',
+  'shop.clearFailed': 'Could not clear the list. Please try again.',
 
   // cook / ingredients
   'cook.eyebrow': 'What can I cook?',
@@ -464,6 +467,9 @@ const ZH: Record<string, string> = {
   'shop.doneCleared': '完成！已清除 {n} 项。',
   'shop.completeFailed': '无法完成此次购物，请重试。',
   'shop.addFailed': '无法添加物品，请重试。',
+  'shop.clearAll': '全部清除',
+  'shop.confirmClearAll': '确认清除全部 {n} 项',
+  'shop.clearFailed': '无法清空清单，请重试。',
 
   'cook.eyebrow': '我能做什么菜？',
   'cook.title': '食材',

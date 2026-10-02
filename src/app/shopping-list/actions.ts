@@ -8,6 +8,7 @@ import {
   removeItem,
   addShoppingItem,
   completeShopping,
+  clearShoppingList,
 } from '@/lib/data/shopping'
 import type { Unit } from '@/lib/types'
 import { VALID_UNITS } from '@/lib/unit-options'
@@ -84,4 +85,9 @@ export async function completeShoppingAction(roomId: string | null = null) {
   // shopping list changed, and the pantry (Ingredients) changed too
   revalidatePath('/', 'layout')
   return result
+}
+
+export async function clearShoppingListAction(roomId: string | null = null) {
+  await clearShoppingList(roomId)
+  revalidatePath('/', 'layout')
 }

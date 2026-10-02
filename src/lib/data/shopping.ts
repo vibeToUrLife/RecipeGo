@@ -152,6 +152,15 @@ export async function completeShopping(
   return { saved: foods.length, cleared: rows.length }
 }
 
+// Empty the whole list: ticked and unticked, food and daily alike. Unlike
+// completeShopping, nothing is saved to the pantry.
+export async function clearShoppingList(roomId: string | null = null): Promise<void> {
+  const supabase = await createClient()
+  const delQ = supabase.from('shopping_list_items').delete()
+  const { error } = await (roomId ? delQ.eq('room_id', roomId) : delQ.is('room_id', null))
+  if (error) throw error
+}
+
 export async function setItemChecked(id: string, checked: boolean): Promise<void> {
   const supabase = await createClient()
   const { error } = await supabase.from('shopping_list_items').update({ checked }).eq('id', id)
