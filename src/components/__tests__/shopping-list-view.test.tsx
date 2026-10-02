@@ -1,8 +1,8 @@
-import { render, screen, waitFor, within, act } from '@testing-library/react'
+import { render, screen, waitFor, within, act, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ShoppingListView } from '@/components/shopping-list-view'
-import { clearShoppingListAction, updateItemNameAction } from '@/app/shopping-list/actions'
+import { clearShoppingListAction, updateItemNameAction, updateItemQuantityAction } from '@/app/shopping-list/actions'
 import { toast } from 'sonner'
 import type { ShoppingListRow } from '@/lib/data/shopping'
 
@@ -36,6 +36,8 @@ const row = (over: Partial<ShoppingListRow> = {}): ShoppingListRow => ({
 beforeEach(() => {
   vi.mocked(updateItemNameAction).mockReset()
   vi.mocked(updateItemNameAction).mockResolvedValue({ ok: true })
+  vi.mocked(updateItemQuantityAction).mockReset()
+  vi.mocked(updateItemQuantityAction).mockResolvedValue({ ok: true })
   vi.mocked(clearShoppingListAction).mockReset()
   vi.mocked(clearShoppingListAction).mockResolvedValue(undefined)
   vi.mocked(toast.error).mockClear()
@@ -203,5 +205,78 @@ describe('ShoppingListView clear all', () => {
   it('is not offered when the list is already empty', () => {
     render(<ShoppingListView items={[]} />)
     expect(screen.queryByRole('button', { name: 'shop.clearAll' })).toBeNull()
+  })
+})
+
+describe('ShoppingListView quantity − / +', () => {
+  const minus = () => screen.getByRole('button', { name: 'shop.decQtyAria' })
+  const plus = () => screen.getByRole('button', { name: 'shop.incQtyAria' })
+  const qtyField = () => screen.getByLabelText('shop.editQtyAria')
+
+  it('+ adds one, shows it at once and saves it', async () => {
+    let release!: () => void
+    vi.mocked(updateItemQuantityAction).mockImplementation(
+      () => new Promise((res) => { release = () => res({ ok: true }) }),
+    )
+    render(<ShoppingListView items={[row({ total_quantity: 2 })]} />)
+
+    await userEvent.click(plus())
+
+    expect(updateItemQuantityAction).toHaveBeenCalledWith('it1', 3)
+    expect(qtyField()).toHaveValue(3)
+    await act(async () => { release() })
+  })
+
+  it('− takes one off', async () => {
+    render(<ShoppingListView items={[row({ total_quantity: 3 })]} />)
+    await userEvent.click(minus())
+    expect(updateItemQuantityAction).toHaveBeenCalledWith('it1', 2)
+  })
+
+  it('− stops at 1 — taking an item off the list is ✕', async () => {
+    const { rerender } = render(<ShoppingListView items={[row({ total_quantity: 1 })]} />)
+    expect(minus()).toBeDisabled()
+
+    // From a fraction above 1 it lands on 1 rather than going under.
+    rerender(<ShoppingListView items={[row({ total_quantity: 1.5 })]} />)
+    await userEvent.click(minus())
+    expect(updateItemQuantityAction).toHaveBeenCalledWith('it1', 1)
+  })
+
+  it('+ starts an unspecified quantity at 1', async () => {
+    render(<ShoppingListView items={[row({ total_quantity: null })]} />)
+    expect(minus()).toBeDisabled()
+    await userEvent.click(plus())
+    expect(updateItemQuantityAction).toHaveBeenCalledWith('it1', 1)
+  })
+
+  it('+ stops at the 100000 cap', () => {
+    render(<ShoppingListView items={[row({ total_quantity: 100000 })]} />)
+    expect(plus()).toBeDisabled()
+    expect(minus()).toBeEnabled()
+  })
+
+  it('counts on from a number typed but not yet saved', async () => {
+    render(<ShoppingListView items={[row({ total_quantity: 2 })]} />)
+    await userEvent.clear(qtyField())
+    await userEvent.type(qtyField(), '5')
+
+    await userEvent.click(plus())
+
+    // Leaving the field saves the 5; + then steps from it, not from the old 2.
+    expect(updateItemQuantityAction).toHaveBeenNthCalledWith(1, 'it1', 5)
+    expect(updateItemQuantityAction).toHaveBeenNthCalledWith(2, 'it1', 6)
+  })
+
+  it('counts on from the typed number when the click leaves focus in the field', async () => {
+    render(<ShoppingListView items={[row({ total_quantity: 2 })]} />)
+    await userEvent.clear(qtyField())
+    await userEvent.type(qtyField(), '5')
+
+    // No blur this time, so nothing has saved the 5 before + runs.
+    fireEvent.click(plus())
+
+    expect(updateItemQuantityAction).toHaveBeenCalledTimes(1)
+    expect(updateItemQuantityAction).toHaveBeenCalledWith('it1', 6)
   })
 })

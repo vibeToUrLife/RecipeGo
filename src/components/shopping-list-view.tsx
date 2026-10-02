@@ -1,7 +1,7 @@
 'use client'
 import { useOptimistic, useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { Plus, Trash2 } from 'lucide-react'
+import { Minus, Plus, Trash2 } from 'lucide-react'
 import { useT } from '@/components/i18n-provider'
 import type { ShoppingListRow } from '@/lib/data/shopping'
 import type { Unit } from '@/lib/types'
@@ -429,8 +429,9 @@ function NameEditor({
 }
 
 // Inline, editable quantity for a row. Commits on blur or Enter; Escape reverts.
-// An empty field clears the quantity (unspecified). The unit is shown but not
-// editable here.
+// An empty field clears the quantity (unspecified). − and + either side step it
+// by one and save straight away; they stand in for the browser's own spin
+// arrows, which are hidden. The unit is shown but not editable here.
 function QtyEditor({
   row,
   unitLabel,
@@ -466,8 +467,32 @@ function QtyEditor({
     onCommit(row.id, next)
   }
 
+  // Step from what the field shows, so a tap straight after typing counts from
+  // the typed number. − stops at 1 (✕ removes an item); an unspecified quantity
+  // can only go up, to 1.
+  const typed = val.trim() === '' ? null : Number(val)
+  const shown = typed === null || (Number.isFinite(typed) && typed >= 0 && typed <= 100000)
+    ? typed
+    : row.total_quantity
+
+  function step(delta: 1 | -1) {
+    const next = Math.round(Math.min(100000, Math.max(1, (shown ?? 0) + delta)) * 100) / 100
+    setVal(fmtQty(next))
+    onCommit(row.id, next)
+  }
+
   return (
     <span className="ml-auto flex items-center gap-1 text-muted-foreground">
+      <Button
+        type="button"
+        variant="outline"
+        size="icon-sm"
+        onClick={() => step(-1)}
+        disabled={shown === null || shown <= 1}
+        aria-label={t('shop.decQtyAria')}
+      >
+        <Minus />
+      </Button>
       <Input
         type="number"
         inputMode="decimal"
@@ -486,8 +511,18 @@ function QtyEditor({
           }
         }}
         aria-label={t('shop.editQtyAria')}
-        className="h-7 w-16 px-2 py-0 text-right"
+        className="h-7 w-14 [appearance:textfield] px-1 py-0 text-center [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
       />
+      <Button
+        type="button"
+        variant="outline"
+        size="icon-sm"
+        onClick={() => step(1)}
+        disabled={shown !== null && shown >= 100000}
+        aria-label={t('shop.incQtyAria')}
+      >
+        <Plus />
+      </Button>
       {unitLabel && <span className="min-w-8">{unitLabel}</span>}
     </span>
   )
