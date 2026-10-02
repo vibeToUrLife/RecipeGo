@@ -1,7 +1,11 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within, fireEvent, act, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { WeekPlanner } from '@/components/week-planner'
+import { movePlanEntryAction } from '@/app/plan/actions'
+import { PLAN_ENTRY_DRAG_TYPE } from '@/lib/plan/drag'
+import { toast } from 'sonner'
+import type { MealPlanEntryView } from '@/lib/db-types'
 
 // WeekPlanner pulls in a router, toast, a server action, and three child
 // components — none relevant to the week-nav label, so stub them out.
@@ -11,9 +15,12 @@ vi.mock('@/components/i18n-provider', () => ({
   useLocale: () => 'en',
 }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
-vi.mock('@/app/plan/actions', () => ({ addWeekToShoppingListAction: vi.fn() }))
+vi.mock('@/app/plan/actions', () => ({ addWeekToShoppingListAction: vi.fn(), movePlanEntryAction: vi.fn() }))
 vi.mock('@/components/add-meal-dialog', () => ({ AddMealDialog: () => null }))
-vi.mock('@/components/planned-meal', () => ({ PlannedMeal: () => null }))
+// Just the title, to show which meal sits in which slot.
+vi.mock('@/components/planned-meal', () => ({
+  PlannedMeal: ({ entry }: { entry: MealPlanEntryView }) => <span>{entry.recipe_title}</span>,
+}))
 vi.mock('@/components/week-start-selector', () => ({ WeekStartSelector: () => null }))
 
 const baseProps = { entries: [], recipes: [], roomId: null, weekStartsOn: 1 }
@@ -62,5 +69,120 @@ describe('WeekPlanner print/PDF', () => {
     expect(range.closest('.print\\:hidden')).toBeNull()
     // The arrows either side of it are screen-only.
     expect(document.querySelector('a[href="/plan?week=2026-06-22"]')).toHaveClass('print:hidden')
+  })
+})
+
+describe('WeekPlanner drag and drop', () => {
+  const meal = (over: Partial<MealPlanEntryView>): MealPlanEntryView => ({
+    id: 'e1',
+    user_id: 'u1',
+    room_id: null,
+    recipe_id: 'r1',
+    plan_date: '2026-06-29',
+    meal_slot: 'dinner',
+    servings: 2,
+    note: null,
+    created_at: '2026-06-26T10:00:00Z',
+    recipe_title: 'Roast Chicken',
+    ...over,
+  })
+  // In the server's order (by day): Monday's chicken first, though the soup
+  // already on Wednesday was added before it.
+  const chicken = meal({})
+  const soup = meal({ id: 'e2', recipe_title: 'Soup', plan_date: '2026-07-01', meal_slot: 'lunch', created_at: '2026-06-25T10:00:00Z' })
+  const week = { ...baseProps, weekStartISO: '2026-06-29', todayWeekISO: '2026-06-29' }
+
+  // A drag in progress, as the browser shows it to each slot it passes over.
+  const drag = (data: Record<string, string>) => ({
+    types: Object.keys(data),
+    getData: (type: string) => data[type] ?? '',
+    dropEffect: 'none',
+  })
+  const mealDrag = (id: string) => drag({ [PLAN_ENTRY_DRAG_TYPE]: id })
+  // One meal slot of one day, found by the labels on screen.
+  const slot = (day: string, name: string) =>
+    within(screen.getByText(day).parentElement!).getByText(name).parentElement!
+  const mealsIn = (el: HTMLElement) =>
+    within(el).queryAllByText(/Roast Chicken|Soup/).map((n) => n.textContent)
+
+  beforeEach(() => {
+    vi.mocked(movePlanEntryAction).mockReset()
+    vi.mocked(movePlanEntryAction).mockResolvedValue({ ok: true })
+    vi.mocked(toast.error).mockClear()
+  })
+
+  it('moves a meal dropped on another slot there at once, and saves it', async () => {
+    let release!: () => void
+    vi.mocked(movePlanEntryAction).mockImplementation(
+      () => new Promise((res) => { release = () => res({ ok: true }) }),
+    )
+    const { rerender } = render(<WeekPlanner {...week} entries={[chicken, soup]} />)
+    const wedLunch = slot('Wed 1 Jul', 'plan.lunch')
+
+    // Taking the drag is what lets the browser drop it here; the slot lights up.
+    expect(fireEvent.dragOver(wedLunch, { dataTransfer: mealDrag('e1') })).toBe(false)
+    expect(wedLunch).toHaveClass('ring-2')
+    fireEvent.drop(wedLunch, { dataTransfer: mealDrag('e1') })
+
+    expect(movePlanEntryAction).toHaveBeenCalledWith('e1', '2026-07-01', 'lunch')
+    expect(wedLunch).not.toHaveClass('ring-2')
+    // There before the server answers, after the soup that was added first…
+    expect(mealsIn(wedLunch)).toEqual(['Soup', 'Roast Chicken'])
+    expect(mealsIn(slot('Mon 29 Jun', 'plan.dinner'))).toEqual([])
+
+    await act(async () => { release() })
+    // …and the server's copy, sorted by day alone, leaves it where it landed.
+    rerender(<WeekPlanner {...week} entries={[{ ...chicken, plan_date: '2026-07-01', meal_slot: 'lunch' }, soup]} />)
+    expect(mealsIn(slot('Wed 1 Jul', 'plan.lunch'))).toEqual(['Soup', 'Roast Chicken'])
+  })
+
+  it('leaves a meal dropped back on its own slot alone', () => {
+    render(<WeekPlanner {...week} entries={[chicken, soup]} />)
+    fireEvent.drop(slot('Mon 29 Jun', 'plan.dinner'), { dataTransfer: mealDrag('e1') })
+    expect(movePlanEntryAction).not.toHaveBeenCalled()
+  })
+
+  it('puts the meal back and says why when the move fails', async () => {
+    vi.mocked(movePlanEntryAction).mockResolvedValue({ error: 'Could not update your plan. Please try again.' })
+    render(<WeekPlanner {...week} entries={[chicken, soup]} />)
+    fireEvent.drop(slot('Wed 1 Jul', 'plan.lunch'), { dataTransfer: mealDrag('e1') })
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Could not update your plan. Please try again.'))
+    await waitFor(() => expect(mealsIn(slot('Mon 29 Jun', 'plan.dinner'))).toEqual(['Roast Chicken']))
+    expect(mealsIn(slot('Wed 1 Jul', 'plan.lunch'))).toEqual(['Soup'])
+  })
+
+  it('ignores dragged text, links and files', () => {
+    render(<WeekPlanner {...week} entries={[chicken, soup]} />)
+    const wedLunch = slot('Wed 1 Jul', 'plan.lunch')
+    const text = drag({ 'text/plain': 'e1' })
+
+    // Not taken, so the browser won't drop it here.
+    expect(fireEvent.dragOver(wedLunch, { dataTransfer: text })).toBe(true)
+    expect(wedLunch).not.toHaveClass('ring-2')
+    fireEvent.drop(wedLunch, { dataTransfer: text })
+    expect(movePlanEntryAction).not.toHaveBeenCalled()
+  })
+
+  it("ignores a meal that isn't on this week's grid", () => {
+    render(<WeekPlanner {...week} entries={[chicken, soup]} />)
+    fireEvent.drop(slot('Wed 1 Jul', 'plan.lunch'), { dataTransfer: mealDrag('from-another-tab') })
+    expect(movePlanEntryAction).not.toHaveBeenCalled()
+  })
+
+  it('stops lighting up a slot once the drag has left it', () => {
+    render(<WeekPlanner {...week} entries={[chicken, soup]} />)
+    const wedLunch = slot('Wed 1 Jul', 'plan.lunch')
+    const leave = (to: Element) => {
+      const e = new Event('dragleave', { bubbles: true })
+      Object.defineProperty(e, 'relatedTarget', { value: to })
+      fireEvent(wedLunch, e)
+    }
+    fireEvent.dragOver(wedLunch, { dataTransfer: mealDrag('e1') })
+
+    leave(within(wedLunch).getByText('Soup')) // onto a meal inside it: still over it
+    expect(wedLunch).toHaveClass('ring-2')
+    leave(document.body)
+    expect(wedLunch).not.toHaveClass('ring-2')
   })
 })

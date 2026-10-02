@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { useTransition } from 'react'
+import { useOptimistic, useState, useTransition, type DragEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -12,10 +12,18 @@ import {
   weekDays, fromISODate, toISODate, addWeeks,
   groupEntriesByDayAndSlot, MEAL_SLOTS, type MealSlot,
 } from '@/lib/plan/week'
-import { addWeekToShoppingListAction } from '@/app/plan/actions'
+import { PLAN_ENTRY_DRAG_TYPE } from '@/lib/plan/drag'
+import { addWeekToShoppingListAction, movePlanEntryAction } from '@/app/plan/actions'
 import { WeekStartSelector } from '@/components/week-start-selector'
 import type { Recipe, MealPlanEntryView } from '@/lib/db-types'
 import { useT, useLocale } from '@/components/i18n-provider'
+import { cn } from '@/lib/utils'
+
+// Within a slot, meals keep the order they were added in (the server only sorts
+// by day), so one dropped into a busy slot lands where it will stay.
+function byAdded(a: MealPlanEntryView, b: MealPlanEntryView) {
+  return a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0
+}
 
 export function WeekPlanner({
   weekStartISO, todayWeekISO, entries, recipes, roomId, weekStartsOn,
@@ -31,10 +39,13 @@ export function WeekPlanner({
   const locale = useLocale()
   const router = useRouter()
   const [pending, start] = useTransition()
+  const [optimistic, setOptimistic] = useOptimistic(entries)
+  const [, startMove] = useTransition()
+  const [dropCell, setDropCell] = useState<string | null>(null)
   const base = roomId ? `/rooms/${roomId}/plan` : '/plan'
   const weekStart = fromISODate(weekStartISO)
   const days = weekDays(weekStart)
-  const grouped = groupEntriesByDayAndSlot(entries)
+  const grouped = groupEntriesByDayAndSlot([...optimistic].sort(byAdded))
   const prev = toISODate(addWeeks(weekStart, -1))
   const next = toISODate(addWeeks(weekStart, 1))
   const thisWeek = todayWeekISO
@@ -56,6 +67,35 @@ export function WeekPlanner({
   })
   const weekRangeLabel = `${rangeFmt.format(weekStart)} – ${rangeFmt.format(days[days.length - 1])}`
   const onCurrentWeek = weekStartISO === todayWeekISO
+
+  // Drag and drop (computers only — see PlannedMeal): a slot takes a meal
+  // dragged from the grid, and lights up while one is held over it.
+  function allowMealDrop(e: DragEvent, cell: string) {
+    if (!e.dataTransfer.types.includes(PLAN_ENTRY_DRAG_TYPE)) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDropCell(cell)
+  }
+
+  function dropMeal(e: DragEvent, planDate: string, slot: MealSlot) {
+    const id = e.dataTransfer.getData(PLAN_ENTRY_DRAG_TYPE)
+    if (!id) return
+    e.preventDefault()
+    setDropCell(null)
+    const entry = optimistic.find((x) => x.id === id)
+    // Only a meal from this week's grid (one dragged in from another tab would be
+    // moved without ever showing here), and only to somewhere new.
+    if (!entry || (entry.plan_date === planDate && entry.meal_slot === slot)) return
+    startMove(async () => {
+      setOptimistic((prev) => prev.map((x) => (x.id === id ? { ...x, plan_date: planDate, meal_slot: slot } : x)))
+      try {
+        const res = await movePlanEntryAction(id, planDate, slot)
+        if (res.error) toast.error(res.error)
+      } catch {
+        toast.error(t('common.errorRetry'))
+      }
+    })
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -99,7 +139,7 @@ export function WeekPlanner({
         </div>
       </div>
 
-      <div className="grid gap-3">
+      <div className="grid gap-3" onDragEnd={() => setDropCell(null)}>
         {days.map((d) => {
           const iso = toISODate(d)
           const day = grouped[iso] ?? { breakfast: [], lunch: [], dinner: [] }
@@ -107,19 +147,37 @@ export function WeekPlanner({
             <div key={iso} className="rounded-xl border bg-card p-3 print:break-inside-avoid">
               <p className="mb-2 font-serif text-sm font-semibold text-primary">{dayFmt.format(d)}</p>
               <div className="grid gap-2 sm:grid-cols-3">
-                {MEAL_SLOTS.map((slot) => (
-                  // Slot fills don't print, so borrow a border to keep the three
-                  // columns readable on paper.
-                  <div key={slot} className="rounded-lg bg-muted/40 p-2 print:border">
-                    <p className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">{slotLabel[slot]}</p>
-                    <div className="flex flex-col gap-1">
-                      {day[slot].map((e) => <PlannedMeal key={e.id} entry={e} />)}
-                      <div className="print:hidden">
-                        <AddMealDialog planDate={iso} slot={slot} recipes={recipes} roomId={roomId} />
+                {MEAL_SLOTS.map((slot) => {
+                  const cell = `${iso} ${slot}`
+                  return (
+                    // Slot fills don't print, so borrow a border to keep the three
+                    // columns readable on paper.
+                    <div
+                      key={slot}
+                      onDragEnter={(e) => allowMealDrop(e, cell)}
+                      onDragOver={(e) => allowMealDrop(e, cell)}
+                      onDragLeave={(e) => {
+                        // Moving onto one of its own children isn't leaving.
+                        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                          setDropCell((c) => (c === cell ? null : c))
+                        }
+                      }}
+                      onDrop={(e) => dropMeal(e, iso, slot)}
+                      className={cn(
+                        'rounded-lg bg-muted/40 p-2 print:border',
+                        dropCell === cell && 'bg-primary/10 ring-2 ring-primary/40',
+                      )}
+                    >
+                      <p className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">{slotLabel[slot]}</p>
+                      <div className="flex flex-col gap-1">
+                        {day[slot].map((e) => <PlannedMeal key={e.id} entry={e} />)}
+                        <div className="print:hidden">
+                          <AddMealDialog planDate={iso} slot={slot} recipes={recipes} roomId={roomId} />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )
