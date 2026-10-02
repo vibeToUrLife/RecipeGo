@@ -1,14 +1,14 @@
 'use client'
 import { useOptimistic, useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { Plus } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { useT } from '@/components/i18n-provider'
 import type { ShoppingListRow } from '@/lib/data/shopping'
 import type { Unit } from '@/lib/types'
 import { findStackTarget, stackedTotal } from '@/lib/stack'
 import { AISLE_ORDER, categorizeIngredient } from '@/lib/aisles'
 import { UNIT_GROUPS } from '@/lib/unit-options'
-import { toggleItemAction, removeItemAction, completeShoppingAction, addShoppingItemAction, updateItemQuantityAction, updateItemNameAction } from '@/app/shopping-list/actions'
+import { toggleItemAction, removeItemAction, completeShoppingAction, clearShoppingListAction, addShoppingItemAction, updateItemQuantityAction, updateItemNameAction } from '@/app/shopping-list/actions'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -117,6 +117,17 @@ export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; 
         )
       } catch {
         toast.error(t('shop.completeFailed'))
+      }
+    })
+  }
+
+  function clearAll() {
+    start(async () => {
+      setOptimistic([])
+      try {
+        await clearShoppingListAction(rid)
+      } catch {
+        toast.error(t('shop.clearFailed'))
       }
     })
   }
@@ -254,7 +265,10 @@ export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; 
       ) : (
         <>
           <div>
-            <p className="text-xs text-muted-foreground">{t('shop.checkedOf', { checked: checkedCount, total: optimistic.length })}</p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">{t('shop.checkedOf', { checked: checkedCount, total: optimistic.length })}</p>
+              <ClearAllButton count={optimistic.length} onConfirm={clearAll} />
+            </div>
             <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full bg-secondary transition-all"
@@ -289,6 +303,40 @@ export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; 
           )}
         </>
       )}
+    </div>
+  )
+}
+
+// Empties the whole list, so it asks first (the same two-step as deleting a
+// recipe): unticked items go too, and on a room's list, everyone's.
+function ClearAllButton({ count, onConfirm }: { count: number; onConfirm: () => void }) {
+  const t = useT()
+  const [confirming, setConfirming] = useState(false)
+
+  if (!confirming) {
+    return (
+      <Button type="button" variant="outline" size="xs" onClick={() => setConfirming(true)}>
+        <Trash2 /> {t('shop.clearAll')}
+      </Button>
+    )
+  }
+  return (
+    <div className="flex gap-2">
+      <Button
+        type="button"
+        variant="destructive"
+        size="xs"
+        onClick={() => {
+          setConfirming(false)
+          onConfirm()
+        }}
+      >
+        {t('shop.confirmClearAll', { n: count })}
+      </Button>
+      {/* Focus lands on the safe choice, so a second Enter backs out. */}
+      <Button type="button" variant="ghost" size="xs" autoFocus onClick={() => setConfirming(false)}>
+        {t('common.cancel')}
+      </Button>
     </div>
   )
 }
