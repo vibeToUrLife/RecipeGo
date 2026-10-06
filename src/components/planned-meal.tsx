@@ -38,8 +38,9 @@ export function PlannedMeal({ entry, onToggleEaten }: { entry: MealPlanEntryView
   // touch screen a long press stays a long press; the edit dialog moves it there.
   const canDrag = useFinePointer()
   const [dragging, setDragging] = useState(false)
-  // Ticked as eaten: it stays on the plan, the meal itself faded. The ✓ and ✎
-  // keep full strength, so it's plain the tick is on and can come off again.
+  // Ticked as eaten: it stays on the plan, the meal faded well back and its card
+  // see-through, so it reads as done at a glance. The ✓ and ✎ keep full
+  // strength, so it's plain the tick is on and can come off again.
   const eaten = !!entry.eaten_at
 
   const slotLabel: Record<MealSlot, string> = {
@@ -70,7 +71,7 @@ export function PlannedMeal({ entry, onToggleEaten }: { entry: MealPlanEntryView
           setTimeout(() => setDragging(true))
         }}
         onDragEnd={() => setDragging(false)}
-        className={cn('flex items-stretch overflow-hidden rounded-md bg-background text-sm', dragging && 'opacity-50')}
+        className={cn('flex items-stretch overflow-hidden rounded-md text-sm', eaten ? 'bg-background/40' : 'bg-background', dragging && 'opacity-50')}
       >
         {/* The whole chip drags; the grip only shows that it can, and only
             where there's a mouse. */}
@@ -84,7 +85,7 @@ export function PlannedMeal({ entry, onToggleEaten }: { entry: MealPlanEntryView
         <button
           type="button"
           onClick={() => setViewOpen(true)}
-          className={cn('flex min-w-0 flex-1 flex-col gap-0.5 px-2 py-1 text-left hover:bg-muted', eaten && 'opacity-50')}
+          className={cn('flex min-w-0 flex-1 flex-col gap-0.5 px-2 py-1 text-left hover:bg-muted', eaten && 'opacity-30')}
           aria-label={t('plan.viewRecipe')}
         >
           <span className="flex w-full items-center justify-between gap-1">
