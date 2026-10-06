@@ -101,6 +101,9 @@ export interface MealPlanEntry {
   // Free-text reminder for this one planned meal ("double the chilli"). Null
   // when there isn't one.
   note: string | null
+  // When it was marked eaten. An eaten meal keeps its row (a soft remove) but is
+  // left off the plan. Null until then.
+  eaten_at: string | null
   created_at: string
 }
 

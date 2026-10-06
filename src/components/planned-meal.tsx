@@ -2,7 +2,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { GripVertical, Pencil } from 'lucide-react'
+import { Check, GripVertical, Pencil } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,7 +22,9 @@ import type { MealPlanEntryView } from '@/lib/db-types'
 import { useT } from '@/components/i18n-provider'
 import { cn } from '@/lib/utils'
 
-export function PlannedMeal({ entry }: { entry: MealPlanEntryView }) {
+// onEaten: the ✓ was pressed. The grid owns taking the meal off, so it can do
+// that at once and put it back on Undo.
+export function PlannedMeal({ entry, onEaten }: { entry: MealPlanEntryView; onEaten: () => void }) {
   const t = useT()
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -91,6 +93,15 @@ export function PlannedMeal({ entry }: { entry: MealPlanEntryView }) {
           {entry.note && (
             <span className="line-clamp-2 text-xs text-muted-foreground">📝 {entry.note}</span>
           )}
+        </button>
+        <button
+          type="button"
+          onClick={onEaten}
+          aria-label={t('plan.markEaten')}
+          title={t('plan.markEaten')}
+          className="flex shrink-0 items-center border-l px-2 text-muted-foreground hover:bg-muted hover:text-primary print:hidden"
+        >
+          <Check className="size-3.5" />
         </button>
         <button
           type="button"

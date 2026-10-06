@@ -2,7 +2,7 @@ import { render, screen, within, fireEvent, act, waitFor } from '@testing-librar
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { WeekPlanner } from '@/components/week-planner'
-import { movePlanEntryAction } from '@/app/plan/actions'
+import { movePlanEntryAction, setPlanEntryEatenAction } from '@/app/plan/actions'
 import { PLAN_ENTRY_DRAG_TYPE } from '@/lib/plan/drag'
 import { toast } from 'sonner'
 import type { MealPlanEntryView } from '@/lib/db-types'
@@ -15,11 +15,21 @@ vi.mock('@/components/i18n-provider', () => ({
   useLocale: () => 'en',
 }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
-vi.mock('@/app/plan/actions', () => ({ addWeekToShoppingListAction: vi.fn(), movePlanEntryAction: vi.fn() }))
+vi.mock('@/app/plan/actions', () => ({
+  addWeekToShoppingListAction: vi.fn(),
+  movePlanEntryAction: vi.fn(),
+  setPlanEntryEatenAction: vi.fn(),
+}))
 vi.mock('@/components/add-meal-dialog', () => ({ AddMealDialog: () => null }))
-// Just the title, to show which meal sits in which slot.
+// Just the title, to show which meal sits in which slot, and its ✓ (named by a
+// label, not text, so it isn't counted as a meal).
 vi.mock('@/components/planned-meal', () => ({
-  PlannedMeal: ({ entry }: { entry: MealPlanEntryView }) => <span>{entry.recipe_title}</span>,
+  PlannedMeal: ({ entry, onEaten }: { entry: MealPlanEntryView; onEaten: () => void }) => (
+    <span>
+      {entry.recipe_title}
+      <button type="button" aria-label={`ate ${entry.recipe_title}`} onClick={onEaten} />
+    </span>
+  ),
 }))
 vi.mock('@/components/week-start-selector', () => ({ WeekStartSelector: () => null }))
 
@@ -72,26 +82,34 @@ describe('WeekPlanner print/PDF', () => {
   })
 })
 
-describe('WeekPlanner drag and drop', () => {
-  const meal = (over: Partial<MealPlanEntryView>): MealPlanEntryView => ({
-    id: 'e1',
-    user_id: 'u1',
-    room_id: null,
-    recipe_id: 'r1',
-    plan_date: '2026-06-29',
-    meal_slot: 'dinner',
-    servings: 2,
-    note: null,
-    created_at: '2026-06-26T10:00:00Z',
-    recipe_title: 'Roast Chicken',
-    ...over,
-  })
-  // In the server's order (by day): Monday's chicken first, though the soup
-  // already on Wednesday was added before it.
-  const chicken = meal({})
-  const soup = meal({ id: 'e2', recipe_title: 'Soup', plan_date: '2026-07-01', meal_slot: 'lunch', created_at: '2026-06-25T10:00:00Z' })
-  const week = { ...baseProps, weekStartISO: '2026-06-29', todayWeekISO: '2026-06-29' }
+// A week with meals in it, for the tests that move them about or eat them.
+const meal = (over: Partial<MealPlanEntryView>): MealPlanEntryView => ({
+  id: 'e1',
+  user_id: 'u1',
+  room_id: null,
+  recipe_id: 'r1',
+  plan_date: '2026-06-29',
+  meal_slot: 'dinner',
+  servings: 2,
+  note: null,
+  eaten_at: null,
+  created_at: '2026-06-26T10:00:00Z',
+  recipe_title: 'Roast Chicken',
+  ...over,
+})
+// In the server's order (by day): Monday's chicken first, though the soup
+// already on Wednesday was added before it.
+const chicken = meal({})
+const soup = meal({ id: 'e2', recipe_title: 'Soup', plan_date: '2026-07-01', meal_slot: 'lunch', created_at: '2026-06-25T10:00:00Z' })
+const week = { ...baseProps, weekStartISO: '2026-06-29', todayWeekISO: '2026-06-29' }
 
+// One meal slot of one day, found by the labels on screen.
+const slot = (day: string, name: string) =>
+  within(screen.getByText(day).parentElement!).getByText(name).parentElement!
+const mealsIn = (el: HTMLElement) =>
+  within(el).queryAllByText(/Roast Chicken|Soup/).map((n) => n.textContent)
+
+describe('WeekPlanner drag and drop', () => {
   // A drag in progress, as the browser shows it to each slot it passes over.
   const drag = (data: Record<string, string>) => ({
     types: Object.keys(data),
@@ -99,11 +117,6 @@ describe('WeekPlanner drag and drop', () => {
     dropEffect: 'none',
   })
   const mealDrag = (id: string) => drag({ [PLAN_ENTRY_DRAG_TYPE]: id })
-  // One meal slot of one day, found by the labels on screen.
-  const slot = (day: string, name: string) =>
-    within(screen.getByText(day).parentElement!).getByText(name).parentElement!
-  const mealsIn = (el: HTMLElement) =>
-    within(el).queryAllByText(/Roast Chicken|Soup/).map((n) => n.textContent)
 
   beforeEach(() => {
     vi.mocked(movePlanEntryAction).mockReset()
@@ -184,5 +197,73 @@ describe('WeekPlanner drag and drop', () => {
     expect(wedLunch).toHaveClass('ring-2')
     leave(document.body)
     expect(wedLunch).not.toHaveClass('ring-2')
+  })
+})
+
+describe('WeekPlanner eaten meals', () => {
+  const mondayDinner = () => mealsIn(slot('Mon 29 Jun', 'plan.dinner'))
+  // The Undo on the "marked as eaten" toast.
+  const undo = () =>
+    (vi.mocked(toast.success).mock.calls[0][1] as { action: { label: string; onClick: () => void } }).action
+
+  beforeEach(() => {
+    vi.mocked(setPlanEntryEatenAction).mockReset()
+    vi.mocked(setPlanEntryEatenAction).mockResolvedValue({ ok: true })
+    vi.mocked(toast.success).mockClear()
+    vi.mocked(toast.error).mockClear()
+  })
+
+  it('takes a meal off the plan as soon as it is marked eaten, and saves that', async () => {
+    let release!: () => void
+    vi.mocked(setPlanEntryEatenAction).mockImplementation(
+      () => new Promise((res) => { release = () => res({ ok: true }) }),
+    )
+    const { rerender } = render(<WeekPlanner {...week} entries={[chicken, soup]} />)
+    fireEvent.click(screen.getByRole('button', { name: 'ate Roast Chicken' }))
+
+    expect(setPlanEntryEatenAction).toHaveBeenCalledWith('e1', true)
+    // Gone before the server answers, and the rest of the week left alone…
+    expect(mondayDinner()).toEqual([])
+    expect(mealsIn(slot('Wed 1 Jul', 'plan.lunch'))).toEqual(['Soup'])
+
+    await act(async () => { release() })
+    // …and the server's copy, which leaves eaten meals out, keeps it gone.
+    rerender(<WeekPlanner {...week} entries={[soup]} />)
+    expect(mondayDinner()).toEqual([])
+    expect(toast.success).toHaveBeenCalledWith('plan.markedEaten', expect.anything())
+    expect(undo().label).toBe('common.undo')
+  })
+
+  it('puts the meal back and says why when marking it eaten fails', async () => {
+    vi.mocked(setPlanEntryEatenAction).mockResolvedValue({ error: 'Could not update your plan. Please try again.' })
+    render(<WeekPlanner {...week} entries={[chicken, soup]} />)
+    fireEvent.click(screen.getByRole('button', { name: 'ate Roast Chicken' }))
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Could not update your plan. Please try again.'))
+    await waitFor(() => expect(mondayDinner()).toEqual(['Roast Chicken']))
+    // No Undo offered for something that didn't happen.
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
+  it('puts an eaten meal back on Undo, and saves that', async () => {
+    const { rerender } = render(<WeekPlanner {...week} entries={[chicken, soup]} />)
+    fireEvent.click(screen.getByRole('button', { name: 'ate Roast Chicken' }))
+    await waitFor(() => expect(toast.success).toHaveBeenCalled())
+    rerender(<WeekPlanner {...week} entries={[soup]} />)
+    expect(mondayDinner()).toEqual([])
+
+    let release!: () => void
+    vi.mocked(setPlanEntryEatenAction).mockImplementation(
+      () => new Promise((res) => { release = () => res({ ok: true }) }),
+    )
+    act(() => undo().onClick())
+
+    expect(setPlanEntryEatenAction).toHaveBeenLastCalledWith('e1', false)
+    // Back before the server answers…
+    expect(mondayDinner()).toEqual(['Roast Chicken'])
+    await act(async () => { release() })
+    // …and still there in the server's copy after.
+    rerender(<WeekPlanner {...week} entries={[chicken, soup]} />)
+    expect(mondayDinner()).toEqual(['Roast Chicken'])
   })
 })

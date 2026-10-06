@@ -207,6 +207,8 @@ const EN: Record<string, string> = {
   'plan.viewRecipe': 'View recipe',
   'plan.editMeal': 'Edit meal',
   'plan.dragToMove': 'Drag to another day or meal',
+  'plan.markEaten': 'Mark as eaten',
+  'plan.markedEaten': '{meal} marked as eaten',
   'plan.recipeLoadFailed': 'Couldn’t load recipe',
   'plan.note': 'Note',
   'plan.notePlaceholder': 'e.g. double the chilli · Ana’s coming · use up the spinach',
@@ -261,6 +263,7 @@ const EN: Record<string, string> = {
   'common.saving': 'Saving…',
   'common.removing': 'Removing…',
   'common.confirm': 'Confirm',
+  'common.undo': 'Undo',
 
   // language switcher
   'lang.switcherLabel': 'Language',
@@ -530,6 +533,8 @@ const ZH: Record<string, string> = {
   'plan.viewRecipe': '查看食谱',
   'plan.editMeal': '编辑餐次',
   'plan.dragToMove': '拖到其他日期或餐次',
+  'plan.markEaten': '标记为已吃',
+  'plan.markedEaten': '已将「{meal}」标记为已吃',
   'plan.recipeLoadFailed': '无法加载食谱',
   'plan.note': '备注',
   'plan.notePlaceholder': '例如 辣椒加倍 · 小安要来 · 把菠菜用掉',
@@ -579,6 +584,7 @@ const ZH: Record<string, string> = {
   'common.saving': '保存中…',
   'common.removing': '移除中…',
   'common.confirm': '确认',
+  'common.undo': '撤销',
 
   'lang.switcherLabel': '语言',
 
