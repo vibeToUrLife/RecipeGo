@@ -101,8 +101,8 @@ export interface MealPlanEntry {
   // Free-text reminder for this one planned meal ("double the chilli"). Null
   // when there isn't one.
   note: string | null
-  // When it was ticked as eaten. It stays on the plan, crossed out, but is left
-  // out of the week's shopping. Null until then.
+  // When it was ticked as eaten. It stays on the plan, shown as eaten, but is
+  // left out of the week's shopping. Null until then.
   eaten_at: string | null
   created_at: string
 }

@@ -69,10 +69,13 @@ describe('PlannedMeal eaten', () => {
     expect(screen.queryByText('plan.moveTo')).toBeNull()
   })
 
-  it('keeps an eaten meal on the chip, crossed out, with a ✓ that unticks it', () => {
+  it('keeps an eaten meal on the chip, faded, with a ✓ that unticks it', () => {
     const onToggleEaten = vi.fn()
     render(<PlannedMeal entry={{ ...entry, eaten_at: '2026-07-20T19:30:00Z' }} onToggleEaten={onToggleEaten} />)
-    expect(screen.getByText('Roast Chicken')).toHaveClass('line-through')
+    const meal = screen.getByLabelText('plan.viewRecipe')
+    expect(meal).toHaveClass('opacity-50')
+    // Only the meal: the chip around it, and so its ✓ and ✎, keep full strength.
+    expect(meal.parentElement).not.toHaveClass('opacity-50')
 
     fireEvent.click(screen.getByRole('button', { name: 'plan.markNotEaten' }))
     expect(onToggleEaten).toHaveBeenCalledTimes(1)
@@ -80,7 +83,7 @@ describe('PlannedMeal eaten', () => {
 
   it('leaves a meal still to eat as it was', () => {
     render(<PlannedMeal entry={entry} onToggleEaten={vi.fn()} />)
-    expect(screen.getByText('Roast Chicken')).not.toHaveClass('line-through')
+    expect(screen.getByLabelText('plan.viewRecipe')).not.toHaveClass('opacity-50')
     expect(screen.queryByRole('button', { name: 'plan.markNotEaten' })).toBeNull()
   })
 

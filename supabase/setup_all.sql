@@ -287,8 +287,8 @@ create table if not exists public.meal_plan_entries (
 -- A free-text reminder per planned meal ("double the chilli"). Null = no note.
 alter table public.meal_plan_entries
   add column if not exists note text;
--- When a planned meal was ticked as eaten. It stays on the plan, crossed out,
--- but is left out of the week's shopping. Null = not eaten yet.
+-- When a planned meal was ticked as eaten. It stays on the plan, shown as
+-- eaten, but is left out of the week's shopping. Null = not eaten yet.
 alter table public.meal_plan_entries
   add column if not exists eaten_at timestamptz;
 create index if not exists meal_plan_entries_scope_date_idx on public.meal_plan_entries (room_id, plan_date);

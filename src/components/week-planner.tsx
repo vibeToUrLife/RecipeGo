@@ -99,7 +99,7 @@ export function WeekPlanner({
   }
 
   // ✓ ticks a meal as eaten, or unticks it. It stays where it is either way,
-  // shown crossed out while ticked, and changes at once.
+  // shown faded while ticked, and changes at once.
   function toggleEaten(entry: MealPlanEntryView) {
     const eaten = !entry.eaten_at
     startEaten(async () => {
