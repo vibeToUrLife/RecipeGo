@@ -40,7 +40,7 @@ const entry: MealPlanEntryView = {
 
 describe('PlannedMeal', () => {
   it('opens the read-only recipe view (no navigation) when the meal is clicked', () => {
-    render(<PlannedMeal entry={entry} onEaten={vi.fn()} />)
+    render(<PlannedMeal entry={entry} onToggleEaten={vi.fn()} />)
     // The view modal is not mounted until the meal title is clicked.
     expect(screen.queryByTestId('recipe-view')).toBeNull()
     fireEvent.click(screen.getByLabelText('plan.viewRecipe'))
@@ -48,7 +48,7 @@ describe('PlannedMeal', () => {
   })
 
   it('opens the edit dialog (servings / move / remove) from the pencil, not the recipe view', () => {
-    render(<PlannedMeal entry={entry} onEaten={vi.fn()} />)
+    render(<PlannedMeal entry={entry} onToggleEaten={vi.fn()} />)
     fireEvent.click(screen.getByLabelText('plan.editMeal'))
     // Edit dialog is up…
     expect(screen.getByText('plan.remove')).toBeInTheDocument()
@@ -59,18 +59,33 @@ describe('PlannedMeal', () => {
 })
 
 describe('PlannedMeal eaten', () => {
-  it('marks the meal eaten from the ✓ on the chip, without opening anything', () => {
-    const onEaten = vi.fn()
-    render(<PlannedMeal entry={entry} onEaten={onEaten} />)
+  it('ticks the meal as eaten from the ✓ on the chip, without opening anything', () => {
+    const onToggleEaten = vi.fn()
+    render(<PlannedMeal entry={entry} onToggleEaten={onToggleEaten} />)
     fireEvent.click(screen.getByRole('button', { name: 'plan.markEaten' }))
 
-    expect(onEaten).toHaveBeenCalledTimes(1)
+    expect(onToggleEaten).toHaveBeenCalledTimes(1)
     expect(screen.queryByTestId('recipe-view')).toBeNull()
     expect(screen.queryByText('plan.moveTo')).toBeNull()
   })
 
+  it('keeps an eaten meal on the chip, crossed out, with a ✓ that unticks it', () => {
+    const onToggleEaten = vi.fn()
+    render(<PlannedMeal entry={{ ...entry, eaten_at: '2026-07-20T19:30:00Z' }} onToggleEaten={onToggleEaten} />)
+    expect(screen.getByText('Roast Chicken')).toHaveClass('line-through')
+
+    fireEvent.click(screen.getByRole('button', { name: 'plan.markNotEaten' }))
+    expect(onToggleEaten).toHaveBeenCalledTimes(1)
+  })
+
+  it('leaves a meal still to eat as it was', () => {
+    render(<PlannedMeal entry={entry} onToggleEaten={vi.fn()} />)
+    expect(screen.getByText('Roast Chicken')).not.toHaveClass('line-through')
+    expect(screen.queryByRole('button', { name: 'plan.markNotEaten' })).toBeNull()
+  })
+
   it('leaves the ✓ off the printed plan', () => {
-    render(<PlannedMeal entry={entry} onEaten={vi.fn()} />)
+    render(<PlannedMeal entry={entry} onToggleEaten={vi.fn()} />)
     expect(screen.getByRole('button', { name: 'plan.markEaten' })).toHaveClass('print:hidden')
   })
 })
@@ -82,17 +97,17 @@ describe('PlannedMeal note', () => {
   })
 
   it('shows an existing note on the chip, without opening anything', () => {
-    render(<PlannedMeal entry={{ ...entry, note: 'double the chilli' }} onEaten={vi.fn()} />)
+    render(<PlannedMeal entry={{ ...entry, note: 'double the chilli' }} onToggleEaten={vi.fn()} />)
     expect(screen.getByText(/double the chilli/)).toBeInTheDocument()
   })
 
   it('shows nothing where the note would be when there is none', () => {
-    render(<PlannedMeal entry={entry} onEaten={vi.fn()} />)
+    render(<PlannedMeal entry={entry} onToggleEaten={vi.fn()} />)
     expect(screen.queryByText(/📝/)).toBeNull()
   })
 
   it('saves a note typed into the edit dialog', async () => {
-    render(<PlannedMeal entry={entry} onEaten={vi.fn()} />)
+    render(<PlannedMeal entry={entry} onToggleEaten={vi.fn()} />)
     fireEvent.click(screen.getByLabelText('plan.editMeal'))
     await userEvent.type(screen.getByLabelText('plan.note'), 'Ana is coming')
     await userEvent.click(screen.getByText('common.save'))
@@ -101,7 +116,7 @@ describe('PlannedMeal note', () => {
   })
 
   it('clears the note to null when the field is emptied', async () => {
-    render(<PlannedMeal entry={{ ...entry, note: 'double the chilli' }} onEaten={vi.fn()} />)
+    render(<PlannedMeal entry={{ ...entry, note: 'double the chilli' }} onToggleEaten={vi.fn()} />)
     fireEvent.click(screen.getByLabelText('plan.editMeal'))
     await userEvent.clear(screen.getByLabelText('plan.note'))
     await userEvent.click(screen.getByText('common.save'))
@@ -111,7 +126,7 @@ describe('PlannedMeal note', () => {
   })
 
   it('does not write an unchanged note', async () => {
-    render(<PlannedMeal entry={{ ...entry, note: 'double the chilli' }} onEaten={vi.fn()} />)
+    render(<PlannedMeal entry={{ ...entry, note: 'double the chilli' }} onToggleEaten={vi.fn()} />)
     fireEvent.click(screen.getByLabelText('plan.editMeal'))
     await userEvent.click(screen.getByText('common.save'))
 
@@ -136,7 +151,7 @@ describe('PlannedMeal dragging', () => {
 
   it('drags on a computer, carrying the meal and fading while it goes', async () => {
     mouse(true)
-    render(<PlannedMeal entry={entry} onEaten={vi.fn()} />)
+    render(<PlannedMeal entry={entry} onToggleEaten={vi.fn()} />)
     expect(chip()).toHaveAttribute('draggable', 'true')
 
     const data: Record<string, string> = {}
@@ -156,7 +171,7 @@ describe('PlannedMeal dragging', () => {
 
   it("doesn't drag on a phone or tablet", () => {
     mouse(false)
-    render(<PlannedMeal entry={entry} onEaten={vi.fn()} />)
+    render(<PlannedMeal entry={entry} onToggleEaten={vi.fn()} />)
     expect(chip()).toHaveAttribute('draggable', 'false')
   })
 })

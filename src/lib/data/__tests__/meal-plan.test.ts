@@ -17,7 +17,8 @@ vi.mock('@/utils/supabase/server', () => ({
   },
 }))
 vi.mock('@/lib/data/shopping', () => ({ addRecipeToList: vi.fn() }))
-import { getWeekPlan } from '@/lib/data/meal-plan'
+import { getWeekPlan, addWeekToShoppingList } from '@/lib/data/meal-plan'
+import { addRecipeToList } from '@/lib/data/shopping'
 
 const row = (over: Record<string, unknown>): Record<string, unknown> => ({
   id: 'e1',
@@ -33,24 +34,40 @@ const row = (over: Record<string, unknown>): Record<string, unknown> => ({
   recipes: { title: 'Roast Chicken' },
   ...over,
 })
+const eaten = { eaten_at: '2026-06-29T19:30:00Z' }
 
 beforeEach(() => {
   holder.rows = []
+  vi.mocked(addRecipeToList).mockReset()
 })
 
 describe('getWeekPlan', () => {
-  it('leaves meals marked eaten off the plan', async () => {
-    holder.rows = [row({}), row({ id: 'e2', eaten_at: '2026-06-29T19:30:00Z', recipes: { title: 'Soup' } })]
+  it('keeps meals ticked as eaten on the plan', async () => {
+    holder.rows = [row({}), row({ id: 'e2', recipes: { title: 'Soup' }, ...eaten })]
     const plan = await getWeekPlan('2026-06-29')
-    expect(plan.map((e) => e.id)).toEqual(['e1'])
-    expect(plan[0].recipe_title).toBe('Roast Chicken')
+    expect(plan.map((e) => [e.id, e.recipe_title, e.eaten_at])).toEqual([
+      ['e1', 'Roast Chicken', null],
+      ['e2', 'Soup', '2026-06-29T19:30:00Z'],
+    ])
+  })
+})
+
+describe('addWeekToShoppingList', () => {
+  it('adds only the meals not eaten yet', async () => {
+    holder.rows = [
+      row({ id: 'e1', recipe_id: 'r1', servings: 2 }),
+      row({ id: 'e2', recipe_id: 'r2', servings: 4, ...eaten }),
+    ]
+    expect(await addWeekToShoppingList('2026-06-29')).toEqual({ meals: 1 })
+    expect(addRecipeToList).toHaveBeenCalledTimes(1)
+    expect(addRecipeToList).toHaveBeenCalledWith('r1', 2)
   })
 
-  it('still shows the plan on a database without the eaten_at column yet', async () => {
-    // A row as it comes back before the migration: no eaten_at at all.
-    const premigration = row({})
-    delete premigration.eaten_at
-    holder.rows = [premigration]
-    expect((await getWeekPlan('2026-06-29')).map((e) => e.id)).toEqual(['e1'])
+  it('adds every meal on a database without the eaten_at column yet', async () => {
+    // Rows as they come back before the migration: no eaten_at at all.
+    holder.rows = [row({ id: 'e1', recipe_id: 'r1' }), row({ id: 'e2', recipe_id: 'r2' })]
+    for (const r of holder.rows) delete r.eaten_at
+    expect(await addWeekToShoppingList('2026-06-29')).toEqual({ meals: 2 })
+    expect(addRecipeToList).toHaveBeenCalledTimes(2)
   })
 })

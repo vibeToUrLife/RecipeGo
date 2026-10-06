@@ -98,29 +98,16 @@ export function WeekPlanner({
     })
   }
 
-  // Eaten: the meal comes off the plan at once. Its row is only marked, not
-  // deleted, so Undo on the toast can put it back.
-  function markEaten(entry: MealPlanEntryView) {
+  // ✓ ticks a meal as eaten, or unticks it. It stays where it is either way,
+  // shown crossed out while ticked, and changes at once.
+  function toggleEaten(entry: MealPlanEntryView) {
+    const eaten = !entry.eaten_at
     startEaten(async () => {
-      setOptimistic((prev) => prev.filter((x) => x.id !== entry.id))
+      setOptimistic((prev) => prev.map((x) => (x.id === entry.id
+        ? { ...x, eaten_at: eaten ? new Date().toISOString() : null }
+        : x)))
       try {
-        const res = await setPlanEntryEatenAction(entry.id, true)
-        if (res.error) { toast.error(res.error); return }
-        toast.success(t('plan.markedEaten', { meal: entry.recipe_title }), {
-          action: { label: t('common.undo'), onClick: () => unmarkEaten(entry) },
-        })
-      } catch {
-        toast.error(t('common.errorRetry'))
-      }
-    })
-  }
-
-  function unmarkEaten(entry: MealPlanEntryView) {
-    startEaten(async () => {
-      // Back at once too, unless the server's copy still has it.
-      setOptimistic((prev) => (prev.some((x) => x.id === entry.id) ? prev : [...prev, entry]))
-      try {
-        const res = await setPlanEntryEatenAction(entry.id, false)
+        const res = await setPlanEntryEatenAction(entry.id, eaten)
         if (res.error) toast.error(res.error)
       } catch {
         toast.error(t('common.errorRetry'))
@@ -156,8 +143,10 @@ export function WeekPlanner({
         </div>
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           <PrintButton size="default" label={t('print.plan')} hint={t('print.hint')} />
+          {/* Eaten meals have nothing left to buy, so with every meal eaten (or
+              none planned) there is nothing to add. */}
           <Button
-            disabled={pending || entries.length === 0}
+            disabled={pending || optimistic.every((e) => e.eaten_at)}
             onClick={() => start(async () => {
               const res = await addWeekToShoppingListAction(weekStartISO, roomId)
               if (res.error) { toast.error(res.error); return }
@@ -201,7 +190,7 @@ export function WeekPlanner({
                     >
                       <p className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">{slotLabel[slot]}</p>
                       <div className="flex flex-col gap-1">
-                        {day[slot].map((e) => <PlannedMeal key={e.id} entry={e} onEaten={() => markEaten(e)} />)}
+                        {day[slot].map((e) => <PlannedMeal key={e.id} entry={e} onToggleEaten={() => toggleEaten(e)} />)}
                         <div className="print:hidden">
                           <AddMealDialog planDate={iso} slot={slot} recipes={recipes} roomId={roomId} />
                         </div>

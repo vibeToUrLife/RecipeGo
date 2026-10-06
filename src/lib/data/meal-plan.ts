@@ -20,15 +20,10 @@ export async function getWeekPlan(
   const { data, error } = await q
   if (error) throw error
   type Row = Omit<MealPlanEntryView, 'recipe_title'> & { recipes: { title: string } | null }
-  return ((data ?? []) as Row[])
-    // A meal marked eaten keeps its row but is off the plan, and out of the
-    // week's shopping. Left out here rather than in the query so a database that
-    // hasn't had the eaten_at migration yet still shows its plan.
-    .filter((row) => !row.eaten_at)
-    .map(({ recipes, ...rest }) => ({
-      ...rest,
-      recipe_title: recipes?.title ?? '',
-    }))
+  return ((data ?? []) as Row[]).map(({ recipes, ...rest }) => ({
+    ...rest,
+    recipe_title: recipes?.title ?? '',
+  }))
 }
 
 export async function addPlanEntry(input: {
@@ -78,8 +73,8 @@ export async function movePlanEntry(
   if (error) throw error
 }
 
-// Mark a planned meal eaten, or not (Undo). Eaten is a soft remove: the row
-// stays, stamped with when, and getWeekPlan leaves it out.
+// Tick a planned meal as eaten (stamped with when), or untick it. It stays on
+// the plan either way.
 export async function setPlanEntryEaten(id: string, eaten: boolean): Promise<void> {
   const supabase = await createClient()
   const { error } = await supabase
@@ -103,7 +98,9 @@ export async function addWeekToShoppingList(
   weekStartISO: string,
   roomId: string | null = null,
 ): Promise<{ meals: number }> {
-  const entries = await getWeekPlan(weekStartISO, roomId)
+  // A meal ticked as eaten has nothing left to buy. Rows from a database without
+  // the eaten_at column yet have no stamp, so they all count.
+  const entries = (await getWeekPlan(weekStartISO, roomId)).filter((e) => !e.eaten_at)
   for (const e of entries) {
     await addRecipeToList(e.recipe_id, e.servings)
   }
