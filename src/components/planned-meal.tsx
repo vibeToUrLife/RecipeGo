@@ -22,9 +22,9 @@ import type { MealPlanEntryView } from '@/lib/db-types'
 import { useT } from '@/components/i18n-provider'
 import { cn } from '@/lib/utils'
 
-// onEaten: the ✓ was pressed. The grid owns taking the meal off, so it can do
-// that at once and put it back on Undo.
-export function PlannedMeal({ entry, onEaten }: { entry: MealPlanEntryView; onEaten: () => void }) {
+// onToggleEaten: the ✓ was pressed. The grid owns the eaten state, so it can
+// show the change at once and put it back if the save fails.
+export function PlannedMeal({ entry, onToggleEaten }: { entry: MealPlanEntryView; onToggleEaten: () => void }) {
   const t = useT()
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -38,6 +38,8 @@ export function PlannedMeal({ entry, onEaten }: { entry: MealPlanEntryView; onEa
   // touch screen a long press stays a long press; the edit dialog moves it there.
   const canDrag = useFinePointer()
   const [dragging, setDragging] = useState(false)
+  // Ticked as eaten: it stays on the plan, crossed out like a ticked shopping item.
+  const eaten = !!entry.eaten_at
 
   const slotLabel: Record<MealSlot, string> = {
     breakfast: t('plan.breakfast'), lunch: t('plan.lunch'), dinner: t('plan.dinner'),
@@ -85,7 +87,7 @@ export function PlannedMeal({ entry, onEaten }: { entry: MealPlanEntryView; onEa
           aria-label={t('plan.viewRecipe')}
         >
           <span className="flex w-full items-center justify-between gap-1">
-            <span className="truncate">{entry.recipe_title}</span>
+            <span className={cn('truncate', eaten && 'text-muted-foreground line-through')}>{entry.recipe_title}</span>
             <span className="shrink-0 text-muted-foreground">× {entry.servings}</span>
           </span>
           {/* Shown on the grid itself — a note you have to open a dialog to read
@@ -96,12 +98,15 @@ export function PlannedMeal({ entry, onEaten }: { entry: MealPlanEntryView; onEa
         </button>
         <button
           type="button"
-          onClick={onEaten}
-          aria-label={t('plan.markEaten')}
-          title={t('plan.markEaten')}
-          className="flex shrink-0 items-center border-l px-2 text-muted-foreground hover:bg-muted hover:text-primary print:hidden"
+          onClick={onToggleEaten}
+          aria-label={eaten ? t('plan.markNotEaten') : t('plan.markEaten')}
+          title={eaten ? t('plan.markNotEaten') : t('plan.markEaten')}
+          className={cn(
+            'flex shrink-0 items-center border-l px-2 print:hidden',
+            eaten ? 'bg-primary/10 text-primary hover:bg-primary/20' : 'text-muted-foreground hover:bg-muted hover:text-primary',
+          )}
         >
-          <Check className="size-3.5" />
+          <Check className="size-3.5" strokeWidth={eaten ? 3 : 2} />
         </button>
         <button
           type="button"

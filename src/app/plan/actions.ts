@@ -94,7 +94,7 @@ export async function movePlanEntryAction(
   return write(() => movePlanEntry(id, planDate, slot as MealSlot))
 }
 
-// Eaten takes a meal off the plan but keeps its row; eaten = false is Undo.
+// Tick a meal as eaten (true) or untick it (false). It stays on the plan.
 export async function setPlanEntryEatenAction(
   id: string,
   eaten: boolean,

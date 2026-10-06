@@ -21,13 +21,15 @@ vi.mock('@/app/plan/actions', () => ({
   setPlanEntryEatenAction: vi.fn(),
 }))
 vi.mock('@/components/add-meal-dialog', () => ({ AddMealDialog: () => null }))
-// Just the title, to show which meal sits in which slot, and its ✓ (named by a
+// Just the title, with a ✓ after it once eaten, to show which meal sits in which
+// slot and whether it's been eaten; and the button that ticks it (named by a
 // label, not text, so it isn't counted as a meal).
 vi.mock('@/components/planned-meal', () => ({
-  PlannedMeal: ({ entry, onEaten }: { entry: MealPlanEntryView; onEaten: () => void }) => (
+  PlannedMeal: ({ entry, onToggleEaten }: { entry: MealPlanEntryView; onToggleEaten: () => void }) => (
     <span>
       {entry.recipe_title}
-      <button type="button" aria-label={`ate ${entry.recipe_title}`} onClick={onEaten} />
+      {entry.eaten_at && ' ✓'}
+      <button type="button" aria-label={`tick ${entry.recipe_title}`} onClick={onToggleEaten} />
     </span>
   ),
 }))
@@ -202,68 +204,67 @@ describe('WeekPlanner drag and drop', () => {
 
 describe('WeekPlanner eaten meals', () => {
   const mondayDinner = () => mealsIn(slot('Mon 29 Jun', 'plan.dinner'))
-  // The Undo on the "marked as eaten" toast.
-  const undo = () =>
-    (vi.mocked(toast.success).mock.calls[0][1] as { action: { label: string; onClick: () => void } }).action
+  const eatenChicken = { ...chicken, eaten_at: '2026-06-29T19:30:00Z' }
+  // Holds the save open until the returned release() is called, to look at the
+  // plan before the server answers.
+  const holdSave = () => {
+    let release!: () => void
+    vi.mocked(setPlanEntryEatenAction).mockImplementation(
+      () => new Promise((res) => { release = () => res({ ok: true }) }),
+    )
+    return () => release()
+  }
 
   beforeEach(() => {
     vi.mocked(setPlanEntryEatenAction).mockReset()
     vi.mocked(setPlanEntryEatenAction).mockResolvedValue({ ok: true })
-    vi.mocked(toast.success).mockClear()
     vi.mocked(toast.error).mockClear()
   })
 
-  it('takes a meal off the plan as soon as it is marked eaten, and saves that', async () => {
-    let release!: () => void
-    vi.mocked(setPlanEntryEatenAction).mockImplementation(
-      () => new Promise((res) => { release = () => res({ ok: true }) }),
-    )
+  it('ticks a meal as eaten at once, leaving it in its slot, and saves that', async () => {
+    const release = holdSave()
     const { rerender } = render(<WeekPlanner {...week} entries={[chicken, soup]} />)
-    fireEvent.click(screen.getByRole('button', { name: 'ate Roast Chicken' }))
+    fireEvent.click(screen.getByRole('button', { name: 'tick Roast Chicken' }))
 
     expect(setPlanEntryEatenAction).toHaveBeenCalledWith('e1', true)
-    // Gone before the server answers, and the rest of the week left alone…
-    expect(mondayDinner()).toEqual([])
+    // Ticked where it was before the server answers, the rest of the week alone…
+    expect(mondayDinner()).toEqual(['Roast Chicken ✓'])
     expect(mealsIn(slot('Wed 1 Jul', 'plan.lunch'))).toEqual(['Soup'])
 
     await act(async () => { release() })
-    // …and the server's copy, which leaves eaten meals out, keeps it gone.
-    rerender(<WeekPlanner {...week} entries={[soup]} />)
-    expect(mondayDinner()).toEqual([])
-    expect(toast.success).toHaveBeenCalledWith('plan.markedEaten', expect.anything())
-    expect(undo().label).toBe('common.undo')
+    // …and the same in the server's copy.
+    rerender(<WeekPlanner {...week} entries={[eatenChicken, soup]} />)
+    expect(mondayDinner()).toEqual(['Roast Chicken ✓'])
   })
 
-  it('puts the meal back and says why when marking it eaten fails', async () => {
+  it('unticks an eaten meal the same way', async () => {
+    const release = holdSave()
+    const { rerender } = render(<WeekPlanner {...week} entries={[eatenChicken, soup]} />)
+    fireEvent.click(screen.getByRole('button', { name: 'tick Roast Chicken' }))
+
+    expect(setPlanEntryEatenAction).toHaveBeenCalledWith('e1', false)
+    expect(mondayDinner()).toEqual(['Roast Chicken'])
+
+    await act(async () => { release() })
+    rerender(<WeekPlanner {...week} entries={[chicken, soup]} />)
+    expect(mondayDinner()).toEqual(['Roast Chicken'])
+  })
+
+  it('puts the meal back as it was and says why when the save fails', async () => {
     vi.mocked(setPlanEntryEatenAction).mockResolvedValue({ error: 'Could not update your plan. Please try again.' })
     render(<WeekPlanner {...week} entries={[chicken, soup]} />)
-    fireEvent.click(screen.getByRole('button', { name: 'ate Roast Chicken' }))
+    fireEvent.click(screen.getByRole('button', { name: 'tick Roast Chicken' }))
 
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Could not update your plan. Please try again.'))
     await waitFor(() => expect(mondayDinner()).toEqual(['Roast Chicken']))
-    // No Undo offered for something that didn't happen.
-    expect(toast.success).not.toHaveBeenCalled()
   })
 
-  it('puts an eaten meal back on Undo, and saves that', async () => {
-    const { rerender } = render(<WeekPlanner {...week} entries={[chicken, soup]} />)
-    fireEvent.click(screen.getByRole('button', { name: 'ate Roast Chicken' }))
-    await waitFor(() => expect(toast.success).toHaveBeenCalled())
-    rerender(<WeekPlanner {...week} entries={[soup]} />)
-    expect(mondayDinner()).toEqual([])
+  it('has nothing to add to the shopping list once every meal is eaten', () => {
+    const addWeek = () => screen.getByRole('button', { name: 'plan.addWeekToList' })
+    const { rerender } = render(<WeekPlanner {...week} entries={[eatenChicken, soup]} />)
+    expect(addWeek()).toBeEnabled()
 
-    let release!: () => void
-    vi.mocked(setPlanEntryEatenAction).mockImplementation(
-      () => new Promise((res) => { release = () => res({ ok: true }) }),
-    )
-    act(() => undo().onClick())
-
-    expect(setPlanEntryEatenAction).toHaveBeenLastCalledWith('e1', false)
-    // Back before the server answers…
-    expect(mondayDinner()).toEqual(['Roast Chicken'])
-    await act(async () => { release() })
-    // …and still there in the server's copy after.
-    rerender(<WeekPlanner {...week} entries={[chicken, soup]} />)
-    expect(mondayDinner()).toEqual(['Roast Chicken'])
+    rerender(<WeekPlanner {...week} entries={[eatenChicken, { ...soup, eaten_at: '2026-07-01T12:30:00Z' }]} />)
+    expect(addWeek()).toBeDisabled()
   })
 })
