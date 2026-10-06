@@ -73,9 +73,10 @@ describe('PlannedMeal eaten', () => {
     const onToggleEaten = vi.fn()
     render(<PlannedMeal entry={{ ...entry, eaten_at: '2026-07-20T19:30:00Z' }} onToggleEaten={onToggleEaten} />)
     const meal = screen.getByLabelText('plan.viewRecipe')
-    expect(meal).toHaveClass('opacity-50')
-    // Only the meal: the chip around it, and so its ✓ and ✎, keep full strength.
-    expect(meal.parentElement).not.toHaveClass('opacity-50')
+    expect(meal).toHaveClass('opacity-30')
+    expect(meal.parentElement).toHaveClass('bg-background/40')
+    // The chip itself isn't faded, so its ✓ and ✎ keep full strength.
+    expect(meal.parentElement!.className).not.toMatch(/\bopacity-/)
 
     fireEvent.click(screen.getByRole('button', { name: 'plan.markNotEaten' }))
     expect(onToggleEaten).toHaveBeenCalledTimes(1)
@@ -83,7 +84,9 @@ describe('PlannedMeal eaten', () => {
 
   it('leaves a meal still to eat as it was', () => {
     render(<PlannedMeal entry={entry} onToggleEaten={vi.fn()} />)
-    expect(screen.getByLabelText('plan.viewRecipe')).not.toHaveClass('opacity-50')
+    const meal = screen.getByLabelText('plan.viewRecipe')
+    expect(meal.className).not.toMatch(/\bopacity-/)
+    expect(meal.parentElement).toHaveClass('bg-background')
     expect(screen.queryByRole('button', { name: 'plan.markNotEaten' })).toBeNull()
   })
 
