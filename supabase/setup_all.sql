@@ -268,7 +268,8 @@ create policy "pantry update" on public.pantry_items for update to authenticated
 create policy "pantry delete" on public.pantry_items for delete to authenticated using ( user_id = (select auth.uid()) );
 
 -- ========== 4c. MEAL PLANNER ==========
--- Folds in 20260630190000_meal_plan.sql + 20260806120000_meal_plan_note.sql.
+-- Folds in 20260630190000_meal_plan.sql + 20260806120000_meal_plan_note.sql
+-- + 20261006120000_meal_plan_eaten.sql.
 -- Written idempotently on purpose: this section was missing from earlier copies
 -- of setup_all.sql, so databases created with those need to re-run the file (or
 -- just this block) to get the planner working — "add a recipe to the plan" fails
@@ -286,6 +287,10 @@ create table if not exists public.meal_plan_entries (
 -- A free-text reminder per planned meal ("double the chilli"). Null = no note.
 alter table public.meal_plan_entries
   add column if not exists note text;
+-- When a planned meal was marked eaten. The row stays (a soft remove) but drops
+-- off the plan. Null = not eaten yet.
+alter table public.meal_plan_entries
+  add column if not exists eaten_at timestamptz;
 create index if not exists meal_plan_entries_scope_date_idx on public.meal_plan_entries (room_id, plan_date);
 create index if not exists meal_plan_entries_recipe_id_idx on public.meal_plan_entries (recipe_id);
 

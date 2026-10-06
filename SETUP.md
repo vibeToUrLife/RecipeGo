@@ -333,6 +333,9 @@ The message on the toast says which limit you hit:
 **"Something went wrong" when you add a recipe to the plan**
 Your database is missing the meal-planner table (`meal_plan_entries`), or the `note` column on it. Earlier copies of `setup_all.sql` left that section out, so projects set up with Method A never got it. Fix: open **SQL Editor → New query**, paste the `-- 4c. MEAL PLANNER` section of `supabase/setup_all.sql`, and click **Run**. That block is safe to run on a database that already has some of it.
 
+**"Could not update your plan" when you tick a meal as eaten (✓)**
+Your database is missing the `eaten_at` column on `meal_plan_entries`, which came with the ✓ button (`20261006120000_meal_plan_eaten.sql`). The rest of the plan keeps working without it. Fix: `npx supabase db push` (Method B), or re-run the `-- 4c. MEAL PLANNER` section of `supabase/setup_all.sql` as above.
+
 **Port 3000 already in use**
 Another process is using it. Stop it, or run on another port: `npm run dev -- -p 3001`.
 

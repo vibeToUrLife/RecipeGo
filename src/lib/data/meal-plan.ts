@@ -20,10 +20,15 @@ export async function getWeekPlan(
   const { data, error } = await q
   if (error) throw error
   type Row = Omit<MealPlanEntryView, 'recipe_title'> & { recipes: { title: string } | null }
-  return ((data ?? []) as Row[]).map(({ recipes, ...rest }) => ({
-    ...rest,
-    recipe_title: recipes?.title ?? '',
-  }))
+  return ((data ?? []) as Row[])
+    // A meal marked eaten keeps its row but is off the plan, and out of the
+    // week's shopping. Left out here rather than in the query so a database that
+    // hasn't had the eaten_at migration yet still shows its plan.
+    .filter((row) => !row.eaten_at)
+    .map(({ recipes, ...rest }) => ({
+      ...rest,
+      recipe_title: recipes?.title ?? '',
+    }))
 }
 
 export async function addPlanEntry(input: {
@@ -73,15 +78,27 @@ export async function movePlanEntry(
   if (error) throw error
 }
 
+// Mark a planned meal eaten, or not (Undo). Eaten is a soft remove: the row
+// stays, stamped with when, and getWeekPlan leaves it out.
+export async function setPlanEntryEaten(id: string, eaten: boolean): Promise<void> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('meal_plan_entries')
+    .update({ eaten_at: eaten ? new Date().toISOString() : null })
+    .eq('id', id)
+  if (error) throw error
+}
+
 export async function removePlanEntry(id: string): Promise<void> {
   const supabase = await createClient()
   const { error } = await supabase.from('meal_plan_entries').delete().eq('id', id)
   if (error) throw error
 }
 
-// Push every planned meal in the week into the shopping list. addRecipeToList
-// derives the scope (personal vs room) from each recipe's own room_id and
-// re-merges the unchecked food rows, so we call it sequentially per entry.
+// Push every planned meal in the week that hasn't been eaten yet into the
+// shopping list. addRecipeToList derives the scope (personal vs room) from each
+// recipe's own room_id and re-merges the unchecked food rows, so we call it
+// sequentially per entry.
 export async function addWeekToShoppingList(
   weekStartISO: string,
   roomId: string | null = null,

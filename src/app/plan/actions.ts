@@ -6,6 +6,7 @@ import {
   updatePlanServings,
   updatePlanNote,
   movePlanEntry,
+  setPlanEntryEaten,
   removePlanEntry,
   addWeekToShoppingList,
 } from '@/lib/data/meal-plan'
@@ -91,6 +92,15 @@ export async function movePlanEntryAction(
   if (!ISO_DATE.test(planDate ?? '')) return { error: 'Invalid date.' }
   if (!MEAL_SLOTS.includes(slot as MealSlot)) return { error: 'Invalid meal.' }
   return write(() => movePlanEntry(id, planDate, slot as MealSlot))
+}
+
+// Eaten takes a meal off the plan but keeps its row; eaten = false is Undo.
+export async function setPlanEntryEatenAction(
+  id: string,
+  eaten: boolean,
+): Promise<{ ok?: true; error?: string }> {
+  if (typeof eaten !== 'boolean') return { error: 'Invalid request.' }
+  return write(() => setPlanEntryEaten(id, eaten))
 }
 
 export async function removePlanEntryAction(

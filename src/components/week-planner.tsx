@@ -13,7 +13,7 @@ import {
   groupEntriesByDayAndSlot, MEAL_SLOTS, type MealSlot,
 } from '@/lib/plan/week'
 import { PLAN_ENTRY_DRAG_TYPE } from '@/lib/plan/drag'
-import { addWeekToShoppingListAction, movePlanEntryAction } from '@/app/plan/actions'
+import { addWeekToShoppingListAction, movePlanEntryAction, setPlanEntryEatenAction } from '@/app/plan/actions'
 import { WeekStartSelector } from '@/components/week-start-selector'
 import type { Recipe, MealPlanEntryView } from '@/lib/db-types'
 import { useT, useLocale } from '@/components/i18n-provider'
@@ -41,6 +41,7 @@ export function WeekPlanner({
   const [pending, start] = useTransition()
   const [optimistic, setOptimistic] = useOptimistic(entries)
   const [, startMove] = useTransition()
+  const [, startEaten] = useTransition()
   const [dropCell, setDropCell] = useState<string | null>(null)
   const base = roomId ? `/rooms/${roomId}/plan` : '/plan'
   const weekStart = fromISODate(weekStartISO)
@@ -90,6 +91,36 @@ export function WeekPlanner({
       setOptimistic((prev) => prev.map((x) => (x.id === id ? { ...x, plan_date: planDate, meal_slot: slot } : x)))
       try {
         const res = await movePlanEntryAction(id, planDate, slot)
+        if (res.error) toast.error(res.error)
+      } catch {
+        toast.error(t('common.errorRetry'))
+      }
+    })
+  }
+
+  // Eaten: the meal comes off the plan at once. Its row is only marked, not
+  // deleted, so Undo on the toast can put it back.
+  function markEaten(entry: MealPlanEntryView) {
+    startEaten(async () => {
+      setOptimistic((prev) => prev.filter((x) => x.id !== entry.id))
+      try {
+        const res = await setPlanEntryEatenAction(entry.id, true)
+        if (res.error) { toast.error(res.error); return }
+        toast.success(t('plan.markedEaten', { meal: entry.recipe_title }), {
+          action: { label: t('common.undo'), onClick: () => unmarkEaten(entry) },
+        })
+      } catch {
+        toast.error(t('common.errorRetry'))
+      }
+    })
+  }
+
+  function unmarkEaten(entry: MealPlanEntryView) {
+    startEaten(async () => {
+      // Back at once too, unless the server's copy still has it.
+      setOptimistic((prev) => (prev.some((x) => x.id === entry.id) ? prev : [...prev, entry]))
+      try {
+        const res = await setPlanEntryEatenAction(entry.id, false)
         if (res.error) toast.error(res.error)
       } catch {
         toast.error(t('common.errorRetry'))
@@ -170,7 +201,7 @@ export function WeekPlanner({
                     >
                       <p className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">{slotLabel[slot]}</p>
                       <div className="flex flex-col gap-1">
-                        {day[slot].map((e) => <PlannedMeal key={e.id} entry={e} />)}
+                        {day[slot].map((e) => <PlannedMeal key={e.id} entry={e} onEaten={() => markEaten(e)} />)}
                         <div className="print:hidden">
                           <AddMealDialog planDate={iso} slot={slot} recipes={recipes} roomId={roomId} />
                         </div>
