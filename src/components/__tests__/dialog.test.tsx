@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { I18nProvider } from '@/components/i18n-provider'
 
 // Drags one finger up the page from `target`; true if the move was cancelled.
 // jsdom has no Touch constructor, so a plain event carries the `touches`.
@@ -56,5 +57,15 @@ describe('DialogContent', () => {
     }
     expect(popup(true)).toMatch(/max-sm:bottom-0/)
     expect(popup(false)).not.toMatch(/max-sm:/)
+  })
+
+  // A screen reader reads the ✕ out by this name.
+  it('names its close button in the language the app is in', () => {
+    render(
+      <I18nProvider locale="zh">
+        <Dialog open><DialogContent><DialogTitle>选择食谱</DialogTitle></DialogContent></Dialog>
+      </I18nProvider>,
+    )
+    expect(screen.getByRole('button', { name: '关闭' })).toBeInTheDocument()
   })
 })
