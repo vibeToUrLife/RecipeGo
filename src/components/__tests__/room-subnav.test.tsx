@@ -38,4 +38,9 @@ describe('RoomSubNav', () => {
     render(<RoomSubNav roomId="r1" />)
     expect(screen.getByRole('navigation')).toHaveClass('lg:hidden')
   })
+
+  it('stays pinned under the header when the page scrolls', () => {
+    render(<RoomSubNav roomId="r1" />)
+    expect(screen.getByRole('navigation')).toHaveClass('sticky', 'top-[61px]')
+  })
 })
