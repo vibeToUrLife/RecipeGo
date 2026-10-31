@@ -5,6 +5,7 @@ import type { Recipe } from '@/lib/db-types'
 import { publicImageUrl } from '@/lib/image-url'
 import { Card } from '@/components/ui/card'
 import { useT } from '@/components/i18n-provider'
+import { PlateArt } from '@/components/icons'
 
 export function RecipeCard({ recipe }: { recipe: Recipe }) {
   const t = useT()
@@ -13,11 +14,11 @@ export function RecipeCard({ recipe }: { recipe: Recipe }) {
   return (
     <Link href={`/recipes/${recipe.id}`}>
       <Card className="overflow-hidden p-0 transition hover:-translate-y-1 hover:shadow-lg">
-        <div className="relative flex h-40 items-center justify-center bg-gradient-to-br from-accent/40 to-primary/30 text-5xl">
+        <div className="relative flex h-40 items-center justify-center bg-gradient-to-br from-accent/40 to-primary/30">
           {img ? (
             <Image src={img} alt={recipe.title} fill className="object-cover" sizes="(max-width:768px) 100vw, 33vw" />
           ) : (
-            <span>🍽️</span>
+            <PlateArt className="size-16" />
           )}
         </div>
         <div className="p-3">

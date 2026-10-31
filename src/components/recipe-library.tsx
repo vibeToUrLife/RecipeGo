@@ -6,6 +6,7 @@ import { RecipeCard } from '@/components/recipe-card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useT } from '@/components/i18n-provider'
+import { DiceIcon, SearchIcon } from '@/components/icons'
 
 export function RecipeLibrary({ recipes, addHref = '/recipes/new', spinHref = '/spin' }: { recipes: Recipe[]; addHref?: string; spinHref?: string }) {
   const t = useT()
@@ -25,9 +26,12 @@ export function RecipeLibrary({ recipes, addHref = '/recipes/new', spinHref = '/
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <Input placeholder={t('home.searchPlaceholder')} value={q} onChange={(e) => setQ(e.target.value)} className="min-w-[12rem] max-w-sm flex-1" />
+        <div className="relative min-w-[12rem] max-w-sm flex-1">
+          <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input placeholder={t('home.searchPlaceholder')} value={q} onChange={(e) => setQ(e.target.value)} className="pl-8" />
+        </div>
         <div className="flex shrink-0 gap-2">
-          <Button asChild variant="outline"><Link href={spinHref}>{t('spin.button')}</Link></Button>
+          <Button asChild variant="outline"><Link href={spinHref}><DiceIcon />{t('spin.button')}</Link></Button>
           <Button asChild><Link href={addHref}>{t('lib.addRecipe')}</Link></Button>
         </div>
       </div>

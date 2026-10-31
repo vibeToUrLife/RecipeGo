@@ -36,7 +36,7 @@ describe('AddMealDialog', () => {
     expect(within(row('Roast Chicken')).getByTestId('photo')).toHaveAttribute(
       'data-src', 'https://demo.supabase.co/storage/v1/object/public/recipe-images/u1/chicken.jpg')
     expect(within(row('Lemon Soup')).queryByTestId('photo')).toBeNull()
-    expect(row('Lemon Soup')).toHaveTextContent('🍽️')
+    expect(row('Lemon Soup').querySelector('svg')).not.toBeNull()
   })
 
   it('rises from the bottom of a phone screen, with a list of one height', () => {

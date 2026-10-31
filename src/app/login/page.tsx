@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getT } from '@/lib/i18n-server'
+import { BrandMark } from '@/components/icons'
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; message?: string }> }) {
   const sp = await searchParams
@@ -13,7 +14,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     <main className="flex min-h-screen items-center justify-center p-6">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-3xl">🍳 RecipeGo</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-3xl"><BrandMark className="size-9" />RecipeGo</CardTitle>
           <p className="text-sm text-muted-foreground">{t('login.subtitle')}</p>
         </CardHeader>
         <CardContent>

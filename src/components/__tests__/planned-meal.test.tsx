@@ -102,14 +102,14 @@ describe('PlannedMeal note', () => {
     vi.mocked(updatePlanNoteAction).mockResolvedValue({ ok: true })
   })
 
-  it('shows an existing note on the chip, without opening anything', () => {
+  it('shows an existing note on the chip, marked as one, without opening anything', () => {
     render(<PlannedMeal entry={{ ...entry, note: 'double the chilli' }} onToggleEaten={vi.fn()} />)
-    expect(screen.getByText(/double the chilli/)).toBeInTheDocument()
+    expect(screen.getByText(/double the chilli/).querySelector('svg')).not.toBeNull()
   })
 
   it('shows nothing where the note would be when there is none', () => {
     render(<PlannedMeal entry={entry} onToggleEaten={vi.fn()} />)
-    expect(screen.queryByText(/📝/)).toBeNull()
+    expect(screen.getByLabelText('plan.viewRecipe').querySelector('svg')).toBeNull()
   })
 
   it('saves a note typed into the edit dialog', async () => {

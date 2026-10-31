@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { useT } from '@/components/i18n-provider'
+import { BrandMark } from '@/components/icons'
 
 // Catches render failures anywhere below the root layout. Without this, a
 // dropped database connection showed Next's default error screen and the only
@@ -22,7 +23,7 @@ export default function Error({
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
-      <span className="text-5xl" aria-hidden="true">🍳</span>
+      <BrandMark className="size-14" />
       <h1 className="font-serif text-2xl text-primary">{t('error.title')}</h1>
       <p className="text-sm text-muted-foreground">{t('error.body')}</p>
       <div className="flex flex-wrap justify-center gap-2">

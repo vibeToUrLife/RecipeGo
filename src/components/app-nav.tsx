@@ -9,6 +9,7 @@ import { LanguageSwitcher } from '@/components/language-switcher'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { MobileMenu } from '@/components/mobile-menu'
 import { getT } from '@/lib/i18n-server'
+import { BrandMark } from '@/components/icons'
 
 // Pages that know their room (e.g. a recipe's detail/edit page) can pass
 // roomId so the nav keeps the room context even when it isn't in the URL.
@@ -19,7 +20,10 @@ export async function AppNav({ roomId }: { roomId?: string | null } = {}) {
       <nav className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
           <BackButton roomId={roomId} />
-          <Link href="/" className="truncate font-serif text-xl font-semibold text-primary">🍳 RecipeGo</Link>
+          <Link href="/" className="flex min-w-0 items-center gap-2 font-serif text-xl font-semibold text-primary">
+            <BrandMark className="size-7" />
+            <span className="truncate">RecipeGo</span>
+          </Link>
         </div>
         <div className="flex items-center gap-2 text-sm">
           {/* Desktop: full inline nav (below lg, room pages show the pills under their heading — RoomSubNav) */}

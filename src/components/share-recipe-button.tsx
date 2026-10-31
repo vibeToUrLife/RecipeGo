@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { useT } from '@/components/i18n-provider'
+import { LinkIcon } from '@/components/icons'
 
 export function ShareRecipeButton({ recipeId }: { recipeId: string }) {
   const t = useT()
@@ -23,6 +24,7 @@ export function ShareRecipeButton({ recipeId }: { recipeId: string }) {
 
   return (
     <Button type="button" variant="outline" size="sm" onClick={copy}>
+      <LinkIcon />
       {copied ? t('detail.copied') : t('detail.share')}
     </Button>
   )

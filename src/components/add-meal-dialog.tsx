@@ -14,13 +14,14 @@ import { publicImageUrl } from '@/lib/image-url'
 import type { Recipe } from '@/lib/db-types'
 import type { MealSlot } from '@/lib/plan/week'
 import { useT } from '@/components/i18n-provider'
+import { PlateArt } from '@/components/icons'
 
 // A recipe's photo at thumbnail size, or the plate its card shows without one.
 function RecipeThumb({ recipe }: { recipe: Recipe }) {
   const img = publicImageUrl(recipe.image_path)
   return (
-    <span className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-gradient-to-br from-accent/40 to-primary/30 text-lg">
-      {img ? <Image src={img} alt="" fill sizes="40px" className="object-cover" /> : <span aria-hidden>🍽️</span>}
+    <span className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-gradient-to-br from-accent/40 to-primary/30">
+      {img ? <Image src={img} alt="" fill sizes="40px" className="object-cover" /> : <PlateArt className="size-7" />}
     </span>
   )
 }

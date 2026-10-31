@@ -12,6 +12,7 @@ import { publicImageUrl } from '@/lib/image-url'
 import type { RecipeWithChildren } from '@/lib/db-types'
 import type { IngredientInput } from '@/lib/types'
 import { useT } from '@/components/i18n-provider'
+import { PlateArt, TimerIcon } from '@/components/icons'
 
 // A read-only recipe view shown in a modal from a planned meal — lets you check
 // the ingredients and method without leaving the plan. Fetches the full recipe
@@ -68,16 +69,16 @@ export function RecipeViewDialog({
           <p className="py-8 text-center text-sm text-muted-foreground">{t('plan.recipeLoadFailed')}</p>
         ) : (
           <div className="flex flex-col gap-3">
-            <div className="relative flex h-40 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-accent/40 to-primary/30 text-5xl">
+            <div className="relative flex h-40 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-accent/40 to-primary/30">
               {img
                 ? <Image src={img} alt={recipe.title} fill className="object-cover" sizes="(max-width: 640px) 100vw, 32rem" />
-                : <span>🍽️</span>}
+                : <PlateArt className="size-16" />}
             </div>
 
             {recipe.description && <p className="text-sm text-muted-foreground">{recipe.description}</p>}
             {(total > 0 || recipe.difficulty) && (
               <p className="text-sm text-muted-foreground">
-                {total > 0 ? `⏱ ${t('detail.min', { n: total })}` : ''}
+                {total > 0 && <><TimerIcon /> {t('detail.min', { n: total })}</>}
                 {recipe.difficulty ? ` · ${recipe.difficulty}` : ''}
               </p>
             )}

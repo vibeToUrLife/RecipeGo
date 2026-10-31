@@ -5,6 +5,7 @@ import { addToListAction } from '@/app/shopping-list/actions'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { useT } from '@/components/i18n-provider'
+import { CartIcon } from '@/components/icons'
 
 export function AddToListButton({
   recipeId,
@@ -37,6 +38,7 @@ export function AddToListButton({
         }
       })}
     >
+      <CartIcon />
       {pending ? t('detail.addingToList') : t('detail.addToList')}
     </Button>
   )

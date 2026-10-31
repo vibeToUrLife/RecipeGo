@@ -14,6 +14,7 @@ import { publicImageUrl } from '@/lib/image-url'
 import { Button } from '@/components/ui/button'
 import { ServingsStepper } from '@/components/servings-stepper'
 import { useT } from '@/components/i18n-provider'
+import { ChefHatIcon, PlateArt, TimerIcon } from '@/components/icons'
 
 export function RecipeDetail({ recipe }: { recipe: RecipeWithChildren }) {
   const t = useT()
@@ -30,8 +31,8 @@ export function RecipeDetail({ recipe }: { recipe: RecipeWithChildren }) {
     <article>
       {/* Without an image this is just a gradient placeholder — half a printed
           page of nothing, so keep it off the sheet. */}
-      <div className={`relative mb-4 flex h-48 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-accent/40 to-primary/30 text-6xl print:h-40 ${img ? '' : 'print:hidden'}`}>
-        {img ? <Image src={img} alt={recipe.title} fill className="object-cover" sizes="100vw" /> : <span>🍽️</span>}
+      <div className={`relative mb-4 flex h-48 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-accent/40 to-primary/30 print:h-40 ${img ? '' : 'print:hidden'}`}>
+        {img ? <Image src={img} alt={recipe.title} fill className="object-cover" sizes="100vw" /> : <PlateArt className="size-20" />}
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
@@ -45,7 +46,7 @@ export function RecipeDetail({ recipe }: { recipe: RecipeWithChildren }) {
       </div>
       {recipe.description && <p className="mt-1 text-muted-foreground">{recipe.description}</p>}
       <p className="mt-2 text-sm text-muted-foreground">
-        {total > 0 ? `⏱ ${t('detail.min', { n: total })}` : ''} {recipe.difficulty ? `· ${recipe.difficulty}` : ''}
+        {total > 0 && <><TimerIcon /> {t('detail.min', { n: total })}</>} {recipe.difficulty ? `· ${recipe.difficulty}` : ''}
       </p>
 
       <div className="my-4">
@@ -64,7 +65,7 @@ export function RecipeDetail({ recipe }: { recipe: RecipeWithChildren }) {
         {recipe.steps.length > 0 && (
           <Button asChild variant="outline">
             {/* Carry the scaler's current value into cook mode. */}
-            <Link href={`/recipes/${recipe.id}/cook?servings=${servings}`}>{t('detail.startCooking')}</Link>
+            <Link href={`/recipes/${recipe.id}/cook?servings=${servings}`}><ChefHatIcon />{t('detail.startCooking')}</Link>
           </Button>
         )}
       </div>

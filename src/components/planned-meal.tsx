@@ -20,6 +20,7 @@ import { PLAN_ENTRY_DRAG_TYPE } from '@/lib/plan/drag'
 import { useFinePointer } from '@/lib/use-fine-pointer'
 import type { MealPlanEntryView } from '@/lib/db-types'
 import { useT } from '@/components/i18n-provider'
+import { NoteIcon } from '@/components/icons'
 import { cn } from '@/lib/utils'
 
 // onToggleEaten: the ✓ was pressed. The grid owns the eaten state, so it can
@@ -95,7 +96,7 @@ export function PlannedMeal({ entry, onToggleEaten }: { entry: MealPlanEntryView
           {/* Shown on the grid itself — a note you have to open a dialog to read
               is no use while you're glancing at the week. */}
           {entry.note && (
-            <span className="line-clamp-2 text-xs text-muted-foreground">📝 {entry.note}</span>
+            <span className="line-clamp-2 text-xs text-muted-foreground"><NoteIcon className="mr-1" />{entry.note}</span>
           )}
         </button>
         <button

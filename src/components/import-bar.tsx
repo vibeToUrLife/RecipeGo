@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import type { ImportedRecipe } from '@/lib/recipe/types'
 import { useT } from '@/components/i18n-provider'
+import { LinkIcon } from '@/components/icons'
 
 // The route answers failures with `{ error }` and a non-2xx status. fetch()
 // doesn't throw on those, so every response has to be status-checked before it
@@ -63,7 +64,7 @@ export function ImportBar({ onImported }: { onImported: (r: ImportedRecipe) => v
 
   return (
     <div className="mb-5 rounded-xl border-2 border-dashed border-primary/30 bg-accent/10 p-4">
-      <p className="text-sm font-semibold text-primary">{t('form.importTitle')}</p>
+      <p className="flex items-center gap-1.5 text-sm font-semibold text-primary"><LinkIcon />{t('form.importTitle')}</p>
       <p className="mb-3 text-xs text-muted-foreground">
         {t('form.importHint')}
       </p>

@@ -3,6 +3,7 @@ import { useOptimistic, useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { Minus, Plus, Trash2 } from 'lucide-react'
 import { useT } from '@/components/i18n-provider'
+import { AppleIcon, BasketIcon } from '@/components/icons'
 import type { ShoppingListRow } from '@/lib/data/shopping'
 import type { Unit } from '@/lib/types'
 import { findStackTarget, stackedTotal } from '@/lib/stack'
@@ -279,7 +280,7 @@ export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; 
 
           {foodItems.length > 0 && (
             <div className="space-y-4">
-              <h2 className="font-serif text-lg text-primary">{t('shop.foodHeading')}</h2>
+              <h2 className="flex items-center gap-2 font-serif text-lg text-primary"><AppleIcon className="size-5" />{t('shop.foodHeading')}</h2>
               {byAisle.map((group) => (
                 <section key={group.aisle}>
                   <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('aisle.' + group.aisle)}</h3>
@@ -291,7 +292,7 @@ export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; 
 
           {dailyItems.length > 0 && (
             <div className="space-y-1">
-              <h2 className="font-serif text-lg text-primary">{t('shop.dailyHeading')}</h2>
+              <h2 className="flex items-center gap-2 font-serif text-lg text-primary"><BasketIcon className="size-5" />{t('shop.dailyHeading')}</h2>
               <ul>{dailyItems.map(renderRow)}</ul>
             </div>
           )}

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useT } from '@/components/i18n-provider'
+import { AlmostIcon, BasketIcon, InfoIcon } from '@/components/icons'
 
 function titleCase(s: string) {
   return s.replace(/\b\w/g, (c) => c.toUpperCase())
@@ -134,7 +135,7 @@ export function CookPlanner({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 font-serif text-lg text-primary">
-            <span aria-hidden>🧺</span> {t('cook.myIngredients')} <CountBadge>{have.size}</CountBadge>
+            <BasketIcon className="size-5" /> {t('cook.myIngredients')} <CountBadge>{have.size}</CountBadge>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -168,7 +169,7 @@ export function CookPlanner({
               <Plus className="size-4" /> {t('common.add')}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">{t('cook.amountNote')}</p>
+          <p className="text-xs text-muted-foreground"><InfoIcon className="mr-1" />{t('cook.amountNote')}</p>
           {haveList.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               {t('cook.haveHint')}
@@ -279,8 +280,8 @@ export function CookPlanner({
           {almost.length > 0 && (
             <section>
               <div className="mb-3 flex items-center gap-2">
-                <span className="inline-flex size-7 items-center justify-center rounded-full bg-accent/25" aria-hidden>
-                  🟡
+                <span className="inline-flex size-7 items-center justify-center rounded-full bg-accent/25 text-accent" aria-hidden>
+                  <AlmostIcon className="size-4" />
                 </span>
                 <h2 className="font-serif text-lg text-primary">{t('cook.almost')}</h2>
                 <CountBadge tone="accent">{almost.length}</CountBadge>

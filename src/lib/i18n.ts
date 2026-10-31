@@ -49,17 +49,17 @@ const EN: Record<string, string> = {
   'home.noRecipes': 'No recipes yet.',
   'home.noRecipesHint': 'Add your first recipe or import one from a URL.',
   'home.addRecipe': 'Add a recipe',
-  'home.searchPlaceholder': '🔍 Search recipes…',
+  'home.searchPlaceholder': 'Search recipes…',
   'home.noMatch': 'No recipes match “{q}”.',
   'lib.addRecipe': '＋ Add recipe',
 
   // recipe detail
-  'detail.share': '🔗 Share',
+  'detail.share': 'Share',
   'detail.copied': '✓ Copied',
   'detail.servings': 'Servings',
   'detail.autoScale': '(quantities auto-scale)',
-  'detail.addToList': '🛒 Add ingredients to shopping list',
-  'detail.addingToList': '🛒 Adding…',
+  'detail.addToList': 'Add ingredients to shopping list',
+  'detail.addingToList': 'Adding…',
   'detail.ingredients': 'INGREDIENTS',
   'detail.method': 'METHOD',
   'detail.confirmDelete': 'Confirm delete',
@@ -73,7 +73,7 @@ const EN: Record<string, string> = {
   // recipe form
   'form.addRecipe': 'Add a recipe',
   'form.editRecipe': 'Edit recipe',
-  'form.importTitle': '🔗 Import from a website',
+  'form.importTitle': 'Import from a website',
   'form.importHint': 'Paste a recipe link from a cooking site and we’ll auto-fill the title, ingredients, and steps for you. Or skip this and fill in the form below yourself.',
   'form.import': 'Import',
   'form.importing': 'Importing…',
@@ -125,17 +125,17 @@ const EN: Record<string, string> = {
   'img.storageMissing': 'Image storage isn’t set up yet — run the IMAGE STORAGE section of supabase/setup_all.sql.',
 
   // shopping list
-  'shop.title': '🛒 Shopping List',
+  'shop.title': 'Shopping List',
   'shop.addPlaceholder': 'Add an extra item — e.g. milk, toilet paper',
   'shop.itemName': 'Item name',
-  'shop.food': '🍎 Food',
-  'shop.daily': '🧺 Daily / other',
+  'shop.food': 'Food',
+  'shop.daily': 'Daily / other',
   'shop.adding': 'Adding…',
   'shop.empty': 'Your list is empty.',
   'shop.emptyHint': 'Add an item above, or open a recipe and tap “Add ingredients to shopping list”.',
   'shop.checkedOf': '{checked} of {total} items checked',
-  'shop.foodHeading': '🍎 Food',
-  'shop.dailyHeading': '🧺 Daily & other',
+  'shop.foodHeading': 'Food',
+  'shop.dailyHeading': 'Daily & other',
   'shop.done': '✓ Done — clear {n} ticked & save food to Ingredients',
   'shop.added': 'Added to your list.',
   'shop.enterName': 'Enter an item name.',
@@ -169,7 +169,7 @@ const EN: Record<string, string> = {
   'cook.removeAria': 'Remove {name}',
   'cook.amountPlaceholder': 'amount, e.g. 2 kg',
   'cook.amountAria': 'Amount of {name}',
-  'cook.amountNote': 'ℹ️ Amounts are just a note for you — they don’t affect which recipes show below.',
+  'cook.amountNote': 'Amounts are just a note for you — they don’t affect which recipes show below.',
 
   // shopping (extra: aria labels, badges, room title)
   'shop.quantityAria': 'Quantity',
@@ -182,7 +182,7 @@ const EN: Record<string, string> = {
   'shop.editName': 'Edit name',
   'shop.nameUpdateFailed': 'Could not rename the item. Please try again.',
   'shop.merged': 'merged ×{n}',
-  'shop.roomTitle': '🛒 {room} — Shopping list',
+  'shop.roomTitle': '{room} — Shopping list',
 
   // meal planner
   'plan.title': 'Meal Plan',
@@ -250,7 +250,7 @@ const EN: Record<string, string> = {
   'login.continueGoogle': 'Continue with Google',
 
   // spin wheel
-  'spin.button': '🎲 Surprise me',
+  'spin.button': 'Surprise me',
   'spin.title': 'Can’t decide what to eat?',
   'spin.subtitle': 'Spin the wheel and let it pick for you.',
   'spin.spin': 'Spin',
@@ -318,7 +318,7 @@ const EN: Record<string, string> = {
   'form.saving': 'Saving…',
 
   // cook mode
-  'detail.startCooking': '👩‍🍳 Start cooking',
+  'detail.startCooking': 'Start cooking',
   'cookMode.exit': 'Exit cook mode',
   'cookMode.stepOf': 'Step {n} of {total}',
   'cookMode.ingredients': 'Ingredients',
@@ -382,16 +382,16 @@ const ZH: Record<string, string> = {
   'home.noRecipes': '还没有食谱。',
   'home.noRecipesHint': '添加你的第一个食谱，或从网址导入一个。',
   'home.addRecipe': '添加食谱',
-  'home.searchPlaceholder': '🔍 搜索食谱…',
+  'home.searchPlaceholder': '搜索食谱…',
   'home.noMatch': '没有匹配“{q}”的食谱。',
   'lib.addRecipe': '＋ 添加食谱',
 
-  'detail.share': '🔗 分享',
+  'detail.share': '分享',
   'detail.copied': '✓ 已复制',
   'detail.servings': '份量',
   'detail.autoScale': '（份量自动换算）',
-  'detail.addToList': '🛒 把食材加入购物清单',
-  'detail.addingToList': '🛒 添加中…',
+  'detail.addToList': '把食材加入购物清单',
+  'detail.addingToList': '添加中…',
   'detail.ingredients': '食材',
   'detail.method': '做法',
   'detail.confirmDelete': '确认删除',
@@ -404,7 +404,7 @@ const ZH: Record<string, string> = {
 
   'form.addRecipe': '添加食谱',
   'form.editRecipe': '编辑食谱',
-  'form.importTitle': '🔗 从网站导入',
+  'form.importTitle': '从网站导入',
   'form.importHint': '从烹饪网站粘贴食谱链接，我们会自动填入标题、食材和步骤。或者跳过，自己填写下面的表单。',
   'form.import': '导入',
   'form.importing': '导入中…',
@@ -454,17 +454,17 @@ const ZH: Record<string, string> = {
   'img.notAllowed': '存储拒绝了这次上传。请重新登录，或检查 recipe-images 的访问策略。',
   'img.storageMissing': '图片存储还没建好——请运行 supabase/setup_all.sql 里的 IMAGE STORAGE 部分。',
 
-  'shop.title': '🛒 购物清单',
+  'shop.title': '购物清单',
   'shop.addPlaceholder': '添加额外物品——例如 牛奶、卫生纸',
   'shop.itemName': '物品名称',
-  'shop.food': '🍎 食物',
-  'shop.daily': '🧺 日用/其他',
+  'shop.food': '食物',
+  'shop.daily': '日用/其他',
   'shop.adding': '添加中…',
   'shop.empty': '你的清单是空的。',
   'shop.emptyHint': '在上面添加物品，或打开一个食谱点击“把食材加入购物清单”。',
   'shop.checkedOf': '已勾选 {checked}/{total} 项',
-  'shop.foodHeading': '🍎 食物',
-  'shop.dailyHeading': '🧺 日用及其他',
+  'shop.foodHeading': '食物',
+  'shop.dailyHeading': '日用及其他',
   'shop.done': '✓ 完成——清除 {n} 项已勾选并把食物存入食材',
   'shop.added': '已加入你的清单。',
   'shop.enterName': '请输入物品名称。',
@@ -497,7 +497,7 @@ const ZH: Record<string, string> = {
   'cook.removeAria': '移除 {name}',
   'cook.amountPlaceholder': '数量，如 2 kg',
   'cook.amountAria': '{name} 的数量',
-  'cook.amountNote': 'ℹ️ 数量只是给你看的备注——不会影响下面显示哪些可以做的食谱。',
+  'cook.amountNote': '数量只是给你看的备注——不会影响下面显示哪些可以做的食谱。',
 
   'shop.quantityAria': '数量',
   'shop.unitAria': '单位',
@@ -509,7 +509,7 @@ const ZH: Record<string, string> = {
   'shop.editName': '编辑名称',
   'shop.nameUpdateFailed': '无法重命名该项目，请重试。',
   'shop.merged': '已合并 ×{n}',
-  'shop.roomTitle': '🛒 {room} — 购物清单',
+  'shop.roomTitle': '{room} — 购物清单',
 
   // meal planner
   'plan.title': '膳食计划',
@@ -573,7 +573,7 @@ const ZH: Record<string, string> = {
   'login.signUp': '注册',
   'login.continueGoogle': '使用 Google 继续',
 
-  'spin.button': '🎲 帮我选',
+  'spin.button': '帮我选',
   'spin.title': '不知道吃什么？',
   'spin.subtitle': '转动转盘，让它帮你决定。',
   'spin.spin': '开始转',
@@ -633,7 +633,7 @@ const ZH: Record<string, string> = {
   'form.saving': '保存中…',
 
   // cook mode
-  'detail.startCooking': '👩‍🍳 开始烹饪',
+  'detail.startCooking': '开始烹饪',
   'cookMode.exit': '退出烹饪模式',
   'cookMode.stepOf': '第 {n} 步 / 共 {total} 步',
   'cookMode.ingredients': '食材',
