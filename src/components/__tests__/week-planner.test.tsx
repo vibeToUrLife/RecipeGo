@@ -268,3 +268,73 @@ describe('WeekPlanner eaten meals', () => {
     expect(addWeek()).toBeDisabled()
   })
 })
+
+describe('WeekPlanner today', () => {
+  // Thursday 2 July 2026, mid-morning, by the phone's clock.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 6, 2, 10))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+    document.querySelectorAll('body > header, body > nav').forEach((el) => el.remove())
+  })
+
+  const todayCard = () => document.querySelector<HTMLElement>('[aria-current="date"]')
+  // jsdom does no layout: today's card starts `top` px down the screen, the rest at 0.
+  const placeToday = (top: number) =>
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return { top: this.getAttribute('aria-current') === 'date' ? top : 0 } as DOMRect
+    })
+  const spyScroll = () => vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+
+  it("marks today's card, and only it", () => {
+    render(<WeekPlanner {...week} />)
+    expect(todayCard()).toHaveTextContent('Thu 2 Jul')
+    expect(within(todayCard()!).getByText('plan.today')).toBeInTheDocument()
+    expect(screen.getAllByText('plan.today')).toHaveLength(1)
+  })
+
+  it('marks no day on another week', () => {
+    render(<WeekPlanner {...week} weekStartISO="2026-07-06" />)
+    expect(todayCard()).toBeNull()
+    expect(screen.queryByText('plan.today')).toBeNull()
+  })
+
+  it("brings today's card up under the header and the pill row pinned there", () => {
+    // What's pinned to the top: a 61px header, and a 44px pill row under it.
+    document.body.insertAdjacentHTML('beforeend',
+      '<header style="position: sticky; top: 0px"></header><nav style="position: sticky; top: 61px"></nav>')
+    Object.defineProperty(document.querySelector('header'), 'offsetHeight', { value: 61 })
+    Object.defineProperty(document.querySelector('nav'), 'offsetHeight', { value: 44 })
+    placeToday(1500)
+    const scrollTo = spyScroll()
+
+    render(<WeekPlanner {...week} />)
+    expect(scrollTo).toHaveBeenCalledWith({ top: 1500 - 61 - 44 - 12 })
+  })
+
+  it("leaves the page alone when today's card is already in the top half of the screen", () => {
+    placeToday(window.innerHeight / 2 - 1)
+    const scrollTo = spyScroll()
+    render(<WeekPlanner {...week} />)
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('leaves the page alone once it has been scrolled', () => {
+    placeToday(1500)
+    const scrollTo = spyScroll()
+    vi.spyOn(window, 'scrollY', 'get').mockReturnValue(300)
+    render(<WeekPlanner {...week} />)
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it("doesn't scroll again when the week refreshes for a change on another device", () => {
+    placeToday(1500)
+    const scrollTo = spyScroll()
+    const { rerender } = render(<WeekPlanner {...week} />)
+    rerender(<WeekPlanner {...week} entries={[chicken]} />)
+    expect(scrollTo).toHaveBeenCalledTimes(1)
+  })
+})

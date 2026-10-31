@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { useOptimistic, useState, useTransition, type DragEvent } from 'react'
+import { useEffect, useOptimistic, useRef, useState, useSyncExternalStore, useTransition, type DragEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -23,6 +23,24 @@ import { cn } from '@/lib/utils'
 // by day), so one dropped into a busy slot lands where it will stay.
 function byAdded(a: MealPlanEntryView, b: MealPlanEntryView) {
   return a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0
+}
+
+// Today by the phone's own clock — the server's can be a day out. Nothing on the
+// server and for the hydration render, so the two render alike.
+const noSubscribe = () => () => {}
+const localToday = () => toISODate(new Date())
+
+// How far down the screen what's pinned to its top reaches: the header, and on a
+// room's page the pill row pinned under it. A card scrolled to sits below them.
+function pinnedHeight(): number {
+  let bottom = 0
+  for (const el of document.querySelectorAll<HTMLElement>('header, nav')) {
+    const { position, top } = getComputedStyle(el)
+    if (position === 'sticky' || position === 'fixed') {
+      bottom = Math.max(bottom, (parseFloat(top) || 0) + el.offsetHeight)
+    }
+  }
+  return bottom
 }
 
 export function WeekPlanner({
@@ -68,6 +86,21 @@ export function WeekPlanner({
   })
   const weekRangeLabel = `${rangeFmt.format(weekStart)} – ${rangeFmt.format(days[days.length - 1])}`
   const onCurrentWeek = weekStartISO === todayWeekISO
+  const today = useSyncExternalStore(noSubscribe, localToday, () => null)
+  const todayInView = days.some((d) => toISODate(d) === today)
+  const todayCard = useRef<HTMLDivElement>(null)
+
+  // Arriving at the week with today in it, bring today's card up under the
+  // header — unless it's already in the top half of the screen, or the page has
+  // been scrolled (by you, or by the browser putting you back where you were).
+  // A refresh for a change on another device keeps the week, so nothing moves.
+  useEffect(() => {
+    const card = todayCard.current
+    if (!card || window.scrollY > 0) return
+    const { top } = card.getBoundingClientRect()
+    if (top < window.innerHeight / 2) return
+    window.scrollTo({ top: top + window.scrollY - pinnedHeight() - 12 })
+  }, [weekStartISO, todayInView])
 
   // Drag and drop (computers only — see PlannedMeal): a slot takes a meal
   // dragged from the grid, and lights up while one is held over it.
@@ -163,9 +196,24 @@ export function WeekPlanner({
         {days.map((d) => {
           const iso = toISODate(d)
           const day = grouped[iso] ?? { breakfast: [], lunch: [], dinner: [] }
+          const isToday = iso === today
           return (
-            <div key={iso} className="rounded-xl border bg-card p-3 print:break-inside-avoid">
+            // Today stands out, outlined and labelled, on screen only.
+            <div
+              key={iso}
+              ref={isToday ? todayCard : undefined}
+              aria-current={isToday ? 'date' : undefined}
+              className={cn(
+                'rounded-xl border bg-card p-3 print:break-inside-avoid',
+                isToday && 'relative border-primary ring-1 ring-primary/40 print:border-border print:ring-0',
+              )}
+            >
               <p className="mb-2 font-serif text-sm font-semibold text-primary">{dayFmt.format(d)}</p>
+              {isToday && (
+                <span className="absolute top-3 right-3 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground print:hidden">
+                  {t('plan.today')}
+                </span>
+              )}
               <div className="grid gap-2 sm:grid-cols-3">
                 {MEAL_SLOTS.map((slot) => {
                   const cell = `${iso} ${slot}`
