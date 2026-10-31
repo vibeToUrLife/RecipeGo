@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Fraunces } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { I18nProvider } from "@/components/i18n-provider";
@@ -12,6 +12,18 @@ const fraunces = Fraunces({ subsets: ["latin"], display: "swap", axes: ["opsz"],
 export const metadata: Metadata = {
   title: "RecipeGo",
   description: "Save recipes and build smart shopping lists.",
+  // On an iPhone's home screen it's named RecipeGo and opens full screen (see
+  // manifest.ts). The default status bar keeps the page below it, so the sticky
+  // header, and the room pill row pinned under it, stay where they are.
+  appleWebApp: { title: "RecipeGo", statusBarStyle: "default" },
+};
+
+// The phone's status bar and browser bar take the header's colour in each theme.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fefdfc" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0907" },
+  ],
 };
 
 // Run server functions next to the Supabase database (Tokyo, ap-northeast-1)
