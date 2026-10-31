@@ -1,24 +1,20 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { lockTouchScroll } from '@/lib/touch-scroll-lock'
 
-// jsdom has no Touch constructor, and the lock only reads where each finger is,
-// so a plain event carrying `touches` stands in for one.
-function touch(type: 'touchstart' | 'touchmove', target: Element, fingers: [number, number][]): boolean {
-  const e = new Event(type, { bubbles: true, cancelable: true })
+// Moves fingers on `target`; true if the move was cancelled. jsdom has no Touch
+// constructor, so a plain event carries the `touches`.
+function moveCancelled(target: Element, fingers: [number, number][]): boolean {
+  const e = new Event('touchmove', { bubbles: true, cancelable: true })
   Object.defineProperty(e, 'touches', { value: fingers.map(([clientX, clientY]) => ({ clientX, clientY })) })
   target.dispatchEvent(e)
   return e.defaultPrevented
 }
 
-// Drags one finger (dx, dy) from `target`; true if the move was cancelled.
-function swipeCancelled(target: Element, dy: number, dx = 0): boolean {
-  touch('touchstart', target, [[100, 100]])
-  return touch('touchmove', target, [[100 + dx, 100 + dy]])
-}
+const swipeCancelled = (target: Element) => moveCancelled(target, [[100, 50]])
 
-// The page, and a dialog over it holding a heading and a list that scrolls
-// 300px (jsdom does no layout, so the list's size is set by hand).
-function renderDialog() {
+// The page, and a dialog over it holding a heading and a list of recipes
+// `listHeight` tall in a 200px box (jsdom does no layout, so sizes are set by hand).
+function renderDialog(listHeight: number) {
   document.body.innerHTML = `
     <main id="page"></main>
     <div data-slot="dialog-content">
@@ -27,11 +23,10 @@ function renderDialog() {
     </div>`
   const get = (id: string) => document.getElementById(id)!
   Object.defineProperties(get('list'), {
-    scrollHeight: { value: 500 },
-    clientHeight: { value: 200 },
-    scrollTop: { value: 0, writable: true },
+    scrollHeight: { value: listHeight },
+    clientHeight: { value: Math.min(listHeight, 200) },
   })
-  return { page: get('page'), title: get('title'), list: get('list'), item: get('item') }
+  return { page: get('page'), title: get('title'), item: get('item') }
 }
 
 describe('lockTouchScroll', () => {
@@ -41,46 +36,42 @@ describe('lockTouchScroll', () => {
     afterEach(() => unlock())
 
     it('stops a swipe on the page behind the dialog', () => {
-      const { page } = renderDialog()
-      expect(swipeCancelled(page, -50)).toBe(true)
+      const { page } = renderDialog(500)
+      expect(swipeCancelled(page)).toBe(true)
     })
 
     it("stops a swipe on a part of the dialog that doesn't scroll", () => {
-      const { title } = renderDialog()
-      expect(swipeCancelled(title, -50)).toBe(true)
+      const { title } = renderDialog(500)
+      expect(swipeCancelled(title)).toBe(true)
     })
 
-    it('lets a list in the dialog scroll, but not on past either end', () => {
-      const { list, item } = renderDialog()
-      // At the top: further down the list, yes; pulling down for more, no.
-      expect(swipeCancelled(item, -50)).toBe(false)
-      expect(swipeCancelled(item, 50)).toBe(true)
-      // At the bottom: back up, yes; on down, no.
-      list.scrollTop = 300
-      expect(swipeCancelled(item, 50)).toBe(false)
-      expect(swipeCancelled(item, -50)).toBe(true)
+    // Whichever way the first, tiny move happens to point: on iOS a cancelled
+    // first move would freeze the list for the whole swipe.
+    it('leaves every swipe on a list with more in it than fits to the list', () => {
+      const { item } = renderDialog(500)
+      expect(moveCancelled(item, [[100, 99]])).toBe(false)
+      expect(moveCancelled(item, [[102, 100]])).toBe(false)
+      expect(moveCancelled(item, [[100, 101]])).toBe(false)
     })
 
-    it('stops a sideways swipe on a list that only scrolls up and down', () => {
-      const { list, item } = renderDialog()
-      list.scrollTop = 100
-      expect(swipeCancelled(item, 5, -50)).toBe(true)
+    it('stops a swipe on a list whose recipes all fit, as there is nothing to scroll', () => {
+      const { item } = renderDialog(150)
+      expect(swipeCancelled(item)).toBe(true)
     })
 
     it('leaves a two-finger pinch alone, so the page can still be zoomed', () => {
-      const { page } = renderDialog()
-      touch('touchstart', page, [[100, 100], [200, 200]])
-      expect(touch('touchmove', page, [[90, 90], [210, 210]])).toBe(false)
+      const { page } = renderDialog(500)
+      expect(moveCancelled(page, [[90, 90], [210, 210]])).toBe(false)
     })
   })
 
   it('lets the page scroll again once the last open dialog closes', () => {
-    const { page } = renderDialog()
+    const { page } = renderDialog(500)
     const unlockFirst = lockTouchScroll()
     const unlockSecond = lockTouchScroll()
     unlockFirst()
-    expect(swipeCancelled(page, -50)).toBe(true)
+    expect(swipeCancelled(page)).toBe(true)
     unlockSecond()
-    expect(swipeCancelled(page, -50)).toBe(false)
+    expect(swipeCancelled(page)).toBe(false)
   })
 })
