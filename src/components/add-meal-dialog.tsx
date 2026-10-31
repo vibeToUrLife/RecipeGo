@@ -1,5 +1,6 @@
 'use client'
 import { useState, useTransition } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
@@ -9,9 +10,20 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { addPlanEntryAction } from '@/app/plan/actions'
 import { NOTE_MAX } from '@/lib/plan/note'
+import { publicImageUrl } from '@/lib/image-url'
 import type { Recipe } from '@/lib/db-types'
 import type { MealSlot } from '@/lib/plan/week'
 import { useT } from '@/components/i18n-provider'
+
+// A recipe's photo at thumbnail size, or the plate its card shows without one.
+function RecipeThumb({ recipe }: { recipe: Recipe }) {
+  const img = publicImageUrl(recipe.image_path)
+  return (
+    <span className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-gradient-to-br from-accent/40 to-primary/30 text-lg">
+      {img ? <Image src={img} alt="" fill sizes="40px" className="object-cover" /> : <span aria-hidden>🍽️</span>}
+    </span>
+  )
+}
 
 export function AddMealDialog({
   planDate, slot, recipes, roomId,
@@ -44,12 +56,15 @@ export function AddMealDialog({
         <Plus className="size-3.5" /> {t('plan.addMeal')}
       </Button>
       <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset() }}>
-        <DialogContent>
+        <DialogContent sheet>
           <DialogHeader><DialogTitle>{t('plan.pickRecipe')}</DialogTitle></DialogHeader>
           {!selected ? (
             <div className="flex flex-col gap-2">
               <Input autoFocus placeholder={t('common.search')} value={q} onChange={(e) => setQ(e.target.value)} />
-              <div className="max-h-64 overflow-y-auto">
+              {/* On a phone the list keeps one height however many recipes it
+                  holds, so the sheet's top, and the search box, stay clear of
+                  the keyboard. */}
+              <div className="max-h-80 overflow-y-auto max-sm:h-[65dvh] max-sm:max-h-none">
                 {filtered.length === 0 ? (
                   <p className="py-4 text-center text-sm text-muted-foreground">{t('home.noRecipes')}</p>
                 ) : (
@@ -58,9 +73,10 @@ export function AddMealDialog({
                       key={r.id}
                       type="button"
                       onClick={() => { setSelected(r); setServings(r.servings) }}
-                      className="block w-full rounded-md px-3 py-2 text-left text-sm hover:bg-muted"
+                      className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
                     >
-                      {r.title}
+                      <RecipeThumb recipe={r} />
+                      <span className="min-w-0 truncate">{r.title}</span>
                     </button>
                   ))
                 )}

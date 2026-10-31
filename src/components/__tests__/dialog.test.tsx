@@ -43,4 +43,18 @@ describe('DialogContent', () => {
     await waitFor(() => expect(screen.queryByText('Pick a recipe')).toBeNull())
     expect(swipeCancelled(page)).toBe(false)
   })
+
+  it('rises from the bottom of a phone screen only when made a sheet', () => {
+    const popup = (sheet: boolean) => {
+      const { unmount } = render(
+        <Dialog open><DialogContent sheet={sheet}><DialogTitle>Pick a recipe</DialogTitle></DialogContent></Dialog>,
+      )
+      const el = document.querySelector('[data-slot="dialog-content"]')!
+      const classes = el.className
+      unmount()
+      return classes
+    }
+    expect(popup(true)).toMatch(/max-sm:bottom-0/)
+    expect(popup(false)).not.toMatch(/max-sm:/)
+  })
 })
