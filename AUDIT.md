@@ -1,5 +1,14 @@
 # RecipeGo — Technical / Security Audit
 
+> **Status, 31 Oct 2026 — every finding re-checked against the code.** Most have since been
+> fixed: the SSRF hole (C1), the response-size cap (H1), the rate limit (H2), the upload limits
+> (H3) and their tests (M1), the red lint (M4), CI (L1), the licence (L2), the boilerplate files
+> (L4), the dead admin client (L6) and the `.gitignore` gap (L8); M2 is answered in the code.
+> **Still open: M3, L3, L7 and L9.** Each finding below keeps its original analysis, now headed
+> by its current status. The table has a Status column, §1 adds a fresh toolchain run, §3's line
+> references follow the code as it is now, and §4–§6 are brought up to date. File:line citations
+> elsewhere are from the original audit, so may have drifted.
+
 **Reviewer's framing:** read as if a technical interviewer is about to grill you on this repo.
 Every claim below is from reading the actual source and running the toolchain — not from the
 README or `CLAUDE.md`. File:line citations are exact.
@@ -14,34 +23,43 @@ README or `CLAUDE.md`. File:line citations are exact.
 
 ## TL;DR severity table
 
-| # | Severity | Finding | Where |
-|---|----------|---------|-------|
-| C1 | 🔴 Critical | SSRF: resolved IP never checked; redirects not re-validated | `url-guard.ts`, `fetch-html.ts:5`, `route.ts:72` |
-| H1 | 🟠 High | No response-size cap on fetched HTML → OOM DoS | `fetch-html.ts:16` |
-| H2 | 🟠 High | No rate limit on the import endpoint (SSRF/DoS amplifier) | `route.ts` (whole handler) |
-| H3 | 🟠 High | Image upload: no server-side MIME/size validation; public bucket | `storage.sql:1`, `image-upload.tsx:30` |
-| M1 | 🟡 Medium | Import tests mock the fetch → false confidence in "SSRF guard" | `route.test.ts:3`, `url-guard.test.ts` |
-| M2 | 🟡 Medium | Realtime `setAuth` called once — token-refresh propagation unproven | `room-realtime.tsx:41` |
-| M3 | 🟡 Medium | Build has a hard build-time dependency on Google Fonts | `layout.tsx:2,9` |
-| M4 | 🟡 Medium | `npm run lint` fails (19 errors, 2 warnings) | multiple |
-| L1 | 🟢 Low | No CI (`.github/` absent) — nothing gates lint/test/build | repo root |
-| L2 | 🟢 Low | No `LICENSE` | repo root |
-| L3 | 🟢 Low | No screenshots/demo in `README.md` | `README.md` |
-| L4 | 🟢 Low | Default `create-next-app` boilerplate SVGs left in `public/` | `public/` |
-| L5 | 🟢 Low | `get_shareable_recipe` — broad `SECURITY DEFINER` read (any auth user, any recipe by UUID) | `share_recipe.sql:7` |
-| L6 | 🟢 Low | Dead code: `createAdminClient` defined but never called | `admin.ts:4` |
-| L7 | 🟢 Low | All import failure modes collapse to one generic response | `route.ts:98` |
-| L8 | 🟢 Low | `.gitignore` misses non-`.local` env files | `.gitignore` |
-| L9 | 🟢 Low | pgTAP RLS/realtime DB tests never run (no CI, needs Docker) | `supabase/tests/*` |
+| # | Severity | Finding | Where (Aug 2026) | Status (31 Oct 2026) |
+|---|----------|---------|------------------|----------------------|
+| C1 | 🔴 Critical | SSRF: resolved IP never checked; redirects not re-validated | `url-guard.ts`, `fetch-html.ts:5`, `route.ts:72` | ✅ Fixed: resolved-IP check pinned to the socket; redirects followed by hand, each hop re-checked (`fetch-html.ts`) |
+| H1 | 🟠 High | No response-size cap on fetched HTML → OOM DoS | `fetch-html.ts:16` | ✅ Fixed: 3 MiB streamed cap; a larger `Content-Length` refused up front (`fetch-html.ts`) |
+| H2 | 🟠 High | No rate limit on the import endpoint (SSRF/DoS amplifier) | `route.ts` (whole handler) | ✅ Fixed: 10 imports a minute per user (`rate-limit.ts`; per warm instance) |
+| H3 | 🟠 High | Image upload: no server-side MIME/size validation; public bucket | `storage.sql:1`, `image-upload.tsx:30` | ✅ Fixed: bucket takes JPEG/PNG/WebP up to 5 MiB; extension from the MIME type |
+| M1 | 🟡 Medium | Import tests mock the fetch → false confidence in "SSRF guard" | `route.test.ts:3`, `url-guard.test.ts` | ✅ Fixed: DNS→private, redirect→private and oversize tests (`fetch-html*.test.ts`) |
+| M2 | 🟡 Medium | Realtime `setAuth` called once — token-refresh propagation unproven | `room-realtime.tsx:41` | ✅ Answered: supabase-js re-auths the socket on token refresh (`room-realtime.tsx:81-94`) |
+| M3 | 🟡 Medium | Build has a hard build-time dependency on Google Fonts | `layout.tsx:2,9` | ⚠️ Open: still `next/font/google` |
+| M4 | 🟡 Medium | `npm run lint` fails (19 errors, 2 warnings) | multiple | ✅ Fixed: lint exits 0 |
+| L1 | 🟢 Low | No CI (`.github/` absent) — nothing gates lint/test/build | repo root | ✅ Fixed: `ci.yml` runs lint, tests and build on every push |
+| L2 | 🟢 Low | No `LICENSE` | repo root | ✅ Fixed: MIT `LICENSE` |
+| L3 | 🟢 Low | No screenshots/demo in `README.md` | `README.md` | ⚠️ Partly: live-demo link added; the screenshot images don't exist yet |
+| L4 | 🟢 Low | Default `create-next-app` boilerplate SVGs left in `public/` | `public/` | ✅ Fixed: gone; `public/` holds only the home-screen icons |
+| L5 | 🟢 Low | `get_shareable_recipe` — broad `SECURITY DEFINER` read (any auth user, any recipe by UUID) | `share_recipe.sql:7` | ⏸ By design: unchanged |
+| L6 | 🟢 Low | Dead code: `createAdminClient` defined but never called | `admin.ts:4` | ✅ Fixed: `admin.ts` removed |
+| L7 | 🟢 Low | All import failure modes collapse to one generic response | `route.ts:98` | ⚠️ Open |
+| L8 | 🟢 Low | `.gitignore` misses non-`.local` env files | `.gitignore` | ✅ Fixed: `.env*` ignored, `!.env.example` kept |
+| L9 | 🟢 Low | pgTAP RLS/realtime DB tests never run (no CI, needs Docker) | `supabase/tests/*` | ⚠️ Open: CI doesn't run `supabase test db` |
 
 > **Note on the SSRF blast radius:** the import endpoint **is** auth-gated (the `proxy.ts`
 > matcher covers `/api/*`, and `middleware.ts:31` redirects unauthenticated users to `/login`),
 > but **sign-up is open** (`login/actions.ts:17` `signup()` calls `supabase.auth.signUp`), so
-> "authenticated" is a self-serve bar. C1 stays Critical.
+> "authenticated" is a self-serve bar. C1 stays Critical. *(Oct 2026: still true of the gate
+> and sign-up; C1 itself is fixed.)*
 
 ---
 
 ## 1. Verification — actual command output
+
+### Re-run, 31 Oct 2026
+- `npm run lint` → **passes** (exit 0, no problems).
+- `npm run test:run` → **passes**: 47 files, 322 tests.
+- `npm run build` → **passes** (with placeholder Supabase env vars; Google Fonts was reachable
+  this time, see M3).
+
+Everything below in §1 is the original August run, kept for the record.
 
 Dependencies were **not** installed on checkout (`node_modules/` absent); ran `npm ci` first (exit 0).
 
@@ -91,6 +109,13 @@ code defect. The *residual* finding is the build-time network dependency itself 
 ## 2. Findings (critical → nice-to-have)
 
 ### 🔴 C1 — SSRF: the *resolved* IP is never validated, and redirects aren't re-checked
+> **Status (Oct 2026): ✅ Fixed.** `fetch-html.ts` now fetches through an undici `Agent` whose
+> `lookup` checks every address the host resolves to and pins the socket to it, so there's no
+> window between check and connect. It follows redirects itself (`redirect: 'manual'`, at most
+> 3), re-running the static guard on each `Location`, and each new hop goes through the same
+> checked `lookup`. Tested in `fetch-html-dns.test.ts` and `fetch-html.test.ts`. The analysis
+> below is the original.
+
 **Current state**
 - The guard is **string-only**. `lib/recipe/url-guard.ts` checks the URL's *literal* hostname
   against private ranges. Its own line 1 admits the gap:
@@ -141,6 +166,9 @@ pinning + a manual redirect loop; the logic itself is small.
 ---
 
 ### 🟠 H1 — No response-size limit → memory-exhaustion DoS
+> **Status (Oct 2026): ✅ Fixed.** `fetch-html.ts` streams the body and stops at 3 MiB, and
+> refuses a declared `Content-Length` over that before reading at all.
+
 **Current state:** `lib/recipe/fetch-html.ts:16` — `return await res.text()` buffers the **entire**
 body into memory with no byte cap and no `Content-Length` guard.
 
@@ -157,6 +185,11 @@ abort once a cap (~2–5 MB is plenty for recipe HTML) is exceeded. Reject early
 ---
 
 ### 🟠 H2 — No rate limiting on `/api/import-recipe`
+> **Status (Oct 2026): ✅ Fixed, per instance.** `route.ts` allows each user 10 imports a minute
+> through `lib/rate-limit.ts`. It's an in-memory window, so on serverless it limits each warm
+> instance rather than globally — the file says as much; a shared store (Upstash, a Postgres
+> table) would make it global.
+
 **Current state:** `app/api/import-recipe/route.ts` has no throttle; the only `limit`/`rate`
 matches in the codebase are Supabase query `.limit()` calls (`lib/data/profile.ts`,
 `lib/data/shopping.ts`), not request rate limiting.
@@ -173,6 +206,11 @@ the edge. Even a crude in-memory limiter per user id is a meaningful first step 
 ---
 
 ### 🟠 H3 — Image upload: no server-side type/size validation; bucket is public
+> **Status (Oct 2026): ✅ Fixed.** `20260727120000_storage_limits.sql` sets the bucket's
+> `allowed_mime_types` to JPEG, PNG and WebP and its `file_size_limit` to 5 MiB, so Storage
+> itself refuses anything else, and `image-upload.tsx` takes the extension from the MIME type,
+> not the filename. The bucket is still public-read, by design.
+
 **Current state**
 - Upload is **client-direct to Supabase Storage** (`components/image-upload.tsx:32`,
   `'use client'`). The only type filter is `accept="image/*"` on the `<input>`
@@ -206,6 +244,10 @@ the edge. Even a crude in-memory limiter per user id is a meaningful first step 
 ---
 
 ### 🟡 M1 — The "SSRF guard" test gives false confidence
+> **Status (Oct 2026): ✅ Fixed.** `fetch-html-dns.test.ts` rejects a hostname resolving to a
+> private IP without connecting; `fetch-html.test.ts` rejects a redirect to a private address,
+> re-checking every hop, and aborts an oversize body.
+
 **Current state:** `app/api/import-recipe/__tests__/route.test.ts:3-5` mocks `fetchHtml`
 entirely, and the only SSRF-labelled assertion (`route.test.ts:21`) just checks that
 `file://` returns 400. `url-guard.test.ts` covers the static cases well but has **zero** tests
@@ -224,6 +266,12 @@ stub resolver.
 ---
 
 ### 🟡 M2 — Realtime auth token is set once; refresh propagation is unverified
+> **Status (Oct 2026): ✅ Answered in the code.** `room-realtime.tsx:81-94` records why the
+> token is set once: supabase-js 2.108.2 re-auths the realtime socket itself on
+> `TOKEN_REFRESHED` (its `onAuthStateChange` → `realtime.setAuth`), which is active because the
+> ssr browser client uses the default auth. The long-lived-tab check below is still the way to
+> see it end to end.
+
 **Current state:** `components/room-realtime.tsx:41-43` calls `supabase.realtime.setAuth(access_token)`
 exactly once, at subscribe time, using the session captured on mount.
 
@@ -243,6 +291,10 @@ interviewer probes — see the Q&A in §4.*
 ---
 
 ### 🟡 M3 — Build depends on Google Fonts at build time (non-hermetic)
+> **Status (Oct 2026): ⚠️ Open.** `layout.tsx` still loads Inter and Fraunces through
+> `next/font/google`. The build passes wherever Google Fonts is reachable (it was on 31 Oct),
+> so this only bites a locked-down build.
+
 **Current state:** `layout.tsx:2,9-10` pulls `Inter` + `Fraunces` via `next/font/google`, which
 fetches from `fonts.googleapis.com` during `next build`. That's what broke the build in this
 sandbox (§1).
@@ -259,6 +311,9 @@ hermetic and also removes a Google round-trip at runtime.
 ---
 
 ### 🟡 M4 — Lint is red (19 errors, 2 warnings)
+> **Status (Oct 2026): ✅ Fixed.** `npm run lint` exits 0 with no problems, and CI runs it on
+> every push (L1).
+
 **Current state:** see §1. Mostly `no-explicit-any` in the recipe-parsing layer + a
 `set-state-in-effect` warning at `theme-toggle.tsx:14`.
 
@@ -277,32 +332,40 @@ locally). Get `lint` to exit 0.
 ### 🟢 Low / nice-to-have
 - **L1 — No CI (`.github/` absent).** Nothing runs `lint`/`test`/`build` on push, which is why
   M4 rotted unnoticed. Add a GitHub Actions workflow (`npm ci && npm run lint && npm run test:run
-  && npm run build`). **Effort: S.**
+  && npm run build`). **Effort: S.** **Now: ✅ fixed** — `.github/workflows/ci.yml` runs exactly
+  that on every push.
 - **L2 — No `LICENSE`.** For a public portfolio repo, absence means "all rights reserved" by
-  default and is ambiguous. Add MIT (or your choice). **Effort: XS.**
+  default and is ambiguous. Add MIT (or your choice). **Effort: XS.** **Now: ✅ fixed** — MIT.
 - **L3 — No screenshots/demo in `README.md`.** Reviewers skim; a hero screenshot + a live demo
-  link dramatically raises first impression. **Effort: S.**
+  link dramatically raises first impression. **Effort: S.** **Now: ⚠️ partly** — the README
+  has a live-demo link and a screenshot table, but the images it points at
+  (`docs/screenshots/*.png`) haven't been captured yet, so they show as broken.
 - **L4 — Boilerplate SVGs in `public/`** (`next.svg`, `vercel.svg`, `window.svg`, `globe.svg`,
   `file.svg`). Leftover `create-next-app` cruft reads as unfinished. Delete the unused ones.
-  **Effort: XS.**
+  **Effort: XS.** **Now: ✅ fixed** — they're gone; `public/` holds only the home-screen app
+  icons.
 - **L5 — `get_shareable_recipe` is a broad `SECURITY DEFINER` read** (`share_recipe.sql:7-11`):
   any authenticated user can read *any* recipe's importable content by UUID, bypassing room RLS.
   It's a deliberate "anyone-with-the-link" capability (UUIDv4 = unguessable) and is nicely
   scoped (no `user_id`/`room_id` leaked) with `search_path = ''`. Defensible — just be ready to
-  justify it out loud. **Effort: n/a (design note).**
+  justify it out loud. **Effort: n/a (design note).** **Now: ⏸ unchanged**, by design.
 - **L6 — Dead code:** `createAdminClient` (`utils/supabase/admin.ts:4`) is never called anywhere
   in `src/` (only referenced in `docs/`). Harmless — and it means the service-role key path is
-  entirely unused — but delete it or wire it up. **Effort: XS.**
+  entirely unused — but delete it or wire it up. **Effort: XS.** **Now: ✅ fixed** — `admin.ts`
+  is gone, and nothing in `src/` uses the service-role key.
 - **L7 — Undifferentiated import failures.** `route.ts:98-100` collapses every failure
   (404, timeout, non-HTML, JS-rendered SPA, paywall) into the same `needsManualEntry` 200; the
   client (`import-bar.tsx:22`) shows one generic toast. Functionally *correct* (it never breaks —
   it degrades to manual entry), but users can't tell "not a recipe page" from "site blocked us."
-  Return a reason code for better UX. **Effort: S.**
+  Return a reason code for better UX. **Effort: S.** **Now: ⚠️ open** — `route.ts` still answers
+  every failure with the same `needsManualEntry` response.
 - **L8 — `.gitignore` gap.** Ignores `.env` and `.env*.local` but not `.env.production` /
   `.env.development` (non-`.local`). Tighten to `.env*` (keeping `!.env.example`). **Effort: XS.**
+  **Now: ✅ fixed** — exactly that.
 - **L9 — DB tests never run.** `supabase/tests/realtime_publication.test.sql` (and the RLS pgTAP
   tests) require Docker/local Supabase and are "deferred to the owner" — with no CI they never
   execute. Wire `supabase test db` into CI, or at least run once and note it. **Effort: S.**
+  **Now: ⚠️ open** — CI runs lint, tests and build, but not `supabase test db`.
 
 ---
 
@@ -313,7 +376,7 @@ then the exact interview answer.
 
 ### 3a. Which mechanism?
 **`postgres_changes`** — not `broadcast`, not `presence`. Confirmed at
-`components/room-realtime.tsx:47` (`channel.on('postgres_changes', …)`). Mentally:
+`components/room-realtime.tsx:100-104` (`channel.on('postgres_changes', …)`). Mentally:
 
 > Postgres writes to its **Write-Ahead Log** → Supabase's Realtime server tails that WAL via
 > **logical replication** → for each change it checks **which subscribed users are allowed to
@@ -335,25 +398,29 @@ deleted row belonged to. `FULL` makes the WAL record include the **entire old ro
 `room_id=eq.<id>` filter still matches on deletes. The migration comment
 (`realtime_rooms.sql:12-14`) says exactly this.
 
-### 3c. The client flow (`components/room-realtime.tsx`, an invisible `null`-rendering subscriber)
-1. **Mount / guard** (`:24-25`): runs in a `useEffect` keyed on `roomId`; bails if no room.
-2. **Auth the socket** (`:41-43`): `getSession()`, then `supabase.realtime.setAuth(access_token)`.
+### 3c. The client flow (`components/room-realtime.tsx`, invisible `null`-rendering subscribers)
+Since October there are two: `RoomRealtime` on a room's pages, and `PlanRealtime` on your own
+plan (mounted by `app/plan/layout.tsx`; your meals have no `room_id`, so it filters on
+`user_id=eq.<you>`, `:53`). Both hand their tables to one shared `refreshOnChange()`
+(`:64-121`), which does steps 2–7. Line numbers here are as of 31 Oct 2026.
+1. **Mount / guard** (`:27-28`): runs in a `useEffect` keyed on `roomId`; bails if no room.
+2. **Auth the socket** (`:92-94`): `getSession()`, then `supabase.realtime.setAuth(access_token)`.
    This is the crucial bit — the JWT is what lets the Realtime server evaluate **your** RLS, so
    you only receive rows you're allowed to `SELECT`.
-3. **Open one channel** (`:45`): `supabase.channel('room:<roomId>')`.
-4. **Subscribe to changes** (`:46-58`): for each room-scoped table, listen to `event: '*'` with
+3. **Open one channel** (`:98`): `supabase.channel('room:<roomId>')` (or `'plan'`).
+4. **Subscribe to changes** (`:29-33`, `:99-105`): for each room-scoped table, listen to `event: '*'` with
    `filter: room_id=eq.<roomId>`; plus the `rooms` row itself keyed by `id=eq.<roomId>` (a rename
    or delete of the room).
-5. **React to a change** (`:33-36`): every event just calls a **debounced (300 ms)**
+5. **React to a change** (`:75-78`): every event just calls a **debounced (300 ms)**
    `router.refresh()`. It does **not** patch state client-side — it re-runs the server components
    so the page re-renders from fresh DB reads. This is the key design choice: **"notify, then
    refetch,"** not "apply deltas."
-6. **Subscribe callback / reconnect** (`:60-64`): on `SUBSCRIBED`, a `connectedOnce` flag
+6. **Subscribe callback / reconnect** (`:107-111`): on `SUBSCRIBED`, a `connectedOnce` flag
    distinguishes the **first** connect (SSR data is already fresh → do nothing) from a
    **re-subscribe after a network drop** (→ `scheduleRefresh()` to catch up on anything missed
    while offline). `supabase-js` auto-reconnects the socket and re-joins channels, which re-fires
    this callback — that's what makes the catch-up fire.
-7. **Cleanup on unmount** (`:69-73`): sets `cancelled`, clears the debounce timer, and
+7. **Cleanup on unmount** (`:116-120`): sets `cancelled`, clears the debounce timer, and
    `supabase.removeChannel(channel)`. **No leak** — this is done correctly. (If you skipped
    `removeChannel`, every navigation would leak a socket subscription.)
 
@@ -364,13 +431,14 @@ membership-scoped policies built on `SECURITY DEFINER` helpers (`is_room_member`
 (`migrations/20260628220000_rooms.sql:34-51,90-152`; `meal_plan.sql:15-29`). Because Realtime
 applies your `SELECT` policy per event, a non-member simply **never receives** another room's
 changes — which is why the component's comment can say "no manual authorization needed here"
-(`room-realtime.tsx:18-19`). That's the sentence that turns "I used Supabase realtime" into "I
+(`room-realtime.tsx:21-22`). That's the sentence that turns "I used Supabase realtime" into "I
 understand my trust boundary."
 
 ### 3e. Does state re-sync on reconnect, or go stale?
 **Re-syncs** — by design (3c step 6). While disconnected you miss events, but the moment the
 channel re-subscribes, `connectedOnce` forces a `router.refresh()` that re-pulls current server
-state, so you converge. The one edge to keep honest about is M2 (token expiry vs. `setAuth`).
+state, so you converge. The one edge to keep honest about was M2 (token expiry vs. `setAuth`),
+now answered in the code: the SDK re-auths the socket on refresh.
 
 ### 3f. Tradeoffs to have ready
 - **Refetch-the-page vs. granular updates:** simple and always-consistent (server is the single
@@ -382,18 +450,22 @@ state, so you converge. The one edge to keep honest about is M2 (token expiry vs
 ---
 
 ## 4. Anticipated grilling — quick answers to rehearse
-- **"Is your URL import SSRF-safe?"** → *Honest:* "Scheme + literal-IP checks are solid, but the
-  resolved IP isn't validated and redirects aren't re-checked — `127.0.0.1.nip.io` gets through.
-  The fix is DNS-resolve + IP-pin + manual redirect re-validation." (Owning C1 beats being caught by it.)
-- **"What stops a giant response from killing your server?"** → currently nothing (H1); the fix
-  is a streamed byte cap.
-- **"Can someone upload a non-image?"** → yes today (H3), because the filter is client-side and
-  the bucket has no MIME/size policy; fix is `allowed_mime_types` + `file_size_limit`.
-- **"Where does the service-role key live?"** → server-only (`admin.ts:1` `import 'server-only'`),
-  no `NEXT_PUBLIC_` prefix, and in fact currently unused (L6). The browser client only ever gets
-  the anon key (`utils/supabase/client.ts`). It cannot reach the client.
+*Answers as the code stands on 31 Oct 2026.*
+- **"Is your URL import SSRF-safe?"** → "Yes, in layers: scheme and literal-IP checks first; then
+  every address the host resolves to is checked inside the socket's `lookup`, and the connection
+  is pinned to it, so `127.0.0.1.nip.io` or DNS rebinding is refused at connect time. Redirects
+  are followed by hand, at most 3, each hop re-checked. And it's tested." (C1, M1)
+- **"What stops a giant response from killing your server?"** → a streamed 3 MiB cap, with a
+  larger declared `Content-Length` refused before reading (H1); plus 10 imports a minute per user
+  (H2) — per warm instance, so a shared store is the next step if that ever matters.
+- **"Can someone upload a non-image?"** → no: the bucket only takes JPEG, PNG and WebP up to
+  5 MiB, enforced by Storage itself, and the extension comes from the MIME type (H3).
+- **"Where does the service-role key live?"** → nowhere in the app: the one unused admin client is
+  gone (L6), so nothing uses it. The browser client only ever gets the anon key
+  (`utils/supabase/client.ts`).
 - **"Walk me through your realtime."** → §3.
-- **"What happens when the JWT expires on an open tab?"** → M2 — know your answer.
+- **"What happens when the JWT expires on an open tab?"** → supabase-js re-auths the realtime
+  socket on `TOKEN_REFRESHED`; the component sets the token once, for the first subscribe (M2).
 
 ---
 
@@ -401,16 +473,17 @@ state, so you converge. The one edge to keep honest about is M2 (token expiry vs
 - **Auth boundary** via the Next 16 `proxy.ts` convention (`src/proxy.ts`) — you correctly used
   the renamed middleware API instead of legacy `middleware.ts`; it gates all non-public routes
   incl. the import API (`utils/supabase/middleware.ts:26-35`, with the `getUser()`-immediately rule honored).
-- **Service-role key containment** — `server-only` + no `NEXT_PUBLIC_` + unused. Textbook.
+- **Service-role key containment** — no `NEXT_PUBLIC_`, and since L6 nothing in the app uses it.
 - **RLS everywhere**, recursion-safe via `SECURITY DEFINER` helpers with `search_path = ''`; the
   realtime security model rests on it and holds.
 - **Realtime lifecycle** — correct `removeChannel` cleanup, thoughtful reconnect catch-up.
 - **Static SSRF pre-filter** is genuinely thorough (IPv4-mapped IPv6, decimal/hex/octal
-  normalization, `.local`/`.internal`, `0.0.0.0`) — verified empirically. It just needs the
-  dynamic layer.
+  normalization, `.local`/`.internal`, `0.0.0.0`) — verified empirically, and now backed by the
+  resolved-IP layer (C1).
 - **Host-header hardening** on the internal-recipe shortcut (`route.ts:78` uses the proxy-set
   host, not the client `Host`).
-- **128 passing unit tests** over the pure logic; clean separation of `lib/` helpers.
+- **322 passing tests** (128 at the audit) over the logic, the components and the import route;
+  clean separation of `lib/` helpers.
 - **Graceful import degradation** — failures fall back to manual entry rather than erroring (L7 is
   a UX refinement, not a bug).
 
@@ -419,22 +492,28 @@ state, so you converge. The one edge to keep honest about is M2 (token expiry vs
 ## 6. Recommended work order
 Ordered by (risk reduction ÷ effort), interview-impact weighted.
 
-1. **C1 — Fix the SSRF** (resolve-and-pin IP + manual redirect re-validation). *M.* The one
+**Progress, 31 Oct 2026:** 1–5 and 7 are done. What's left: 6 (fonts), the screenshots in 8
+(L3), and L7 and L9 in 9.
+
+1. ✅ **C1 — Fix the SSRF** (resolve-and-pin IP + manual redirect re-validation). *M.* The one
    finding that's genuinely dangerous **and** the one you'll be asked about. Do it first.
-2. **H1 + H2 — Size cap + rate limit** on the import endpoint. *S each.* Small, and they close
+2. ✅ **H1 + H2 — Size cap + rate limit** on the import endpoint. *S each.* Small, and they close
    the DoS/amplification story you opened in C1. Bundle with C1.
-3. **M1 — SSRF/size tests.** *S.* Lock the C1/H1 behaviour so it can't regress; turns a weakness
+3. ✅ **M1 — SSRF/size tests.** *S.* Lock the C1/H1 behaviour so it can't regress; turns a weakness
    into a "look, it's tested" talking point.
-4. **H3 — Bucket `allowed_mime_types` + `file_size_limit`.** *S.* One migration, real hardening.
-5. **M4 + L1 — Green the lint, add CI.** *S–M.* CI makes lint/test/build gate every push; a red
+4. ✅ **H3 — Bucket `allowed_mime_types` + `file_size_limit`.** *S.* One migration, real hardening.
+5. ✅ **M4 + L1 — Green the lint, add CI.** *S–M.* CI makes lint/test/build gate every push; a red
    `lint` on a portfolio repo is free points lost.
-6. **M3 — Self-host fonts** (`next/font/local`). *S.* Hermetic, reproducible builds.
-7. **M2 — Verify realtime token refresh.** *S.* Cheap certainty on a likely interview question.
-8. **Polish sweep — L2/L3/L4/L8** (LICENSE, README screenshots, delete boilerplate SVGs, tighten
-   `.gitignore`). *XS–S.* First-impression multipliers.
-9. **L5/L6/L7/L9** (document the share capability, drop dead admin client, per-reason import
+6. ⚠️ **M3 — Self-host fonts** (`next/font/local`). *S.* Hermetic, reproducible builds.
+7. ✅ **M2 — Verify realtime token refresh.** *S.* Cheap certainty on a likely interview question.
+8. ⚠️ **Polish sweep — L2/L3/L4/L8** (LICENSE, README screenshots, delete boilerplate SVGs, tighten
+   `.gitignore`). *XS–S.* First-impression multipliers. *(All done but the screenshots, L3.)*
+9. ⚠️ **L5/L6/L7/L9** *(L6 done, L5 kept by design; L7 and L9 left.)* (document the share capability, drop dead admin client, per-reason import
    feedback, wire DB tests into CI). *XS–S.* Finishing touches.
 
 ---
 *Audit performed read-only. No source files were modified; nothing was committed. This report
 (`AUDIT.md`) is the only file written.*
+
+*Status re-checked on 31 Oct 2026 against the code then on `master`; only this file changed for
+the update.*
