@@ -4,6 +4,7 @@ import * as React from "react"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 
 import { cn } from "@/lib/utils"
+import { lockTouchScroll } from "@/lib/touch-scroll-lock"
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
 
@@ -39,6 +40,12 @@ function DialogOverlay({
   )
 }
 
+// Rendered inside the popup, so it holds the lock just while the dialog is up.
+function TouchScrollLock() {
+  React.useEffect(() => lockTouchScroll(), [])
+  return null
+}
+
 function DialogContent({
   className,
   children,
@@ -58,6 +65,7 @@ function DialogContent({
         )}
         {...props}
       >
+        <TouchScrollLock />
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close
