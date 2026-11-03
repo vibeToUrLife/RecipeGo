@@ -4,12 +4,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // it throws outside a server environment, so neutralise it here.
 vi.mock('server-only', () => ({}))
 
-// The update chain setRecipeImage builds: from('recipes').update(…).eq(…).select(…).
+// The chains these build: setRecipeImage's from('recipes').update(…).eq(…).select(…),
+// and listLibraryRecipes' from('recipes').select(…).order(…).eq/is(…).
 const holder = vi.hoisted(() => ({
   user: { id: '11111111-2222-4333-8444-555555555555' } as { id: string } | null,
   updated: [{ id: 'r1' }] as { id: string }[] | null,
   error: null as unknown,
   update: vi.fn(),
+  listed: [] as unknown[],
+  select: vi.fn(),
 }))
 vi.mock('@/utils/supabase/server', () => ({
   createClient: async () => ({
@@ -19,10 +22,15 @@ vi.mock('@/utils/supabase/server', () => ({
         holder.update(payload)
         return { eq: () => ({ select: async () => ({ data: holder.updated, error: holder.error }) }) }
       },
+      select: (columns: string) => {
+        holder.select(columns)
+        const done = async () => ({ data: holder.listed, error: null })
+        return { order: () => ({ eq: done, is: done }) }
+      },
     }),
   }),
 }))
-import { setRecipeImage } from '@/lib/data/recipes'
+import { setRecipeImage, listLibraryRecipes } from '@/lib/data/recipes'
 
 const mine = `${'11111111-2222-4333-8444-555555555555'}/0f8a4c2e-1b3d-4e5f-8a9b-0c1d2e3f4a5b.jpg`
 
@@ -57,5 +65,20 @@ describe('setRecipeImage', () => {
     holder.user = null
     expect(await setRecipeImage('r1', mine)).toBe(false)
     expect(holder.update).not.toHaveBeenCalled()
+  })
+})
+
+describe('listLibraryRecipes', () => {
+  it('fetches each recipe with its ingredients in one request, as their names', async () => {
+    holder.listed = [
+      { id: 'r1', title: 'Roast Chicken', ingredients: [{ name: 'chicken' }, { name: 'lemon' }] },
+      { id: 'r2', title: 'Toast', ingredients: null },
+    ]
+    const recipes = await listLibraryRecipes('room-1')
+    expect(holder.select).toHaveBeenCalledWith('*, ingredients(name)')
+    expect(recipes).toEqual([
+      { id: 'r1', title: 'Roast Chicken', ingredient_names: ['chicken', 'lemon'] },
+      { id: 'r2', title: 'Toast', ingredient_names: [] },
+    ])
   })
 })

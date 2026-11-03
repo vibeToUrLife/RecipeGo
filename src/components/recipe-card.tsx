@@ -7,7 +7,8 @@ import { Card } from '@/components/ui/card'
 import { useT } from '@/components/i18n-provider'
 import { PlateArt } from '@/components/icons'
 
-export function RecipeCard({ recipe }: { recipe: Recipe }) {
+// hint: a line under the details, e.g. which ingredient a search found it by.
+export function RecipeCard({ recipe, hint }: { recipe: Recipe; hint?: string }) {
   const t = useT()
   const img = publicImageUrl(recipe.image_path)
   const total = (recipe.prep_minutes ?? 0) + (recipe.cook_minutes ?? 0)
@@ -26,6 +27,7 @@ export function RecipeCard({ recipe }: { recipe: Recipe }) {
           <p className="mt-1 text-xs text-muted-foreground">
             {total > 0 ? t('detail.min', { n: total }) : t('card.noTimeSet')} · {t('card.servingsCount', { n: recipe.servings })}
           </p>
+          {hint && <p className="mt-1 truncate text-xs text-primary">{hint}</p>}
         </div>
       </Card>
     </Link>

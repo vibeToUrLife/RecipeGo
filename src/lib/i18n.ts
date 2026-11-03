@@ -49,7 +49,8 @@ const EN: Record<string, string> = {
   'home.noRecipes': 'No recipes yet.',
   'home.noRecipesHint': 'Add your first recipe or import one from a URL.',
   'home.addRecipe': 'Add a recipe',
-  'home.searchPlaceholder': 'Search recipes…',
+  'home.searchPlaceholder': 'Dish or ingredient…',
+  'home.usesIngredient': 'Uses {name}',
   'home.noMatch': 'No recipes match “{q}”.',
   'lib.addRecipe': '＋ Add recipe',
 
@@ -384,7 +385,8 @@ const ZH: Record<string, string> = {
   'home.noRecipes': '还没有食谱。',
   'home.noRecipesHint': '添加你的第一个食谱，或从网址导入一个。',
   'home.addRecipe': '添加食谱',
-  'home.searchPlaceholder': '搜索食谱…',
+  'home.searchPlaceholder': '搜索菜名或食材…',
+  'home.usesIngredient': '用到{name}',
   'home.noMatch': '没有匹配“{q}”的食谱。',
   'lib.addRecipe': '＋ 添加食谱',
 

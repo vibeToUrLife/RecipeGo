@@ -1,6 +1,6 @@
 import 'server-only'
 import { createClient } from '@/utils/supabase/server'
-import type { Recipe, RecipeWithChildren, RecipeFormData } from '@/lib/db-types'
+import type { Recipe, LibraryRecipe, RecipeWithChildren, RecipeFormData } from '@/lib/db-types'
 
 export async function listRecipes(roomId: string | null = null): Promise<Recipe[]> {
   const supabase = await createClient()
@@ -9,6 +9,20 @@ export async function listRecipes(roomId: string | null = null): Promise<Recipe[
   const { data, error } = await q
   if (error) throw error
   return data ?? []
+}
+
+// listRecipes for the library, each with its ingredients' names for the search,
+// in the same request: PostgREST embeds them through ingredients.recipe_id.
+export async function listLibraryRecipes(roomId: string | null = null): Promise<LibraryRecipe[]> {
+  const supabase = await createClient()
+  let q = supabase.from('recipes').select('*, ingredients(name)').order('created_at', { ascending: false })
+  q = roomId ? q.eq('room_id', roomId) : q.is('room_id', null)
+  const { data, error } = await q
+  if (error) throw error
+  return (data ?? []).map(({ ingredients, ...recipe }: Recipe & { ingredients: { name: string }[] | null }) => ({
+    ...recipe,
+    ingredient_names: (ingredients ?? []).map((i) => i.name),
+  }))
 }
 
 // Recipes (with just their ingredient names) for the "What can I cook?" planner,

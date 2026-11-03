@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { listRecipes } from '@/lib/data/recipes'
+import { listLibraryRecipes } from '@/lib/data/recipes'
 import { listMyRooms } from '@/lib/data/rooms'
 import { roomToRestore } from '@/lib/last-collection'
 import { AppNav } from '@/components/app-nav'
@@ -26,7 +26,7 @@ export default async function HomePage({
     }
   }
 
-  const recipes = await listRecipes()
+  const recipes = await listLibraryRecipes()
   const t = await getT()
   return (
     <>

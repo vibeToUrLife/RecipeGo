@@ -3,7 +3,7 @@ import { AppNav } from '@/components/app-nav'
 import { RoomSubNav } from '@/components/room-subnav'
 import { RecipeLibrary } from '@/components/recipe-library'
 import { getRoom } from '@/lib/data/rooms'
-import { listRecipes } from '@/lib/data/recipes'
+import { listLibraryRecipes } from '@/lib/data/recipes'
 import { getT } from '@/lib/i18n-server'
 
 export default async function RoomPage({
@@ -12,7 +12,7 @@ export default async function RoomPage({
   params: Promise<{ roomId: string }>
 }) {
   const { roomId } = await params
-  const [room, recipes, t] = await Promise.all([getRoom(roomId), listRecipes(roomId), getT()])
+  const [room, recipes, t] = await Promise.all([getRoom(roomId), listLibraryRecipes(roomId), getT()])
   if (!room) notFound()
 
   return (

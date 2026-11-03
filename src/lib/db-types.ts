@@ -17,6 +17,12 @@ export interface Recipe {
   room_id: string | null
 }
 
+// A recipe as the library lists it: with its ingredients' names, so a search
+// finds it by one.
+export interface LibraryRecipe extends Recipe {
+  ingredient_names: string[]
+}
+
 export interface Ingredient {
   id: string
   recipe_id: string

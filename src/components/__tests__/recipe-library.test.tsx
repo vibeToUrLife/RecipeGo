@@ -1,15 +1,23 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { RecipeLibrary } from '@/components/recipe-library'
-import type { Recipe } from '@/lib/db-types'
+import type { LibraryRecipe } from '@/lib/db-types'
 
-vi.mock('@/components/i18n-provider', () => ({ useT: () => (k: string) => k }))
-vi.mock('@/components/recipe-card', () => ({ RecipeCard: ({ recipe }: { recipe: Recipe }) => <p>{recipe.title}</p> }))
+vi.mock('@/components/i18n-provider', () => ({
+  useT: () => (k: string, vars?: Record<string, string>) => (vars?.name ? `${k}:${vars.name}` : k),
+}))
+// The title, then the card's hint in brackets when it has one.
+vi.mock('@/components/recipe-card', () => ({
+  RecipeCard: ({ recipe, hint }: { recipe: LibraryRecipe; hint?: string }) => <p>{recipe.title}{hint && ` (${hint})`}</p>,
+}))
 
 const recipes = [
-  { id: 'r1', title: 'Roast Chicken' },
-  { id: 'r2', title: 'Lemon Soup' },
-] as Recipe[]
+  { id: 'r1', title: 'Roast Chicken', ingredient_names: ['chicken', 'lemon'] },
+  { id: 'r2', title: 'Lemon Soup', ingredient_names: ['lemon', 'Chicken stock'] },
+  { id: 'r3', title: 'Steamed Rice', ingredient_names: ['rice'] },
+] as LibraryRecipe[]
+const search = (q: string) => fireEvent.change(screen.getByPlaceholderText('home.searchPlaceholder'), { target: { value: q } })
+const shown = () => screen.queryAllByText(/Roast|Lemon|Rice/).map((p) => p.textContent)
 
 const toolbar = () => screen.getByPlaceholderText('home.searchPlaceholder').parentElement!.parentElement!
 
@@ -34,10 +42,22 @@ describe('RecipeLibrary search', () => {
     expect(toolbar()).toContainElement(screen.getByText('lib.addRecipe').closest('a'))
   })
 
-  it('still narrows the recipes as you type', () => {
+  it('still narrows the recipes by name as you type', () => {
     render(<RecipeLibrary recipes={recipes} />)
-    fireEvent.change(screen.getByPlaceholderText('home.searchPlaceholder'), { target: { value: 'soup' } })
-    expect(screen.queryByText('Roast Chicken')).toBeNull()
-    expect(screen.getByText('Lemon Soup')).toBeInTheDocument()
+    search('soup')
+    expect(shown()).toEqual(['Lemon Soup'])
+  })
+
+  it('finds a recipe by one of its ingredients, saying which', () => {
+    render(<RecipeLibrary recipes={recipes} />)
+    search('chicken')
+    // Roast Chicken by its name, so nothing to explain; the soup by its stock.
+    expect(shown()).toEqual(['Roast Chicken', 'Lemon Soup (home.usesIngredient:Chicken stock)'])
+  })
+
+  it('ignores case and the spaces around what you type', () => {
+    render(<RecipeLibrary recipes={recipes} />)
+    search('  RICE ')
+    expect(shown()).toEqual(['Steamed Rice'])
   })
 })
