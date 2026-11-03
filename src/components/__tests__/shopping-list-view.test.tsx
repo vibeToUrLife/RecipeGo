@@ -1,10 +1,19 @@
 import { render, screen, waitFor, within, act, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ShoppingListView } from '@/components/shopping-list-view'
-import { clearShoppingListAction, updateItemNameAction, updateItemQuantityAction } from '@/app/shopping-list/actions'
+import {
+  clearShoppingListAction,
+  completeShoppingAction,
+  refreshListAction,
+  removeItemAction,
+  toggleItemAction,
+  updateItemNameAction,
+  updateItemQuantityAction,
+} from '@/app/shopping-list/actions'
 import { toast } from 'sonner'
 import type { ShoppingListRow } from '@/lib/data/shopping'
+import { forgetTick, rememberTick, unsentTicks } from '@/lib/offline-list'
 
 vi.mock('@/components/i18n-provider', () => ({ useT: () => (k: string) => k }))
 vi.mock('sonner', () => ({
@@ -18,6 +27,7 @@ vi.mock('@/app/shopping-list/actions', () => ({
   addShoppingItemAction: vi.fn(),
   updateItemQuantityAction: vi.fn(),
   updateItemNameAction: vi.fn(),
+  refreshListAction: vi.fn(),
 }))
 
 const row = (over: Partial<ShoppingListRow> = {}): ShoppingListRow => ({
@@ -327,5 +337,208 @@ describe('ShoppingListView sharing', () => {
   it('has nothing to share once everything is ticked', () => {
     render(<ShoppingListView items={[row({ checked: true })]} />)
     expect(shareButton()).toBeDisabled()
+  })
+})
+
+describe('ShoppingListView with no signal', () => {
+  let online = true
+  const box = () => screen.getByRole('checkbox')
+  const status = () => screen.queryByRole('status')
+  const goOnline = (on: boolean) => {
+    online = on
+    act(() => { window.dispatchEvent(new Event(on ? 'online' : 'offline')) })
+  }
+  const noSignal = () => new TypeError('Load failed')
+
+  beforeEach(() => {
+    online = true
+    Object.defineProperty(navigator, 'onLine', { get: () => online, configurable: true })
+    for (const id of Object.keys(unsentTicks())) forgetTick(id)
+    vi.mocked(toggleItemAction).mockReset()
+    vi.mocked(toggleItemAction).mockResolvedValue(undefined)
+    vi.mocked(completeShoppingAction).mockReset()
+    vi.mocked(completeShoppingAction).mockResolvedValue({ saved: 0, cleared: 1 })
+    vi.mocked(removeItemAction).mockReset()
+    vi.mocked(refreshListAction).mockReset()
+    vi.mocked(refreshListAction).mockResolvedValue(undefined)
+  })
+  afterEach(() => {
+    delete (navigator as unknown as Record<string, unknown>).onLine
+    vi.useRealTimers()
+  })
+
+  it('keeps a tick on the phone, and says so', async () => {
+    online = false
+    render(<ShoppingListView items={[row()]} />)
+    expect(status()).toHaveTextContent('shop.offline')
+
+    fireEvent.click(box())
+
+    await waitFor(() => expect(unsentTicks()).toEqual({ it1: true }))
+    expect(box()).toBeChecked()
+    expect(toggleItemAction).not.toHaveBeenCalled()
+  })
+
+  it('sends the kept ticks once the signal is back', async () => {
+    online = false
+    const { rerender } = render(<ShoppingListView items={[row()]} />)
+    fireEvent.click(box())
+    await waitFor(() => expect(unsentTicks()).toEqual({ it1: true }))
+
+    goOnline(true)
+
+    await waitFor(() => expect(toggleItemAction).toHaveBeenCalledWith('it1', true))
+    await waitFor(() => expect(unsentTicks()).toEqual({}))
+    rerender(<ShoppingListView items={[row({ checked: true })]} />) // the list as the server now has it
+    expect(box()).toBeChecked()
+    expect(status()).toBeNull()
+  })
+
+  it('keeps a tick that could not be sent, shown ticked and waiting', async () => {
+    vi.mocked(toggleItemAction).mockRejectedValue(noSignal())
+    render(<ShoppingListView items={[row()]} />)
+
+    fireEvent.click(box())
+
+    await waitFor(() => expect(status()).toHaveTextContent('shop.unsentTicks'))
+    expect(unsentTicks()).toEqual({ it1: true })
+    expect(box()).toBeChecked()
+  })
+
+  it('tries again every 20 seconds while a weak signal keeps failing', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    vi.mocked(toggleItemAction).mockRejectedValue(noSignal())
+    render(<ShoppingListView items={[row()]} />)
+    fireEvent.click(box())
+    await waitFor(() => expect(unsentTicks()).toEqual({ it1: true }))
+    const tries = vi.mocked(toggleItemAction).mock.calls.length
+
+    vi.mocked(toggleItemAction).mockResolvedValue(undefined)
+    await act(async () => { vi.advanceTimersByTime(20_000) })
+
+    await waitFor(() => expect(unsentTicks()).toEqual({}))
+    expect(toggleItemAction).toHaveBeenCalledTimes(tries + 1)
+  })
+
+  it('shows ticks kept from before when the list opens, and sends them', async () => {
+    rememberTick('it1', true)
+    render(<ShoppingListView items={[row()]} />)
+
+    expect(box()).toBeChecked()
+    await waitFor(() => expect(toggleItemAction).toHaveBeenCalledWith('it1', true))
+    await waitFor(() => expect(unsentTicks()).toEqual({}))
+  })
+
+  it('lets a tick sent now replace one still waiting', async () => {
+    vi.mocked(toggleItemAction).mockRejectedValue(noSignal())
+    rememberTick('it1', true)
+    render(<ShoppingListView items={[row()]} />)
+    await waitFor(() => expect(toggleItemAction).toHaveBeenCalled()) // the waiting one fails again
+    expect(box()).toBeChecked()
+
+    vi.mocked(toggleItemAction).mockResolvedValue(undefined)
+    fireEvent.click(box()) // untick
+
+    await waitFor(() => expect(toggleItemAction).toHaveBeenLastCalledWith('it1', false))
+    await waitFor(() => expect(unsentTicks()).toEqual({}))
+  })
+
+  it('sends the waiting ticks before finishing the shop', async () => {
+    vi.mocked(toggleItemAction).mockRejectedValue(noSignal())
+    rememberTick('it1', true)
+    render(<ShoppingListView items={[row()]} />)
+    await waitFor(() => expect(toggleItemAction).toHaveBeenCalled())
+    const tries = vi.mocked(toggleItemAction).mock.calls.length
+
+    vi.mocked(toggleItemAction).mockResolvedValue(undefined)
+    fireEvent.click(screen.getByRole('button', { name: 'shop.done' }))
+
+    await waitFor(() => expect(completeShoppingAction).toHaveBeenCalledWith(null))
+    const { calls, invocationCallOrder } = vi.mocked(toggleItemAction).mock
+    expect(calls.slice(tries)).toEqual([['it1', true]])
+    expect(invocationCallOrder[tries]).toBeLessThan(vi.mocked(completeShoppingAction).mock.invocationCallOrder[0])
+  })
+
+  it('does not finish the shop while ticks still cannot be sent', async () => {
+    vi.mocked(toggleItemAction).mockRejectedValue(noSignal())
+    rememberTick('it1', true)
+    render(<ShoppingListView items={[row()]} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'shop.done' }))
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('shop.completeFailed'))
+    expect(completeShoppingAction).not.toHaveBeenCalled()
+    expect(unsentTicks()).toEqual({ it1: true })
+  })
+
+  it('says so when an item cannot be removed, and brings it back', async () => {
+    vi.mocked(removeItemAction).mockRejectedValue(noSignal())
+    render(<ShoppingListView items={[row()]} />)
+
+    fireEvent.click(screen.getByRole('button', { name: '✕' }))
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('shop.removeFailed'))
+    await waitFor(() => expect(nameButton('carrot')).toBeInTheDocument())
+  })
+
+  it('asks the service worker to keep a copy once the list has settled', async () => {
+    const postMessage = vi.fn()
+    Object.defineProperty(navigator, 'serviceWorker', {
+      value: { ready: Promise.resolve({ active: { postMessage } }) },
+      configurable: true,
+    })
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      const { rerender } = render(<ShoppingListView items={[row()]} />)
+      rerender(<ShoppingListView items={[row({ checked: true })]} />) // a change starts the wait again
+      await act(async () => { vi.advanceTimersByTime(1999) })
+      expect(postMessage).not.toHaveBeenCalled()
+
+      await act(async () => { vi.advanceTimersByTime(1) })
+      expect(postMessage).toHaveBeenCalledTimes(1)
+      expect(postMessage).toHaveBeenCalledWith({ type: 'keep', path: location.pathname })
+    } finally {
+      delete (navigator as unknown as Record<string, unknown>).serviceWorker
+    }
+  })
+
+  describe('catching up with the server', () => {
+    const minutesAgo = (n: number) => Date.now() - n * 60_000
+
+    it('leaves a list fresh from the server alone', async () => {
+      render(<ShoppingListView items={[row()]} renderedAt={Date.now()} />)
+      await act(async () => {})
+      expect(refreshListAction).not.toHaveBeenCalled()
+    })
+
+    it('fetches the list afresh when the one opened is a copy kept earlier', async () => {
+      render(<ShoppingListView items={[row()]} renderedAt={minutesAgo(5)} />)
+      await waitFor(() => expect(refreshListAction).toHaveBeenCalledTimes(1))
+    })
+
+    it('waits for a signal to do so', async () => {
+      online = false
+      render(<ShoppingListView items={[row()]} renderedAt={minutesAgo(5)} />)
+      await act(async () => {})
+      expect(refreshListAction).not.toHaveBeenCalled()
+
+      goOnline(true)
+      await waitFor(() => expect(refreshListAction).toHaveBeenCalledTimes(1))
+    })
+
+    it('catches up on what others changed once the phone is back online', async () => {
+      render(<ShoppingListView items={[row()]} renderedAt={Date.now()} />)
+      goOnline(false)
+      goOnline(true)
+      await waitFor(() => expect(refreshListAction).toHaveBeenCalledTimes(1))
+    })
+
+    it('gives up quietly if the signal fails again', async () => {
+      vi.mocked(refreshListAction).mockRejectedValue(noSignal())
+      render(<ShoppingListView items={[row()]} renderedAt={minutesAgo(5)} />)
+      await waitFor(() => expect(refreshListAction).toHaveBeenCalled())
+      expect(box()).toBeInTheDocument()
+      expect(toast.error).not.toHaveBeenCalled()
+    })
   })
 })

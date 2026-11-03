@@ -16,13 +16,16 @@ export default async function RoomShoppingListPage({
   const [room, items, t] = await Promise.all([getRoom(roomId), getShoppingList(roomId), getT()])
   if (!room) notFound()
 
+  // When this was rendered, so a copy kept for offline can tell it's old.
+  // eslint-disable-next-line react-hooks/purity -- a server page renders once per request
+  const renderedAt = Date.now()
   return (
     <>
       <AppNav />
       <main className="mx-auto max-w-2xl px-4 py-6">
         <h1 className="mb-4 flex items-center gap-2 font-serif text-2xl text-primary"><CartIcon className="size-6" />{t('shop.roomTitle', { room: room.name })}</h1>
         <RoomSubNav roomId={roomId} />
-        <ShoppingListView items={items} roomId={roomId} />
+        <ShoppingListView items={items} roomId={roomId} renderedAt={renderedAt} />
       </main>
     </>
   )

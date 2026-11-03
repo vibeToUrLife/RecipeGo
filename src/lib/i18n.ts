@@ -156,6 +156,9 @@ const EN: Record<string, string> = {
   'shop.clearAll': 'Clear all',
   'shop.confirmClearAll': 'Yes, clear all {n}',
   'shop.clearFailed': 'Could not clear the list. Please try again.',
+  'shop.removeFailed': 'Could not remove the item. Please try again.',
+  'shop.offline': 'No signal. Your ticks are kept on this phone and sent once you’re back online.',
+  'shop.unsentTicks': '{n} tick(s) not sent yet. They’ll go as soon as there’s signal.',
 
   // cook / ingredients
   'cook.eyebrow': 'What can I cook?',
@@ -496,6 +499,9 @@ const ZH: Record<string, string> = {
   'shop.clearAll': '全部清除',
   'shop.confirmClearAll': '确认清除全部 {n} 项',
   'shop.clearFailed': '无法清空清单，请重试。',
+  'shop.removeFailed': '无法删除物品，请重试。',
+  'shop.offline': '没有网络。打的勾先存在这台手机上，联网后自动同步。',
+  'shop.unsentTicks': '还有 {n} 个勾没同步，有信号就会自动发出。',
 
   'cook.eyebrow': '我能做什么菜？',
   'cook.title': '食材',

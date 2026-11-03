@@ -21,6 +21,11 @@ export async function toggleItemAction(id: string, checked: boolean) {
   await setItemChecked(id, checked)
   revalidatePath('/', 'layout')
 }
+// Changes nothing: revalidating sends back the list as the server has it now,
+// for a page opened from the copy this phone kept for offline.
+export async function refreshListAction() {
+  revalidatePath('/', 'layout')
+}
 export async function removeItemAction(id: string) {
   await removeItem(id)
   revalidatePath('/', 'layout')

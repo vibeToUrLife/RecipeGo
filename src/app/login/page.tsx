@@ -6,12 +6,14 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getT } from '@/lib/i18n-server'
 import { BrandMark } from '@/components/icons'
+import { ForgetOfflineLists } from '@/components/forget-offline-lists'
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; message?: string }> }) {
   const sp = await searchParams
   const t = await getT()
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
+      <ForgetOfflineLists />
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-3xl"><BrandMark className="size-9" />RecipeGo</CardTitle>

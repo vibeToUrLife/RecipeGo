@@ -21,4 +21,9 @@ describe('proxy matcher', () => {
     expect(checked('/icon-192.png')).toBe(false)
     expect(checked('/icon-maskable-512.png')).toBe(false)
   })
+
+  // The browser re-fetches it on its own to update it, signed in or not.
+  it('serves the service worker without a login check', () => {
+    expect(checked('/sw.js')).toBe(false)
+  })
 })

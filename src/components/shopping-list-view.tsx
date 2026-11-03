@@ -1,7 +1,7 @@
 'use client'
-import { useOptimistic, useRef, useState, useTransition } from 'react'
+import { useEffect, useEffectEvent, useMemo, useOptimistic, useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { Minus, Plus, Share, Trash2 } from 'lucide-react'
+import { Minus, Plus, Share, Trash2, WifiOff } from 'lucide-react'
 import { useT } from '@/components/i18n-provider'
 import { AppleIcon, BasketIcon } from '@/components/icons'
 import type { ShoppingListRow } from '@/lib/data/shopping'
@@ -10,7 +10,8 @@ import { findStackTarget, stackedTotal } from '@/lib/stack'
 import { AISLE_ORDER, categorizeIngredient } from '@/lib/aisles'
 import { UNIT_GROUPS } from '@/lib/unit-options'
 import { fmtQty, shoppingListText } from '@/lib/shopping-text'
-import { toggleItemAction, removeItemAction, completeShoppingAction, clearShoppingListAction, addShoppingItemAction, updateItemQuantityAction, updateItemNameAction } from '@/app/shopping-list/actions'
+import { forgetTick, keepForOffline, rememberTick, sendUnsentTicks, unsentTicks, useOnline, useUnsentTicks } from '@/lib/offline-list'
+import { toggleItemAction, removeItemAction, completeShoppingAction, clearShoppingListAction, addShoppingItemAction, updateItemQuantityAction, updateItemNameAction, refreshListAction } from '@/app/shopping-list/actions'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -32,11 +33,80 @@ function stackInto(rows: ShoppingListRow[], added: ShoppingListRow): ShoppingLis
   return rows.map((r) => (r.id === match.id ? { ...r, total_quantity: total } : r))
 }
 
-export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; roomId?: string | null }) {
+// A list rendered longer ago than this is a copy kept for offline (or one the
+// browser brought back from earlier), not one fresh from the server.
+const STALE_MS = 60_000
+
+export function ShoppingListView({ items, roomId, renderedAt }: {
+  items: ShoppingListRow[]
+  roomId?: string | null
+  // When the server rendered it; from Date.now() there.
+  renderedAt?: number
+}) {
   const t = useT()
-  const [optimistic, setOptimistic] = useOptimistic(items)
+  const online = useOnline()
+  // Ticks made with no signal wait on this phone to be sent; till then the list
+  // shows them over what the server last said.
+  const waiting = useUnsentTicks()
+  const shown = useMemo(
+    () => items.map((i) => (i.id in waiting ? { ...i, checked: waiting[i.id] } : i)),
+    [items, waiting],
+  )
+  const unsent = items.filter((i) => i.id in waiting).length
+  const anyWaiting = Object.keys(waiting).length > 0
+  const [optimistic, setOptimistic] = useOptimistic(shown)
   const [, start] = useTransition()
   const rid = roomId ?? null
+
+  // Waiting ticks go when there's a signal: on opening the list, when the phone
+  // comes back online, and every 20 seconds while any are left (a weak signal
+  // can fail them without the phone ever going offline).
+  const sendWaiting = useEffectEvent(() => {
+    start(async () => {
+      // Shown as they are until the list comes back from the server with them
+      // in it, rather than unticking for a moment as each is sent.
+      const ticks = unsentTicks()
+      setOptimistic((prev) => prev.map((i) => (i.id in ticks ? { ...i, checked: ticks[i.id] } : i)))
+      await sendUnsentTicks(toggleItemAction)
+    })
+  })
+  useEffect(() => {
+    if (!online || !anyWaiting) return
+    sendWaiting()
+    const timer = setInterval(() => sendWaiting(), 20_000)
+    return () => clearInterval(timer)
+  }, [online, anyWaiting])
+
+  // The service worker keeps a copy of this list to open with no signal, fetched
+  // afresh once it has settled after each change.
+  useEffect(() => {
+    const timer = setTimeout(() => keepForOffline(location.pathname), 2000)
+    return () => clearTimeout(timer)
+  }, [items])
+
+  // A kept copy shows the list as it was when kept. Opened with a signal after
+  // all (one too weak to bring the list in time), or once the phone is back
+  // online, it catches up with what others changed meanwhile. Through a server
+  // action, which, unlike a router refresh, gives up quietly if the signal
+  // fails again instead of reloading the page.
+  const wasOnline = useRef(true)
+  const catchUp = useEffectEvent(() => {
+    start(async () => {
+      try {
+        await refreshListAction()
+      } catch {
+        // Still no signal: the next time it's back.
+      }
+    })
+  })
+  useEffect(() => {
+    const backOnline = online && !wasOnline.current
+    wasOnline.current = online
+    // The first run comes straight after hydration, before the phone's
+    // real online state is read, so that's checked here too.
+    const kept = renderedAt !== undefined && Date.now() - renderedAt > STALE_MS
+    if (navigator.onLine && (backOnline || kept)) catchUp()
+  }, [online, renderedAt])
 
   // Add-item form state
   const [name, setName] = useState('')
@@ -95,10 +165,22 @@ export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; 
     })
   }
 
+  // A tick is sent straight away; with no signal it waits on this phone.
   function toggle(row: ShoppingListRow) {
+    const checked = !row.checked
     start(async () => {
-      setOptimistic((prev) => prev.map((i) => (i.id === row.id ? { ...i, checked: !i.checked } : i)))
-      await toggleItemAction(row.id, !row.checked)
+      setOptimistic((prev) => prev.map((i) => (i.id === row.id ? { ...i, checked } : i)))
+      if (navigator.onLine) {
+        try {
+          await toggleItemAction(row.id, checked)
+          forgetTick(row.id) // one waiting from before is out of date now
+          return
+        } catch {
+          // No signal after all.
+        }
+      }
+      // An item still being added has no id yet to send it with.
+      if (!row.id.startsWith('tmp-')) rememberTick(row.id, checked)
     })
   }
 
@@ -106,6 +188,10 @@ export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; 
     start(async () => {
       setOptimistic((prev) => prev.filter((i) => !i.checked))
       try {
+        // The server finishes the items it knows are ticked, so ticks still
+        // waiting on this phone go first.
+        await sendUnsentTicks(toggleItemAction)
+        if (items.some((i) => i.id in unsentTicks())) throw new Error('Ticks not sent yet')
         const res = await completeShoppingAction(rid)
         toast.success(
           res.saved > 0
@@ -132,7 +218,11 @@ export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; 
   function removeRow(id: string) {
     start(async () => {
       setOptimistic((prev) => prev.filter((i) => i.id !== id))
-      await removeItemAction(id)
+      try {
+        await removeItemAction(id)
+      } catch {
+        toast.error(t('shop.removeFailed'))
+      }
     })
   }
 
@@ -211,6 +301,13 @@ export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; 
 
   return (
     <div className="space-y-5">
+      {(!online || unsent > 0) && (
+        <p role="status" className="flex items-start gap-2 rounded-xl bg-muted px-3 py-2 text-sm text-muted-foreground">
+          <WifiOff className="mt-0.5 size-4 shrink-0" />
+          {online ? t('shop.unsentTicks', { n: unsent }) : t('shop.offline')}
+        </p>
+      )}
+
       {/* Add an extra item (name + optional quantity/unit + food/daily) */}
       <div className="rounded-xl border border-dashed p-3">
         <div className="flex flex-wrap items-center gap-2">
