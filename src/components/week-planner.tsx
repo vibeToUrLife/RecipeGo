@@ -13,6 +13,7 @@ import {
   groupEntriesByDayAndSlot, MEAL_SLOTS, type MealSlot,
 } from '@/lib/plan/week'
 import { PLAN_ENTRY_DRAG_TYPE } from '@/lib/plan/drag'
+import { pinnedHeight } from '@/lib/pinned-height'
 import { addWeekToShoppingListAction, movePlanEntryAction, setPlanEntryEatenAction } from '@/app/plan/actions'
 import { WeekStartSelector } from '@/components/week-start-selector'
 import type { Recipe, MealPlanEntryView } from '@/lib/db-types'
@@ -29,19 +30,6 @@ function byAdded(a: MealPlanEntryView, b: MealPlanEntryView) {
 // server and for the hydration render, so the two render alike.
 const noSubscribe = () => () => {}
 const localToday = () => toISODate(new Date())
-
-// How far down the screen what's pinned to its top reaches: the header, and on a
-// room's page the pill row pinned under it. A card scrolled to sits below them.
-function pinnedHeight(): number {
-  let bottom = 0
-  for (const el of document.querySelectorAll<HTMLElement>('header, nav')) {
-    const { position, top } = getComputedStyle(el)
-    if (position === 'sticky' || position === 'fixed') {
-      bottom = Math.max(bottom, (parseFloat(top) || 0) + el.offsetHeight)
-    }
-  }
-  return bottom
-}
 
 export function WeekPlanner({
   weekStartISO, todayWeekISO, entries, recipes, roomId, weekStartsOn,
