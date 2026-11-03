@@ -4,20 +4,32 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // neutralize it under the jsdom test environment.
 vi.mock('server-only', () => ({}))
 
-const holder = vi.hoisted(() => ({ rows: [] as Record<string, unknown>[] }))
-// The week's query as getWeekPlan builds it, ending in the scope filter.
+const holder = vi.hoisted(() => ({
+  rows: [] as Record<string, unknown>[],
+  // A week's rows by its first day, where a test needs two weeks to differ.
+  weeks: {} as Record<string, Record<string, unknown>[]>,
+  inserted: [] as Record<string, unknown>[],
+}))
+// The week's query as getWeekPlan builds it, ending in the scope filter; and
+// an insert, which hands back an id for each row.
 vi.mock('@/utils/supabase/server', () => ({
-  createClient: async () => {
-    const rows = () => Promise.resolve({ data: holder.rows, error: null })
-    return {
-      from: () => ({
-        select: () => ({ gte: () => ({ lte: () => ({ order: () => ({ eq: rows, is: rows }) }) }) }),
+  createClient: async () => ({
+    from: () => ({
+      select: () => ({
+        gte: (_column: string, first: string) => {
+          const rows = () => Promise.resolve({ data: holder.weeks[first] ?? holder.rows, error: null })
+          return { lte: () => ({ order: () => ({ eq: rows, is: rows }) }) }
+        },
       }),
-    }
-  },
+      insert: (rows: Record<string, unknown>[]) => {
+        holder.inserted.push(...rows)
+        return { select: async () => ({ data: rows.map((_, i) => ({ id: `new${i}` })), error: null }) }
+      },
+    }),
+  }),
 }))
 vi.mock('@/lib/data/shopping', () => ({ addRecipeToList: vi.fn() }))
-import { getWeekPlan, addWeekToShoppingList } from '@/lib/data/meal-plan'
+import { getWeekPlan, addWeekToShoppingList, copyPreviousWeek } from '@/lib/data/meal-plan'
 import { addRecipeToList } from '@/lib/data/shopping'
 
 const row = (over: Record<string, unknown>): Record<string, unknown> => ({
@@ -38,7 +50,41 @@ const eaten = { eaten_at: '2026-06-29T19:30:00Z' }
 
 beforeEach(() => {
   holder.rows = []
+  holder.weeks = {}
+  holder.inserted = []
   vi.mocked(addRecipeToList).mockReset()
+})
+
+describe('copyPreviousWeek', () => {
+  // Monday 22 June, the week before Monday 29 June.
+  const lastWeek = () => [
+    row({ id: 'a', plan_date: '2026-06-22', meal_slot: 'dinner', recipe_id: 'r1', servings: 3, note: 'extra spicy', ...eaten }),
+    row({ id: 'b', plan_date: '2026-06-24', meal_slot: 'lunch', recipe_id: 'r2' }),
+  ]
+
+  it('puts last week’s meals on the same days and meals, not eaten yet', async () => {
+    holder.weeks = { '2026-06-22': lastWeek(), '2026-06-29': [] }
+    expect(await copyPreviousWeek('2026-06-29', 'room-1')).toEqual({ found: 2, ids: ['new0', 'new1'] })
+    expect(holder.inserted).toEqual([
+      { recipe_id: 'r1', plan_date: '2026-06-29', meal_slot: 'dinner', servings: 3, room_id: 'room-1', note: 'extra spicy' },
+      { recipe_id: 'r2', plan_date: '2026-07-01', meal_slot: 'lunch', servings: 2, room_id: 'room-1', note: null },
+    ])
+  })
+
+  it('leaves out a meal this week already has, so copying twice adds nothing', async () => {
+    holder.weeks = {
+      '2026-06-22': lastWeek(),
+      '2026-06-29': [row({ id: 'c', plan_date: '2026-06-29', meal_slot: 'dinner', recipe_id: 'r1' })],
+    }
+    expect(await copyPreviousWeek('2026-06-29')).toEqual({ found: 2, ids: ['new0'] })
+    expect(holder.inserted.map((r) => r.recipe_id)).toEqual(['r2'])
+  })
+
+  it('adds nothing when nothing was planned the week before', async () => {
+    holder.weeks = { '2026-06-22': [], '2026-06-29': [] }
+    expect(await copyPreviousWeek('2026-06-29')).toEqual({ found: 0, ids: [] })
+    expect(holder.inserted).toEqual([])
+  })
 })
 
 describe('getWeekPlan', () => {

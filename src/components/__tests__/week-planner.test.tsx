@@ -2,7 +2,7 @@ import { render, screen, within, fireEvent, act, waitFor } from '@testing-librar
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { WeekPlanner } from '@/components/week-planner'
-import { movePlanEntryAction, setPlanEntryEatenAction } from '@/app/plan/actions'
+import { copyLastWeekAction, movePlanEntryAction, removePlanEntriesAction, setPlanEntryEatenAction } from '@/app/plan/actions'
 import { PLAN_ENTRY_DRAG_TYPE } from '@/lib/plan/drag'
 import { toast } from 'sonner'
 import type { MealPlanEntryView } from '@/lib/db-types'
@@ -14,10 +14,12 @@ vi.mock('@/components/i18n-provider', () => ({
   useT: () => (k: string) => k,
   useLocale: () => 'en',
 }))
-vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }))
 vi.mock('@/app/plan/actions', () => ({
   addWeekToShoppingListAction: vi.fn(),
+  copyLastWeekAction: vi.fn(),
   movePlanEntryAction: vi.fn(),
+  removePlanEntriesAction: vi.fn(),
   setPlanEntryEatenAction: vi.fn(),
 }))
 vi.mock('@/components/add-meal-dialog', () => ({ AddMealDialog: () => null }))
@@ -336,5 +338,40 @@ describe('WeekPlanner today', () => {
     const { rerender } = render(<WeekPlanner {...week} />)
     rerender(<WeekPlanner {...week} entries={[chicken]} />)
     expect(scrollTo).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('WeekPlanner copy last week', () => {
+  const copy = () => fireEvent.click(screen.getByRole('button', { name: 'plan.copyLastWeek' }))
+  beforeEach(() => {
+    vi.mocked(copyLastWeekAction).mockReset()
+    vi.mocked(removePlanEntriesAction).mockReset()
+    vi.mocked(toast.success).mockClear()
+    vi.mocked(toast.info).mockClear()
+  })
+
+  it('copies last week into the week in view, with an Undo that takes back what came', async () => {
+    vi.mocked(copyLastWeekAction).mockResolvedValue({ found: 3, ids: ['n1', 'n2'] })
+    vi.mocked(removePlanEntriesAction).mockResolvedValue({ ok: true })
+    render(<WeekPlanner {...week} roomId="room-1" />)
+    copy()
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalled())
+    expect(copyLastWeekAction).toHaveBeenCalledWith('2026-06-29', 'room-1')
+    const [message, options] = vi.mocked(toast.success).mock.calls[0]
+    expect(message).toBe('plan.copiedLastWeek')
+    act(() => (options as unknown as { action: { onClick: () => void } }).action.onClick())
+    await waitFor(() => expect(removePlanEntriesAction).toHaveBeenCalledWith(['n1', 'n2']))
+  })
+
+  it.each([
+    [{ found: 0, ids: [] }, 'plan.nothingLastWeek'],
+    [{ found: 2, ids: [] }, 'plan.lastWeekAlreadyHere'],
+  ])('says why nothing came: %o', async (result, message) => {
+    vi.mocked(copyLastWeekAction).mockResolvedValue(result)
+    render(<WeekPlanner {...week} />)
+    copy()
+    await waitFor(() => expect(toast.info).toHaveBeenCalledWith(message))
+    expect(toast.success).not.toHaveBeenCalled()
   })
 })

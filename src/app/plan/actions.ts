@@ -8,6 +8,8 @@ import {
   movePlanEntry,
   setPlanEntryEaten,
   removePlanEntry,
+  removePlanEntries,
+  copyPreviousWeek,
   addWeekToShoppingList,
 } from '@/lib/data/meal-plan'
 import { getRecipe } from '@/lib/data/recipes'
@@ -107,6 +109,28 @@ export async function removePlanEntryAction(
   id: string,
 ): Promise<{ ok?: true; error?: string }> {
   return write(() => removePlanEntry(id))
+}
+
+// Last week's meals onto this one (see copyPreviousWeek), and the Undo for it.
+export async function copyLastWeekAction(
+  weekStartISO: string,
+  roomId: string | null = null,
+): Promise<{ found?: number; ids?: string[]; error?: string }> {
+  if (!ISO_DATE.test(weekStartISO ?? '')) return { error: 'Invalid week.' }
+  try {
+    const result = await copyPreviousWeek(weekStartISO, roomId)
+    revalidatePath('/', 'layout')
+    return result
+  } catch (e) {
+    console.error(e)
+    return { error: 'Could not copy last week. Please try again.' }
+  }
+}
+
+export async function removePlanEntriesAction(
+  ids: string[],
+): Promise<{ ok?: true; error?: string }> {
+  return write(() => removePlanEntries(ids))
 }
 
 export async function addWeekToShoppingListAction(

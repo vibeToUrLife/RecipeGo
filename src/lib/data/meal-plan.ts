@@ -1,7 +1,7 @@
 import 'server-only'
 import { createClient } from '@/utils/supabase/server'
 import { addRecipeToList } from '@/lib/data/shopping'
-import { weekDays, fromISODate, toISODate, type MealSlot } from '@/lib/plan/week'
+import { weekDays, fromISODate, toISODate, addWeeks, type MealSlot } from '@/lib/plan/week'
 import type { MealPlanEntryView } from '@/lib/db-types'
 
 export async function getWeekPlan(
@@ -88,6 +88,46 @@ export async function removePlanEntry(id: string): Promise<void> {
   const supabase = await createClient()
   const { error } = await supabase.from('meal_plan_entries').delete().eq('id', id)
   if (error) throw error
+}
+
+export async function removePlanEntries(ids: string[]): Promise<void> {
+  if (ids.length === 0) return
+  const supabase = await createClient()
+  const { error } = await supabase.from('meal_plan_entries').delete().in('id', ids)
+  if (error) throw error
+}
+
+// The week before onto the same days and meals of this one, as new meals with
+// the same servings and notes, none of them eaten yet. One this week already
+// has (the same recipe on the same day and meal) is left out, so copying twice
+// adds nothing. `found` is how many meals the week before had; `ids` are the
+// new ones, for an Undo.
+export async function copyPreviousWeek(
+  weekStartISO: string,
+  roomId: string | null = null,
+): Promise<{ found: number; ids: string[] }> {
+  const weekStart = fromISODate(weekStartISO)
+  const [before, current] = await Promise.all([
+    getWeekPlan(toISODate(addWeeks(weekStart, -1)), roomId),
+    getWeekPlan(weekStartISO, roomId),
+  ])
+  const key = (date: string, slot: string, recipeId: string) => `${date} ${slot} ${recipeId}`
+  const have = new Set(current.map((e) => key(e.plan_date, e.meal_slot, e.recipe_id)))
+  const rows = before
+    .map((e) => ({
+      recipe_id: e.recipe_id,
+      plan_date: toISODate(addWeeks(fromISODate(e.plan_date), 1)),
+      meal_slot: e.meal_slot,
+      servings: e.servings,
+      room_id: roomId,
+      note: e.note,
+    }))
+    .filter((r) => !have.has(key(r.plan_date, r.meal_slot, r.recipe_id)))
+  if (rows.length === 0) return { found: before.length, ids: [] }
+  const supabase = await createClient()
+  const { data, error } = await supabase.from('meal_plan_entries').insert(rows).select('id')
+  if (error) throw error
+  return { found: before.length, ids: (data ?? []).map((r: { id: string }) => r.id) }
 }
 
 // Push every planned meal in the week that hasn't been eaten yet into the

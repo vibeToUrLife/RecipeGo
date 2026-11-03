@@ -14,7 +14,9 @@ import {
 } from '@/lib/plan/week'
 import { PLAN_ENTRY_DRAG_TYPE } from '@/lib/plan/drag'
 import { pinnedHeight } from '@/lib/pinned-height'
-import { addWeekToShoppingListAction, movePlanEntryAction, setPlanEntryEatenAction } from '@/app/plan/actions'
+import {
+  addWeekToShoppingListAction, copyLastWeekAction, movePlanEntryAction, removePlanEntriesAction, setPlanEntryEatenAction,
+} from '@/app/plan/actions'
 import { WeekStartSelector } from '@/components/week-start-selector'
 import type { Recipe, MealPlanEntryView } from '@/lib/db-types'
 import { useT, useLocale } from '@/components/i18n-provider'
@@ -48,6 +50,7 @@ export function WeekPlanner({
   const [optimistic, setOptimistic] = useOptimistic(entries)
   const [, startMove] = useTransition()
   const [, startEaten] = useTransition()
+  const [copying, startCopy] = useTransition()
   const [dropCell, setDropCell] = useState<string | null>(null)
   const base = roomId ? `/rooms/${roomId}/plan` : '/plan'
   const weekStart = fromISODate(weekStartISO)
@@ -119,6 +122,33 @@ export function WeekPlanner({
     })
   }
 
+  // Last week's meals onto this one. A whole week can land at once, so the toast
+  // offers to take back exactly what came.
+  function copyLastWeek() {
+    startCopy(async () => {
+      try {
+        const res = await copyLastWeekAction(weekStartISO, roomId)
+        if (res.error) { toast.error(res.error); return }
+        if (!res.found) { toast.info(t('plan.nothingLastWeek')); return }
+        const ids = res.ids ?? []
+        if (ids.length === 0) { toast.info(t('plan.lastWeekAlreadyHere')); return }
+        toast.success(t('plan.copiedLastWeek', { n: ids.length }), {
+          action: {
+            label: t('common.undo'),
+            onClick: () => startCopy(async () => {
+              const undo = await removePlanEntriesAction(ids)
+              if (undo.error) toast.error(undo.error)
+              router.refresh()
+            }),
+          },
+        })
+        router.refresh()
+      } catch {
+        toast.error(t('common.errorRetry'))
+      }
+    })
+  }
+
   // ✓ ticks a meal as eaten, or unticks it. It stays where it is either way,
   // shown faded while ticked, and changes at once.
   function toggleEaten(entry: MealPlanEntryView) {
@@ -163,6 +193,7 @@ export function WeekPlanner({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 print:hidden">
+          <Button variant="outline" disabled={copying} onClick={copyLastWeek}>{t('plan.copyLastWeek')}</Button>
           <PrintButton size="default" label={t('print.plan')} hint={t('print.hint')} />
           {/* Eaten meals have nothing left to buy, so with every meal eaten (or
               none planned) there is nothing to add. */}
