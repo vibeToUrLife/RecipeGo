@@ -1,6 +1,5 @@
 'use client'
 import { useEffect, useState } from 'react'
-import Image from 'next/image'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ServingsStepper } from '@/components/servings-stepper'
@@ -12,7 +11,8 @@ import { publicImageUrl } from '@/lib/image-url'
 import type { RecipeWithChildren } from '@/lib/db-types'
 import type { IngredientInput } from '@/lib/types'
 import { useT } from '@/components/i18n-provider'
-import { PlateArt, TimerIcon } from '@/components/icons'
+import { TimerIcon } from '@/components/icons'
+import { RecipePhoto } from '@/components/recipe-photo'
 
 // A read-only recipe view shown in a modal from a planned meal — lets you check
 // the ingredients and method without leaving the plan. Fetches the full recipe
@@ -69,11 +69,12 @@ export function RecipeViewDialog({
           <p className="py-8 text-center text-sm text-muted-foreground">{t('plan.recipeLoadFailed')}</p>
         ) : (
           <div className="flex flex-col gap-3">
-            <div className="relative flex h-40 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-accent/40 to-primary/30">
-              {img
-                ? <Image src={img} alt={recipe.title} fill className="object-cover" sizes="(max-width: 640px) 100vw, 32rem" />
-                : <PlateArt className="size-16" />}
-            </div>
+            <RecipePhoto
+              src={img}
+              alt={recipe.title}
+              sizes="(max-width: 640px) 100vw, 32rem"
+              className={img ? 'aspect-[4/3] max-h-[50vh] w-full rounded-xl' : 'h-40 rounded-xl'}
+            />
 
             {recipe.description && <p className="text-sm text-muted-foreground">{recipe.description}</p>}
             {(total > 0 || recipe.difficulty) && (
@@ -117,7 +118,7 @@ export function RecipeViewDialog({
                       <div className="flex-1 space-y-2">
                         <span>{s.text}</span>
                         {stepImg && (
-                          <Image src={stepImg} alt="" width={480} height={300} className="w-full rounded-lg object-cover" />
+                          <RecipePhoto src={stepImg} alt="" sizes="(max-width: 640px) 100vw, 30rem" className="aspect-[4/3] w-full rounded-lg" />
                         )}
                       </div>
                     </li>

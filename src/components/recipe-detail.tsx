@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import type { RecipeWithChildren } from '@/lib/db-types'
 import type { IngredientInput } from '@/lib/types'
@@ -14,7 +13,8 @@ import { publicImageUrl } from '@/lib/image-url'
 import { Button } from '@/components/ui/button'
 import { ServingsStepper } from '@/components/servings-stepper'
 import { useT } from '@/components/i18n-provider'
-import { ChefHatIcon, PlateArt, TimerIcon } from '@/components/icons'
+import { ChefHatIcon, TimerIcon } from '@/components/icons'
+import { RecipePhoto } from '@/components/recipe-photo'
 
 export function RecipeDetail({ recipe }: { recipe: RecipeWithChildren }) {
   const t = useT()
@@ -29,11 +29,17 @@ export function RecipeDetail({ recipe }: { recipe: RecipeWithChildren }) {
 
   return (
     <article>
-      {/* Without an image this is just a gradient placeholder — half a printed
-          page of nothing, so keep it off the sheet. */}
-      <div className={`relative mb-4 flex h-48 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-accent/40 to-primary/30 print:h-40 ${img ? '' : 'print:hidden'}`}>
-        {img ? <Image src={img} alt={recipe.title} fill className="object-cover" sizes="100vw" /> : <PlateArt className="size-20" />}
-      </div>
+      {/* A photo gets a 4:3 frame, short of most of a phone screen, and shows
+          whole within it. Without one this is just the placeholder — half a
+          printed page of nothing, so keep it off the sheet. */}
+      <RecipePhoto
+        src={img}
+        alt={recipe.title}
+        sizes="(max-width: 768px) 100vw, 768px"
+        className={img
+          ? 'mb-4 aspect-[4/3] max-h-[min(70vh,28rem)] w-full rounded-2xl print:aspect-auto print:h-40'
+          : 'mb-4 h-48 rounded-2xl print:hidden'}
+      />
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
         <h1 className="font-serif text-3xl text-primary">{recipe.title}</h1>
@@ -92,7 +98,7 @@ export function RecipeDetail({ recipe }: { recipe: RecipeWithChildren }) {
                   <div className="flex-1 space-y-2">
                     <span>{s.text}</span>
                     {stepImg && (
-                      <Image src={stepImg} alt="" width={480} height={300} className="w-full rounded-lg object-cover" />
+                      <RecipePhoto src={stepImg} alt="" sizes="(max-width: 768px) 100vw, 720px" className="aspect-[4/3] w-full rounded-lg" />
                     )}
                   </div>
                 </li>
