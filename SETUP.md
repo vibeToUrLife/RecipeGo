@@ -20,10 +20,11 @@ A complete, beginner-friendly walkthrough to get RecipeGo running on your own ma
 8. [Optional: Enable Google sign-in](#8-optional-enable-google-sign-in)
 9. [Optional: Deploy online with Vercel](#9-optional-deploy-online-with-vercel)
 10. [Shared Rooms](#10-shared-rooms)
-11. [Useful commands](#11-useful-commands)
-12. [Project structure](#12-project-structure)
-13. [Troubleshooting](#13-troubleshooting)
-14. [Security notes](#14-security-notes)
+11. [Optional: Notifications](#11-optional-notifications)
+12. [Useful commands](#12-useful-commands)
+13. [Project structure](#13-project-structure)
+14. [Troubleshooting](#14-troubleshooting)
+15. [Security notes](#15-security-notes)
 
 ---
 
@@ -262,7 +263,49 @@ Alternatively, drop and recreate the entire schema by re-running `supabase/setup
 
 ---
 
-## 11. Useful commands
+## 11. Optional: Notifications
+
+Members of a room can get a notification on their phone when someone else changes the room's meal plan or shopping list: adds items, finishes the shop, plans, moves or removes a meal, or copies last week. Each person turns them on for each phone, on the **Rooms** page or a room's **Members** page.
+
+### A. Apply the migration
+
+A project set up with `setup_all.sql` after notifications were added already has it. Otherwise open **SQL Editor → New query**, paste all of `supabase/migrations/20261103120000_push_notifications.sql`, and click **Run**.
+
+### B. Make a VAPID key pair
+
+Push services (Apple's, Google's, Mozilla's) check every notification against this key pair. On your computer, run:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+It prints a **Public Key** and a **Private Key**. Keep the private key secret, like a password.
+
+### C. Add them to Vercel
+
+Vercel → your project → **Settings → Environment Variables**:
+
+| Variable | Value |
+|---|---|
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | the public key |
+| `VAPID_PRIVATE_KEY` | the private key |
+| `SUPABASE_SERVICE_ROLE_KEY` | if it isn't there already: Supabase → **Project Settings → API Keys** → service_role / secret |
+| `VAPID_SUBJECT` | optional: `mailto:you@example.com`, who push services can contact. Without it, the site's own address is used. |
+
+Then **redeploy** (Deployments → ⋯ → **Redeploy**): the public key is built into the app, so a build from before it was added doesn't have it. Until all of these are set, the Notifications card stays hidden and nothing is sent.
+
+### D. Turn them on
+
+- **iPhone or iPad (iOS 16.4 or later):** notifications only work in RecipeGo added to the Home Screen. In Safari or Chrome: **Share → Add to Home Screen**. Open RecipeGo from the Home Screen, go to **Rooms**, tap **Turn on notifications**, and allow them.
+- **Android or a computer:** open **Rooms** and tap **Turn on notifications**.
+
+Tap **Send a test** to check one arrives.
+
+A run of changes notifies once: items added one after another buzz the others' phones once, and they hear again after five quiet minutes. Ticking or editing items, and changes to your own (not a room's) list or plan, notify no one. Signing out on a phone turns its notifications off.
+
+---
+
+## 12. Useful commands
 
 | Command | What it does |
 |---|---|
@@ -275,7 +318,7 @@ Alternatively, drop and recreate the entire schema by re-running `supabase/setup
 
 ---
 
-## 12. Project structure
+## 13. Project structure
 
 ```
 src/
@@ -299,7 +342,7 @@ supabase/
 
 ---
 
-## 13. Troubleshooting
+## 14. Troubleshooting
 
 **"Your project's URL and Key are required" / app won't start**
 `.env.local` is missing or misspelled. Confirm the three variable names exactly match step 4, then restart `npm run dev` (env changes need a restart).
@@ -344,9 +387,10 @@ The app parses common formats (`200g flour`, `1/2 cup sugar`). Unusual lines may
 
 ---
 
-## 14. Security notes
+## 15. Security notes
 
-- **`SUPABASE_SERVICE_ROLE_KEY` is all-powerful** — it bypasses every security rule. It is used **server-side only**, is never sent to the browser, and must never be prefixed with `NEXT_PUBLIC_`. If it ever leaks, rotate it in **Project Settings → API Keys**.
+- **`SUPABASE_SERVICE_ROLE_KEY` is all-powerful** — it bypasses every security rule. It is used **server-side only**, is never sent to the browser, and must never be prefixed with `NEXT_PUBLIC_`. If it ever leaks, rotate it in **Project Settings → API Keys**. The app uses it for notifications alone: to save each phone's subscription (after checking it's a real push service's address) and to read the other members' when telling them about a change, which RLS keeps from everyone but their owner.
+- **`VAPID_PRIVATE_KEY`** signs every notification. Keep it secret like a password; if it leaks, make a new pair (section 11), and everyone turns notifications on again.
 - **Row-Level Security (RLS)** is the real boundary: every table has policies so each signed-in user can only read/write their **own** rows. The `anon`/publishable key is safe to expose in the browser precisely because RLS restricts what it can do.
 - **`.env.local` is gitignored** — keep it that way; never commit real keys.
 - The URL-import endpoint blocks requests to localhost/private/cloud-metadata addresses to prevent SSRF.

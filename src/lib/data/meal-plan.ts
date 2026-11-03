@@ -84,6 +84,32 @@ export async function setPlanEntryEaten(id: string, eaten: boolean): Promise<voi
   if (error) throw error
 }
 
+// Which room a planned meal is in, and what and when it is, for telling the
+// room's other members about a change to it. Null if it isn't there (or isn't
+// yours to see).
+export async function getPlanEntryForNotice(
+  id: string,
+): Promise<{ roomId: string | null; recipe: string; date: string; slot: MealSlot } | null> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('meal_plan_entries')
+    .select('room_id, plan_date, meal_slot, recipes(title)')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw error
+  if (!data) return null
+  const row = data as unknown as { room_id: string | null; plan_date: string; meal_slot: MealSlot; recipes: { title: string } | null }
+  return { roomId: row.room_id, recipe: row.recipes?.title ?? '', date: row.plan_date, slot: row.meal_slot }
+}
+
+// The name of a recipe, for a notification about it.
+export async function getRecipeTitle(id: string): Promise<string> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.from('recipes').select('title').eq('id', id).maybeSingle()
+  if (error) throw error
+  return (data as { title: string } | null)?.title ?? ''
+}
+
 export async function removePlanEntry(id: string): Promise<void> {
   const supabase = await createClient()
   const { error } = await supabase.from('meal_plan_entries').delete().eq('id', id)

@@ -6,7 +6,7 @@
 
 ## What it is
 
-RecipeGo is a multi-user recipe management app where every cook has their own private library. You can add recipes by hand or import them directly from any food blog URL — the app fetches the page, parses the ingredients and steps, and pre-fills the form so you only need to review and save. A built-in serving scaler adjusts every quantity when you change the number of portions. When you add recipes to your shopping list, RecipeGo merges shared ingredients across dishes (so two recipes each calling for garlic appear as one line with the combined amount) and groups everything by supermarket aisle so you can move through the store in order. It keeps working in a shop with no signal: ticks wait on your phone and are sent once you're back online, and a list you've opened before opens again offline. A weekly **meal planner** lets you drop recipes into Breakfast / Lunch / Dinner slots for each day, set how many people each meal is for, and then build the whole week's shopping list in one tap; it opens on today, outlined so it stands out — works for your personal recipes and inside shared Rooms. When it's time to actually cook, **cook mode** takes over the screen: one step at a time in large type, a tickable ingredient list scaled to your chosen servings, arrow-key and big-button navigation, and the screen held awake so it never dims mid-recipe. On a phone, add it to your home screen (Share → Add to Home Screen) and it opens full screen like an app, with its own icon. The interface follows a Warm Editorial design — clean typography, a cream-and-terracotta palette, and no visual clutter.
+RecipeGo is a multi-user recipe management app where every cook has their own private library. You can add recipes by hand or import them directly from any food blog URL — the app fetches the page, parses the ingredients and steps, and pre-fills the form so you only need to review and save. A built-in serving scaler adjusts every quantity when you change the number of portions. When you add recipes to your shopping list, RecipeGo merges shared ingredients across dishes (so two recipes each calling for garlic appear as one line with the combined amount) and groups everything by supermarket aisle so you can move through the store in order. It keeps working in a shop with no signal: ticks wait on your phone and are sent once you're back online, and a list you've opened before opens again offline. In a shared room, everyone else can be told on their phone when someone changes the meal plan or the shopping list. A weekly **meal planner** lets you drop recipes into Breakfast / Lunch / Dinner slots for each day, set how many people each meal is for, and then build the whole week's shopping list in one tap; it opens on today, outlined so it stands out — works for your personal recipes and inside shared Rooms. When it's time to actually cook, **cook mode** takes over the screen: one step at a time in large type, a tickable ingredient list scaled to your chosen servings, arrow-key and big-button navigation, and the screen held awake so it never dims mid-recipe. On a phone, add it to your home screen (Share → Add to Home Screen) and it opens full screen like an app, with its own icon. The interface follows a Warm Editorial design — clean typography, a cream-and-terracotta palette, and no visual clutter.
 
 ## Screenshots
 
@@ -68,7 +68,9 @@ Open `.env.local` and fill in the three values. You find all three in your Supab
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | "anon / public" key under "Project API keys" |
 | `SUPABASE_SERVICE_ROLE_KEY` | "service_role / secret" key under "Project API keys" |
 
-> **Security note:** `SUPABASE_SERVICE_ROLE_KEY` bypasses Row-Level Security. Never expose it to the browser and never prefix it with `NEXT_PUBLIC_`. It is used only in server-side Route Handlers.
+> **Security note:** `SUPABASE_SERVICE_ROLE_KEY` bypasses Row-Level Security. Never expose it to the browser and never prefix it with `NEXT_PUBLIC_`. It is used only on the server, for notifications.
+
+Notifications also need a VAPID key pair (`NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and optionally `VAPID_SUBJECT`): see [SETUP.md, "Optional: Notifications"](SETUP.md#11-optional-notifications). Without them the app works as before, just without notifications.
 
 ### 3. Link your Supabase project and apply migrations
 
@@ -184,7 +186,7 @@ In the Vercel project settings under **Environment Variables**, add all three va
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
-Use the same values as your `.env.local`.
+Use the same values as your `.env.local`. For notifications, add the VAPID keys too (see [SETUP.md](SETUP.md#11-optional-notifications)), then redeploy.
 
 ### 4. Deploy
 

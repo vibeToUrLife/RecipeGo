@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { InviteActions } from '@/components/invite-actions'
+import { NotificationSettings } from '@/components/notification-settings'
 import { listMyRooms, listMyPendingInvites } from '@/lib/data/rooms'
 import { createRoomAction } from './actions'
 import { getT } from '@/lib/i18n-server'
@@ -45,6 +46,8 @@ export default async function RoomsPage({
             </form>
           </CardContent>
         </Card>
+
+        <NotificationSettings />
 
         {/* Your rooms */}
         <section className="mb-8">

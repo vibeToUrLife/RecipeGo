@@ -10,6 +10,7 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { MobileMenu } from '@/components/mobile-menu'
 import { getT } from '@/lib/i18n-server'
 import { BrandMark } from '@/components/icons'
+import { PushSync } from '@/components/push-sync'
 
 // Pages that know their room (e.g. a recipe's detail/edit page) can pass
 // roomId so the nav keeps the room context even when it isn't in the URL.
@@ -17,6 +18,7 @@ export async function AppNav({ roomId }: { roomId?: string | null } = {}) {
   const [myRooms, t] = await Promise.all([listMyRooms(), getT()])
   return (
     <header className="sticky top-0 z-20 border-b bg-card/80 backdrop-blur print:hidden">
+      <PushSync />
       <nav className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
           <BackButton roomId={roomId} />

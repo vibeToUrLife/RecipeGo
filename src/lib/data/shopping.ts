@@ -33,7 +33,12 @@ export async function getShoppingList(roomId: string | null = null): Promise<Sho
   })
 }
 
-export async function addRecipeToList(recipeId: string, servings: number): Promise<void> {
+// Says which list the recipe's ingredients went on (its room's, or null for
+// your own) and the recipe's name, for telling the room.
+export async function addRecipeToList(
+  recipeId: string,
+  servings: number,
+): Promise<{ roomId: string | null; title: string }> {
   const supabase = await createClient()
   const recipe = await getRecipe(recipeId)
   if (!recipe) throw new Error('Recipe not found')
@@ -74,6 +79,7 @@ export async function addRecipeToList(recipeId: string, servings: number): Promi
     )
     if (insError) throw insError
   }
+  return { roomId, title: recipe.title }
 }
 
 // Manually add an extra item (food or non-food "daily") to the list, with an

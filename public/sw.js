@@ -1,5 +1,6 @@
-// RecipeGo's service worker. Its job: keep the shopping list open in a shop with
-// no signal.
+// RecipeGo's service worker. Its jobs: keep the shopping list open in a shop
+// with no signal, and show the notifications the server sends when someone in
+// a room changes its meal plan or shopping list.
 //
 // - A shopping list page comes from the network when there is one, keeping a
 //   copy; with none (or one too weak to bring it in a few seconds), the copy.
@@ -11,6 +12,8 @@
 // - Any other page asked for offline gets one listing the lists kept here.
 // - The login page tells this when no one's signed in (a "forget" message):
 //   the kept lists go.
+// - A notification shows what changed; tapping it opens that list or plan, in
+//   the app if it's open already.
 const PAGES = 'pages-v1'
 const FILES = 'files-v1'
 const LIST = /^\/(rooms\/[^/]+\/)?shopping-list$/
@@ -52,6 +55,39 @@ self.addEventListener('message', (event) => {
   const { type, path } = event.data ?? {}
   if (type === 'keep' && typeof path === 'string' && LIST.test(path)) event.waitUntil(keep(path))
   else if (type === 'forget') event.waitUntil(forget())
+})
+
+// Every push is shown (a phone may stop delivering them to a site that
+// doesn't), with a title and body the server wrote in this phone's language.
+self.addEventListener('push', (event) => {
+  let notice = {}
+  try {
+    notice = event.data?.json() ?? {}
+  } catch {
+    // Not one of ours: shown plainly.
+  }
+  event.waitUntil(self.registration.showNotification(notice.title || 'RecipeGo', {
+    body: notice.body || '',
+    tag: notice.tag,
+    icon: '/icon-192.png',
+    data: { url: notice.url || '/' },
+  }))
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const url = new URL(event.notification.data?.url || '/', self.location.origin)
+  if (url.origin !== self.location.origin) return
+  event.waitUntil((async () => {
+    const open = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    const app = open.find((client) => new URL(client.url).origin === url.origin)
+    if (app) {
+      await app.focus()
+      // A page this worker doesn't control can't be sent elsewhere from here.
+      if (await app.navigate(url.href).catch(() => null)) return
+    }
+    await self.clients.openWindow(url.href)
+  })())
 })
 
 async function builtFile(request) {

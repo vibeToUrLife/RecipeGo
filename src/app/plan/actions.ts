@@ -11,7 +11,10 @@ import {
   removePlanEntries,
   copyPreviousWeek,
   addWeekToShoppingList,
+  getPlanEntryForNotice,
+  getRecipeTitle,
 } from '@/lib/data/meal-plan'
+import { notifyRoom, pushConfigured } from '@/lib/push/send'
 import { getRecipe } from '@/lib/data/recipes'
 import { MEAL_SLOTS, type MealSlot } from '@/lib/plan/week'
 import { cleanNote, NOTE_MAX } from '@/lib/plan/note'
@@ -56,7 +59,7 @@ export async function addPlanEntryAction(input: {
   if (servings === null) return { error: 'Enter a valid number of people (1–1000).' }
   const note = cleanNote(input?.note)
   if (note === undefined) return { error: `Note too long (max ${NOTE_MAX} characters).` }
-  return write(() =>
+  const res = await write(() =>
     addPlanEntry({
       recipeId: input.recipeId,
       planDate: input.planDate,
@@ -66,6 +69,12 @@ export async function addPlanEntryAction(input: {
       note,
     }),
   )
+  if (res.ok && input.roomId) {
+    const { roomId, recipeId, planDate: date } = input
+    const slot = input.slot as MealSlot
+    notifyRoom(async () => ({ roomId, change: { kind: 'planAdded', recipe: await getRecipeTitle(recipeId), date, slot } }))
+  }
+  return res
 }
 
 export async function updatePlanNoteAction(
@@ -93,7 +102,14 @@ export async function movePlanEntryAction(
 ): Promise<{ ok?: true; error?: string }> {
   if (!ISO_DATE.test(planDate ?? '')) return { error: 'Invalid date.' }
   if (!MEAL_SLOTS.includes(slot as MealSlot)) return { error: 'Invalid meal.' }
-  return write(() => movePlanEntry(id, planDate, slot as MealSlot))
+  const res = await write(() => movePlanEntry(id, planDate, slot as MealSlot))
+  if (res.ok) {
+    notifyRoom(async () => {
+      const meal = await getPlanEntryForNotice(id)
+      return meal && { roomId: meal.roomId, change: { kind: 'planMoved', recipe: meal.recipe, date: planDate, slot: slot as MealSlot } }
+    })
+  }
+  return res
 }
 
 // Tick a meal as eaten (true) or untick it (false). It stays on the plan.
@@ -108,7 +124,15 @@ export async function setPlanEntryEatenAction(
 export async function removePlanEntryAction(
   id: string,
 ): Promise<{ ok?: true; error?: string }> {
-  return write(() => removePlanEntry(id))
+  // Gone once it's removed, so what it was is looked up first, when there's
+  // anyone to tell.
+  const meal = pushConfigured() ? await getPlanEntryForNotice(id).catch(() => null) : null
+  const res = await write(() => removePlanEntry(id))
+  if (res.ok && meal) {
+    const { roomId, recipe, date, slot } = meal
+    notifyRoom({ roomId, change: { kind: 'planRemoved', recipe, date, slot } })
+  }
+  return res
 }
 
 // Last week's meals onto this one (see copyPreviousWeek), and the Undo for it.
@@ -120,6 +144,7 @@ export async function copyLastWeekAction(
   try {
     const result = await copyPreviousWeek(weekStartISO, roomId)
     revalidatePath('/', 'layout')
+    if (result.ids.length) notifyRoom({ roomId, change: { kind: 'planCopied', n: result.ids.length, week: weekStartISO } })
     return result
   } catch (e) {
     console.error(e)
@@ -140,6 +165,7 @@ export async function addWeekToShoppingListAction(
   try {
     const result = await addWeekToShoppingList(weekStartISO, roomId)
     revalidatePath('/', 'layout')
+    if (result.meals > 0) notifyRoom({ roomId, change: { kind: 'listWeek' } })
     return result
   } catch (e) {
     console.error(e)

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { MemberRow } from '@/components/member-row'
 import { InviteForm } from '@/components/invite-form'
 import { InviteCancelButton } from '@/components/invite-cancel-button'
+import { NotificationSettings } from '@/components/notification-settings'
 import { getRoom, listMembers, listRoomInvites } from '@/lib/data/rooms'
 import { createClient } from '@/utils/supabase/server'
 import { getT } from '@/lib/i18n-server'
@@ -91,6 +92,8 @@ export default async function MembersPage({
             )}
           </CardContent>
         </Card>
+
+        <NotificationSettings />
 
         {/* Pending invites */}
         {isOwner && invites.length > 0 && (

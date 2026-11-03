@@ -12,10 +12,16 @@ import {
 } from '@/lib/data/shopping'
 import type { Unit } from '@/lib/types'
 import { VALID_UNITS } from '@/lib/unit-options'
+import { notifyRoom } from '@/lib/push/send'
+
+// Adding to a room's list, and finishing its shop, tell the room's other
+// members (see notifyRoom). Ticks, edits and removals don't: they'd buzz
+// someone's phone for every item.
 
 export async function addToListAction(recipeId: string, servings: number) {
-  await addRecipeToList(recipeId, servings)
+  const added = await addRecipeToList(recipeId, servings)
   revalidatePath('/', 'layout')
+  notifyRoom({ roomId: added.roomId, change: { kind: 'listRecipe', recipe: added.title } })
 }
 export async function toggleItemAction(id: string, checked: boolean) {
   await setItemChecked(id, checked)
@@ -82,6 +88,7 @@ export async function addShoppingItemAction(
 
   await addShoppingItem({ name: clean, isFood, quantity, unit, roomId })
   revalidatePath('/', 'layout')
+  notifyRoom({ roomId, change: { kind: 'listItem', item: clean } })
   return { ok: true }
 }
 
@@ -89,6 +96,7 @@ export async function completeShoppingAction(roomId: string | null = null) {
   const result = await completeShopping(roomId)
   // shopping list changed, and the pantry (Ingredients) changed too
   revalidatePath('/', 'layout')
+  if (result.cleared > 0) notifyRoom({ roomId, change: { kind: 'listDone', n: result.cleared } })
   return result
 }
 
