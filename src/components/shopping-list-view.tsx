@@ -1,7 +1,7 @@
 'use client'
 import { useOptimistic, useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { Minus, Plus, Trash2 } from 'lucide-react'
+import { Minus, Plus, Share, Trash2 } from 'lucide-react'
 import { useT } from '@/components/i18n-provider'
 import { AppleIcon, BasketIcon } from '@/components/icons'
 import type { ShoppingListRow } from '@/lib/data/shopping'
@@ -9,16 +9,12 @@ import type { Unit } from '@/lib/types'
 import { findStackTarget, stackedTotal } from '@/lib/stack'
 import { AISLE_ORDER, categorizeIngredient } from '@/lib/aisles'
 import { UNIT_GROUPS } from '@/lib/unit-options'
+import { fmtQty, shoppingListText } from '@/lib/shopping-text'
 import { toggleItemAction, removeItemAction, completeShoppingAction, clearShoppingListAction, addShoppingItemAction, updateItemQuantityAction, updateItemNameAction } from '@/app/shopping-list/actions'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-
-function fmtQty(q: number | null) {
-  if (q === null) return ''
-  return Number.isInteger(q) ? String(q) : q.toFixed(2).replace(/\.?0+$/, '')
-}
 
 // Mirror the server's stacking rule so the optimistic list matches what will
 // come back after revalidation (no duplicate row flicker on re-add). Only
@@ -168,6 +164,28 @@ export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; 
     })
   }
 
+  // What's left to buy, sent through the phone's share sheet (WeChat, Messages,
+  // Notes…) so someone without the app can shop from it; where there's no
+  // share sheet, copied to paste instead.
+  async function share() {
+    const text = shoppingListText(optimistic, t)
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title: t('shop.title'), text })
+      } catch (err) {
+        // Closing the share sheet without picking anything isn't a failure.
+        if ((err as Error)?.name !== 'AbortError') toast.error(t('shop.shareFailed'))
+      }
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success(t('shop.listCopied'))
+    } catch {
+      toast.error(t('shop.shareFailed'))
+    }
+  }
+
   function renderRow(row: ShoppingListRow) {
     return (
       <li key={row.id} className="flex items-center gap-3 border-b py-2 text-sm">
@@ -268,7 +286,12 @@ export function ShoppingListView({ items, roomId }: { items: ShoppingListRow[]; 
           <div>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-muted-foreground">{t('shop.checkedOf', { checked: checkedCount, total: optimistic.length })}</p>
-              <ClearAllButton count={optimistic.length} onConfirm={clearAll} />
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="outline" size="xs" onClick={share} disabled={checkedCount === optimistic.length}>
+                  <Share /> {t('shop.share')}
+                </Button>
+                <ClearAllButton count={optimistic.length} onConfirm={clearAll} />
+              </div>
             </div>
             <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted">
               <div

@@ -280,3 +280,52 @@ describe('ShoppingListView quantity − / +', () => {
     expect(updateItemQuantityAction).toHaveBeenCalledWith('it1', 6)
   })
 })
+
+describe('ShoppingListView sharing', () => {
+  const shareButton = () => screen.getByRole('button', { name: 'shop.share' })
+  const restore: (() => void)[] = []
+  // Give the browser a share sheet, or a clipboard, for one test.
+  function stub<K extends 'share' | 'clipboard'>(key: K, value: unknown) {
+    const before = Object.getOwnPropertyDescriptor(navigator, key)
+    Object.defineProperty(navigator, key, { value, configurable: true })
+    restore.push(() => (before ? Object.defineProperty(navigator, key, before) : delete (navigator as unknown as Record<string, unknown>)[key]))
+  }
+  beforeEach(() => { while (restore.length) restore.pop()!() })
+
+  it('sends what’s left to buy through the share sheet', async () => {
+    const share = vi.fn().mockResolvedValue(undefined)
+    stub('share', share)
+    render(<ShoppingListView items={[row({ name: 'carrot' }), row({ id: 'it2', name: 'leek', checked: true })]} />)
+    fireEvent.click(shareButton())
+
+    await waitFor(() => expect(share).toHaveBeenCalled())
+    const { title, text } = share.mock.calls[0][0]
+    expect(title).toBe('shop.title')
+    expect(text).toContain('- carrot 2')
+    expect(text).not.toContain('leek')
+  })
+
+  it('says nothing when the share sheet is closed without sending', async () => {
+    stub('share', vi.fn().mockRejectedValue(Object.assign(new Error('cancelled'), { name: 'AbortError' })))
+    render(<ShoppingListView items={[row()]} />)
+    fireEvent.click(shareButton())
+    await waitFor(() => expect(navigator.share).toHaveBeenCalled())
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it('copies the list where there’s no share sheet', async () => {
+    stub('share', undefined)
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    stub('clipboard', { writeText })
+    render(<ShoppingListView items={[row({ name: 'carrot' })]} />)
+    fireEvent.click(shareButton())
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('shop.listCopied'))
+    expect(writeText.mock.calls[0][0]).toContain('- carrot 2')
+  })
+
+  it('has nothing to share once everything is ticked', () => {
+    render(<ShoppingListView items={[row({ checked: true })]} />)
+    expect(shareButton()).toBeDisabled()
+  })
+})

@@ -129,6 +129,9 @@ const EN: Record<string, string> = {
 
   // shopping list
   'shop.title': 'Shopping List',
+  'shop.share': 'Share',
+  'shop.listCopied': 'List copied. Paste it anywhere.',
+  'shop.shareFailed': 'Couldn’t share the list',
   'shop.addPlaceholder': 'Add an extra item — e.g. milk, toilet paper',
   'shop.itemName': 'Item name',
   'shop.food': 'Food',
@@ -461,6 +464,9 @@ const ZH: Record<string, string> = {
   'img.storageMissing': '图片存储还没建好——请运行 supabase/setup_all.sql 里的 IMAGE STORAGE 部分。',
 
   'shop.title': '购物清单',
+  'shop.share': '分享',
+  'shop.listCopied': '清单已复制，粘贴到哪里都行',
+  'shop.shareFailed': '没能分享清单',
   'shop.addPlaceholder': '添加额外物品——例如 牛奶、卫生纸',
   'shop.itemName': '物品名称',
   'shop.food': '食物',
