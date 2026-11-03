@@ -208,6 +208,7 @@ Run through this checklist after your first deployment (or after any migration c
 - [ ] **Sign up** with a new email address. After clicking the confirmation link you are redirected to the home page and a row appears in the `profiles` table in your Supabase dashboard.
 - [ ] **Add a recipe manually.** Click "New Recipe", fill in title, ingredients, and steps, save → the recipe appears in your library. Click it to open the detail page.
 - [ ] **Import a recipe from a URL.** Click "Import from URL", paste a link from a popular food blog (e.g. seriouseats.com or budgetbytes.com), click Import → the form is pre-filled with the parsed ingredients and steps. Review and save.
+- [ ] **Change a recipe's photo.** On a recipe's edit page, upload a tall phone photo → "Photo saved" appears; leave without pressing Save → the recipe page shows the new photo whole, top to bottom, not a strip cut from its middle.
 - [ ] **Scale servings.** Open any recipe and change the serving count → all ingredient quantities update proportionally.
 - [ ] **Shopping list merging and aisle grouping.** Add two recipes that share a common ingredient (e.g. both call for garlic) to the shopping list. The list shows a single garlic line with the combined quantity, and all ingredients are grouped by supermarket aisle.
 - [ ] **Check and clear.** Check off individual items on the shopping list → the progress bar advances. Click "Clear checked" → checked items are removed.

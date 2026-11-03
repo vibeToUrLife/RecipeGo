@@ -6,7 +6,7 @@ import type { RecipeWithChildren } from '@/lib/db-types'
 
 // Same stubs the step tests use — the server action and the Supabase-backed
 // uploader are irrelevant to keyboard flow through the ingredient rows.
-vi.mock('@/app/recipes/actions', () => ({ saveRecipe: vi.fn() }))
+vi.mock('@/app/recipes/actions', () => ({ saveRecipe: vi.fn(), saveRecipeImageAction: vi.fn() }))
 vi.mock('@/components/image-upload', () => ({ ImageUpload: () => null }))
 vi.mock('@/components/i18n-provider', () => ({ useT: () => (k: string) => k }))
 

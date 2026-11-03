@@ -5,7 +5,7 @@ import type { RecipeWithChildren } from '@/lib/db-types'
 
 // The form pulls in a server action and the Supabase-backed image uploader —
 // neither matters for step reordering, so stub them out.
-vi.mock('@/app/recipes/actions', () => ({ saveRecipe: vi.fn() }))
+vi.mock('@/app/recipes/actions', () => ({ saveRecipe: vi.fn(), saveRecipeImageAction: vi.fn() }))
 vi.mock('@/components/image-upload', () => ({ ImageUpload: () => null }))
 vi.mock('@/components/i18n-provider', () => ({ useT: () => (k: string) => k }))
 

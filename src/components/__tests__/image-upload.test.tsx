@@ -158,4 +158,29 @@ describe('ImageUpload', () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalled())
     expect(hidden().value).toBe('user-1/old.jpg')
   })
+
+  describe('saving the photo the moment it uploads', () => {
+    it('hands the new photo on to be saved, and says it was', async () => {
+      const onUploaded = vi.fn().mockResolvedValue(true)
+      render(<ImageUpload onUploaded={onUploaded} />)
+      pick(file('dinner.jpg', 'image/jpeg'))
+
+      await waitFor(() => expect(toast.success).toHaveBeenCalledWith('img.saved'))
+      expect(onUploaded).toHaveBeenCalledWith(hidden().value)
+      expect(hidden().value).toMatch(/^user-1\//)
+    })
+
+    // Failed or unreachable, the photo is still in the form, so Save keeps it.
+    it.each([
+      ['fails', () => Promise.resolve(false)],
+      ['can’t be reached', () => Promise.reject(new TypeError('Failed to fetch'))],
+    ])('says to press Save when saving it %s', async (_, save) => {
+      render(<ImageUpload onUploaded={vi.fn(save)} />)
+      pick(file('dinner.jpg', 'image/jpeg'))
+
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith('img.notSaved'))
+      expect(hidden().value).toMatch(/^user-1\//)
+      expect(button()).not.toBeDisabled()
+    })
+  })
 })

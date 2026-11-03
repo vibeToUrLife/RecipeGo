@@ -115,6 +115,22 @@ export async function updateRecipe(id: string, input: RecipeFormData): Promise<v
   await insertChildren(id, input)
 }
 
+// Gives a recipe a photo just uploaded, on its own, so it sticks without a Save.
+// Only a key the way ImageUpload files it, in the signed-in user's own folder,
+// is taken; RLS decides whether they may change this recipe, and one they can't
+// updates no rows. Returns whether the photo was saved.
+export async function setRecipeImage(id: string, imagePath: string): Promise<boolean> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !new RegExp(`^${user.id}/[0-9a-f-]{36}\\.(jpg|png|webp)$`).test(imagePath)) return false
+  const { data, error } = await supabase
+    .from('recipes')
+    .update({ image_path: imagePath, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('id')
+  return !error && (data?.length ?? 0) > 0
+}
+
 export async function deleteRecipe(id: string): Promise<void> {
   const supabase = await createClient()
   const { error } = await supabase.from('recipes').delete().eq('id', id)

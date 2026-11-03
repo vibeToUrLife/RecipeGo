@@ -59,14 +59,19 @@ function reasonKey(error: { status?: number; statusCode?: string; message?: stri
   return 'img.uploadFailed'
 }
 
+// onUploaded: save the new photo somewhere straight away (RecipeForm does, on a
+// recipe that exists) and say whether that worked. Without it the photo only
+// goes into the form, to be saved with it.
 export function ImageUpload({
   name = 'image_path',
   defaultPath,
   compact = false,
+  onUploaded,
 }: {
   name?: string
   defaultPath?: string | null
   compact?: boolean
+  onUploaded?: (path: string) => Promise<boolean>
 }) {
   const t = useT()
   const [path, setPath] = useState<string>(defaultPath ?? '')
@@ -100,7 +105,10 @@ export function ImageUpload({
         .upload(key, body, { upsert: true, contentType: mime })
       if (error) { console.error(error); toast.error(t(reasonKey(error))); return }
       setPath(key)
-      toast.success(t('img.uploaded'))
+      // A save that fails still leaves the photo in the form, so Save keeps it.
+      if (!onUploaded) toast.success(t('img.uploaded'))
+      else if (await onUploaded(key).catch(() => false)) toast.success(t('img.saved'))
+      else toast.error(t('img.notSaved'))
     } catch (err) {
       // storage-js re-throws anything that isn't a StorageError (offline, CORS,
       // a proxy that eats the request) and getUser() can reject too. Uncaught,
@@ -122,7 +130,7 @@ export function ImageUpload({
         <img
           src={preview}
           alt=""
-          className={compact ? 'h-16 w-16 rounded-md object-cover' : 'h-32 w-full rounded-lg object-cover'}
+          className={compact ? 'h-16 w-16 rounded-md object-cover' : 'h-48 w-full rounded-lg bg-muted object-contain'}
         />
       )}
       <input

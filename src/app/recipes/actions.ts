@@ -1,7 +1,7 @@
 'use server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { createRecipe, updateRecipe, deleteRecipe, getRecipe } from '@/lib/data/recipes'
+import { createRecipe, updateRecipe, deleteRecipe, getRecipe, setRecipeImage } from '@/lib/data/recipes'
 import { categorizeIngredient } from '@/lib/aisles'
 import { VALID_UNITS } from '@/lib/unit-options'
 import { getT } from '@/lib/i18n-server'
@@ -72,6 +72,14 @@ export async function saveRecipe(_prev: SaveRecipeState, formData: FormData): Pr
 
   revalidatePath(id ? `/recipes/${id}` : '/')
   redirect(`/recipes/${targetId}`)
+}
+
+// A photo uploaded on a recipe's edit page is saved to it there and then, so
+// leaving without pressing Save doesn't lose it.
+export async function saveRecipeImageAction(recipeId: string, imagePath: string): Promise<{ ok: boolean }> {
+  const ok = await setRecipeImage(recipeId, imagePath)
+  if (ok) revalidatePath(`/recipes/${recipeId}`)
+  return { ok }
 }
 
 export async function removeRecipe(id: string) {

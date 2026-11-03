@@ -2,7 +2,7 @@
 import { useState, useRef, useActionState, type KeyboardEvent } from 'react'
 import { flushSync } from 'react-dom'
 import { ChevronDown, ChevronUp, GripVertical } from 'lucide-react'
-import { saveRecipe } from '@/app/recipes/actions'
+import { saveRecipe, saveRecipeImageAction } from '@/app/recipes/actions'
 import type { RecipeWithChildren, Room } from '@/lib/db-types'
 import type { ImportedRecipe } from '@/lib/recipe/types'
 import { Button } from '@/components/ui/button'
@@ -91,7 +91,15 @@ export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?
     <form action={formAction} className="space-y-5">
       {recipe && <input type="hidden" name="id" value={recipe.id} />}
       <input type="hidden" name="source_url" value={imported?.sourceUrl ?? recipe?.source_url ?? ''} />
-      <ImageUpload name="image_path" defaultPath={recipe?.image_path} />
+      {/* On a recipe that exists, a new photo is saved to it the moment it's
+          uploaded, so leaving without Save keeps it. A new recipe has nothing
+          to save it to yet, and step photos follow steps that may have moved
+          since the last save, so those go with the form. */}
+      <ImageUpload
+        name="image_path"
+        defaultPath={recipe?.image_path}
+        onUploaded={recipe ? async (path) => (await saveRecipeImageAction(recipe.id, path)).ok : undefined}
+      />
 
       <div className="space-y-2">
         <Label htmlFor="title">{t('form.title')}</Label>
