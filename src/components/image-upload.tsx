@@ -32,6 +32,41 @@ function mimeOf(file: File): string | undefined {
   return EXT_MIME[file.name.split('.').pop()?.toLowerCase() ?? '']
 }
 
+// The longest side a recipe photo needs; past it are pixels no page shows.
+const MAX_SIDE = 2000
+// Under this, a photo that's no bigger than MAX_SIDE goes up untouched.
+const SMALL_BYTES = 1.5 * 1024 * 1024
+
+// A phone photo is often several MB and 4000px or more across: past the
+// bucket's limit, and slow to load for no gain. A big one is redrawn at most
+// MAX_SIDE across as a JPEG, usually a few hundred KB, turned the way the
+// camera held it. A small one, or one the browser can't decode, goes up as it
+// is, under the type we settled on: Storage matches the uploaded part's own type
+// against allowed_mime_types, and slice() only relabels the bytes.
+async function shrink(file: File, mime: string): Promise<Blob> {
+  const original = file.type === mime ? file : file.slice(0, file.size, mime)
+  if (typeof createImageBitmap !== 'function') return original
+  try {
+    const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
+    const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height))
+    if (scale === 1 && file.size <= SMALL_BYTES) { bitmap.close(); return original }
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(bitmap.width * scale)
+    canvas.height = Math.round(bitmap.height * scale)
+    const ctx = canvas.getContext('2d')
+    if (!ctx) { bitmap.close(); return original }
+    // JPEG has no transparency: a PNG's clear parts go white, not black.
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+    bitmap.close()
+    const jpeg = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85))
+    return jpeg && jpeg.size < file.size ? jpeg : original
+  } catch {
+    return original
+  }
+}
+
 // crypto.randomUUID() exists only in secure contexts, so it is missing whenever
 // the app is opened over plain http on a LAN address (http://192.168.x.x:3000 —
 // how you'd reach the dev server from a phone) and on Safari below 15.4. It used
@@ -88,21 +123,17 @@ export function ImageUpload({
     if (!file) return
     const mime = mimeOf(file)
     if (!mime) { toast.error(t('img.unsupportedType')); return }
-    if (file.size > MAX_BYTES) { toast.error(t('img.tooLarge')); return }
     setBusy(true)
     try {
+      const photo = await shrink(file, mime)
+      if (photo.size > MAX_BYTES) { toast.error(t('img.tooLarge')); return }
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { toast.error(t('img.signInAgain')); return }
-      const key = `${user.id}/${uuid()}.${MIME_EXT[mime]}`
-      // Upload the bytes under the type we settled on: the SDK sends a File as
-      // multipart and Storage matches that part's own type against
-      // allowed_mime_types, so a typeless File would arrive as
-      // application/octet-stream and be rejected. slice() only relabels it.
-      const body = file.type === mime ? file : file.slice(0, file.size, mime)
+      const key = `${user.id}/${uuid()}.${MIME_EXT[photo.type]}`
       const { error } = await supabase.storage
         .from('recipe-images')
-        .upload(key, body, { upsert: true, contentType: mime })
+        .upload(key, photo, { upsert: true, contentType: photo.type })
       if (error) { console.error(error); toast.error(t(reasonKey(error))); return }
       setPath(key)
       // A save that fails still leaves the photo in the form, so Save keeps it.

@@ -81,7 +81,8 @@ describe('ImageUpload', () => {
     expect(input.value).toBe('')
   })
 
-  it('rejects an oversized image locally, naming the limit', async () => {
+  // jsdom can't decode an image, so this one can't be made smaller either.
+  it('rejects an oversized image it can’t shrink, naming the limit', async () => {
     render(<ImageUpload />)
     pick(file('huge.jpg', 'image/jpeg', 5 * 1024 * 1024 + 1))
 
@@ -157,6 +158,68 @@ describe('ImageUpload', () => {
 
     await waitFor(() => expect(toast.error).toHaveBeenCalled())
     expect(hidden().value).toBe('user-1/old.jpg')
+  })
+
+  describe('shrinking a big photo first', () => {
+    // A decoder that sees a `width`×`height` photo, and a canvas whose JPEG is `jpegBytes`.
+    function decodeAs(width: number, height: number, jpegBytes = 300_000) {
+      const drawn: { width: number; height: number }[] = []
+      vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ width, height, close: vi.fn() })))
+      vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function (this: HTMLCanvasElement) {
+        drawn.push({ width: this.width, height: this.height })
+        return { fillRect: vi.fn(), drawImage: vi.fn() } as unknown as CanvasRenderingContext2D
+      } as never)
+      vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((done) =>
+        done(new Blob([new Uint8Array(jpegBytes)], { type: 'image/jpeg' })))
+      return drawn
+    }
+    afterEach(() => vi.unstubAllGlobals())
+
+    it('sends a big phone photo as a smaller JPEG, at most 2000px across', async () => {
+      const drawn = decodeAs(4032, 3024)
+      render(<ImageUpload />)
+      pick(file('IMG_0001.png', 'image/png', 6 * 1024 * 1024))
+
+      await waitFor(() => expect(toast.success).toHaveBeenCalledWith('img.uploaded'))
+      const [, key, body, options] = upload.mock.calls[0]
+      expect(drawn).toEqual([{ width: 2000, height: 1500 }])
+      expect(key).toMatch(/\.jpg$/)
+      expect((body as Blob).size).toBe(300_000)
+      expect(options).toMatchObject({ contentType: 'image/jpeg' })
+      expect(toast.error).not.toHaveBeenCalled()
+    })
+
+    it('sends a small photo as it is', async () => {
+      const drawn = decodeAs(1200, 900)
+      render(<ImageUpload />)
+      const small = file('dinner.png', 'image/png', 200_000)
+      pick(small)
+
+      await waitFor(() => expect(toast.success).toHaveBeenCalledWith('img.uploaded'))
+      expect(drawn).toEqual([])
+      expect(upload.mock.calls[0][2]).toBe(small)
+      expect(upload.mock.calls[0][1]).toMatch(/\.png$/)
+    })
+
+    it('sends the original if the JPEG would come out no smaller', async () => {
+      decodeAs(3000, 3000, 900_000)
+      render(<ImageUpload />)
+      const photo = file('dinner.jpg', 'image/jpeg', 800_000)
+      pick(photo)
+
+      await waitFor(() => expect(toast.success).toHaveBeenCalledWith('img.uploaded'))
+      expect(upload.mock.calls[0][2]).toBe(photo)
+    })
+
+    it('sends the original if the photo won’t decode', async () => {
+      vi.stubGlobal('createImageBitmap', vi.fn(async () => { throw new Error('bad image') }))
+      render(<ImageUpload />)
+      const photo = file('dinner.jpg', 'image/jpeg', 100_000)
+      pick(photo)
+
+      await waitFor(() => expect(toast.success).toHaveBeenCalledWith('img.uploaded'))
+      expect(upload.mock.calls[0][2]).toBe(photo)
+    })
   })
 
   describe('saving the photo the moment it uploads', () => {
