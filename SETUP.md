@@ -238,7 +238,7 @@ Vercel deploys the app on every push, but a new migration (a file in `supabase/m
    | Name | Value |
    |---|---|
    | `SUPABASE_ACCESS_TOKEN` | Supabase → your avatar (top right) → **Account preferences → Access Tokens → Generate new token** (supabase.com/dashboard/account/tokens) |
-   | `SUPABASE_PROJECT_ID` | the project's reference: the `xxxx` in `https://xxxx.supabase.co` (also **Project Settings → General → Project ID**) |
+   | `SUPABASE_PROJECT_ID` | the project's reference, 20 lowercase letters: the `xxxx` in `https://xxxx.supabase.co` (also **Project Settings → General → Project ID**). Not the project's name. |
    | `SUPABASE_DB_PASSWORD` | the database password chosen when the project was made. Forgotten it? **Project Settings → Database → Reset database password**. The app itself doesn't use it, so nothing else needs changing. |
 
 2. **Baseline once.** A database set up by pasting SQL (Method A) has no record of which migrations it has, so the first run would apply them all again; the migrate job stops with an error instead. Record them once: GitHub → **Actions → Baseline the database → Run workflow**, giving the number of the newest migration the database already has:
