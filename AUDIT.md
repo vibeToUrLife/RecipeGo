@@ -41,7 +41,7 @@ README or `CLAUDE.md`. File:line citations are exact.
 | L6 | 🟢 Low | Dead code: `createAdminClient` defined but never called | `admin.ts:4` | ✅ Fixed: `admin.ts` removed |
 | L7 | 🟢 Low | All import failure modes collapse to one generic response | `route.ts:98` | ⚠️ Open |
 | L8 | 🟢 Low | `.gitignore` misses non-`.local` env files | `.gitignore` | ✅ Fixed: `.env*` ignored, `!.env.example` kept |
-| L9 | 🟢 Low | pgTAP RLS/realtime DB tests never run (no CI, needs Docker) | `supabase/tests/*` | ⚠️ Open: CI doesn't run `supabase test db` |
+| L9 | 🟢 Low | pgTAP RLS/realtime DB tests never run (no CI, needs Docker) | `supabase/tests/*` | ✅ Fixed: CI's `database` job runs `supabase test db` on a fresh database |
 
 > **Note on the SSRF blast radius:** the import endpoint **is** auth-gated (the `proxy.ts`
 > matcher covers `/api/*`, and `middleware.ts:31` redirects unauthenticated users to `/login`),
@@ -365,7 +365,10 @@ locally). Get `lint` to exit 0.
 - **L9 — DB tests never run.** `supabase/tests/realtime_publication.test.sql` (and the RLS pgTAP
   tests) require Docker/local Supabase and are "deferred to the owner" — with no CI they never
   execute. Wire `supabase test db` into CI, or at least run once and note it. **Effort: S.**
-  **Now: ⚠️ open** — CI runs lint, tests and build, but not `supabase test db`.
+  **Now: ✅ fixed** — CI's `database` job starts a Supabase database with the CLI, applies every
+  migration and runs `supabase test db`. Its first run caught seven checks in `rooms_rls` that
+  could never pass: `throws_ok` given just a description, which pgTAP reads as the error message
+  expected. The RLS was right all along; they now check for `42501` instead.
 
 ---
 
@@ -389,7 +392,7 @@ then the exact interview answer.
 `recipes`, `shopping_list_items`, `meal_plan_entries`, `room_members`, `room_invites`, `rooms`.
 
 (A pgTAP test, `supabase/tests/realtime_publication.test.sql`, asserts exactly these six are
-published *and* have full replica identity — though per L9 it isn't run in CI.)
+published *and* have full replica identity — and since L9, CI runs it.)
 
 **Why `REPLICA IDENTITY FULL` matters** (great "why" to volunteer in an interview): by default a
 change event only carries the row's **primary key** for `UPDATE`/`DELETE`. But the client filters
@@ -508,7 +511,7 @@ Ordered by (risk reduction ÷ effort), interview-impact weighted.
 7. ✅ **M2 — Verify realtime token refresh.** *S.* Cheap certainty on a likely interview question.
 8. ⚠️ **Polish sweep — L2/L3/L4/L8** (LICENSE, README screenshots, delete boilerplate SVGs, tighten
    `.gitignore`). *XS–S.* First-impression multipliers. *(All done but the screenshots, L3.)*
-9. ⚠️ **L5/L6/L7/L9** *(L6 done, L5 kept by design; L7 and L9 left.)* (document the share capability, drop dead admin client, per-reason import
+9. ⚠️ **L5/L6/L7/L9** *(L6 and L9 done, L5 kept by design; L7 left.)* (document the share capability, drop dead admin client, per-reason import
    feedback, wire DB tests into CI). *XS–S.* Finishing touches.
 
 ---

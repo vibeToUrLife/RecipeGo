@@ -128,6 +128,9 @@ reset role;
 --
 -- Blocked SELECT  → is_empty()   (RLS USING hides rows, no exception)
 -- Blocked INSERT  → throws_ok()  (RLS WITH CHECK fails, raises 42501)
+--   in its four-argument form, (sql, '42501', null, description): given just
+--   two, pgTAP takes the second for the error message expected, so the
+--   description would have to match Postgres's own wording.
 -- ====================================================================
 set local role authenticated;
 set local "request.jwt.claims" to
@@ -146,6 +149,7 @@ select throws_ok(
              'c0000000-0000-0000-0000-000000000003',
              'Evil Recipe',
              'd0000000-0000-0000-0000-000000000004') $$,
+  '42501', null,
   '(c) outsider C cannot insert recipe into room'
 );
 
@@ -159,6 +163,7 @@ select is_empty(
 select throws_ok(
   $$ insert into public.ingredients (recipe_id, name)
      values ('f0000000-0000-0000-0000-000000000006', 'Evil Ingredient') $$,
+  '42501', null,
   '(c) outsider C cannot insert ingredient into room recipe'
 );
 
@@ -172,6 +177,7 @@ select is_empty(
 select throws_ok(
   $$ insert into public.steps (recipe_id, step_number, text)
      values ('f0000000-0000-0000-0000-000000000006', 1, 'Evil Step') $$,
+  '42501', null,
   '(c) outsider C cannot insert step into room recipe'
 );
 
@@ -187,6 +193,7 @@ select throws_ok(
      values ('c0000000-0000-0000-0000-000000000003',
              'Evil Item',
              'd0000000-0000-0000-0000-000000000004') $$,
+  '42501', null,
   '(c) outsider C cannot insert shopping_list_item into room'
 );
 
@@ -202,6 +209,7 @@ select throws_ok(
      values ('d0000000-0000-0000-0000-000000000004',
              'c0000000-0000-0000-0000-000000000003',
              'member') $$,
+  '42501', null,
   '(c) outsider C cannot insert into room_members'
 );
 
@@ -215,6 +223,7 @@ select is_empty(
 select throws_ok(
   $$ insert into public.room_invites (room_id, email)
      values ('d0000000-0000-0000-0000-000000000004', 'userc@test.com') $$,
+  '42501', null,
   '(c) outsider C cannot insert room_invite'
 );
 
@@ -234,6 +243,7 @@ set local "request.jwt.claims" to
 select throws_ok(
   $$ insert into public.room_invites (room_id, email)
      values ('d0000000-0000-0000-0000-000000000004', 'userc@test.com') $$,
+  '42501', null,
   '(d) member B cannot insert a room_invite'
 );
 
