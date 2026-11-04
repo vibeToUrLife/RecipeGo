@@ -29,3 +29,16 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
           SUPABASE_SERVICE_ROLE_KEY: placeholder-service-key
+
+  # The database's own tests: every migration in supabase/migrations applied to
+  # a fresh Supabase database (Docker comes with GitHub's runners), then the
+  # pgTAP checks in supabase/tests on who can see and change what.
+  database:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.1
+      - run: supabase db start
+      - run: supabase test db
