@@ -161,6 +161,7 @@ const EN: Record<string, string> = {
   'shop.unsentTicks': '{n} tick(s) not sent yet. They’ll go as soon as there’s signal.',
 
   // notifications: the card that turns them on, and what other members are told
+  'welcome.tagline': 'Recipes, meal plans and shopping, together.',
   'notify.title': 'Notifications',
   'notify.intro': 'Get told on this phone when someone in your rooms changes a meal plan or shopping list.',
   'notify.turnOn': 'Turn on notifications',
@@ -535,6 +536,7 @@ const ZH: Record<string, string> = {
   'shop.offline': '没有网络。打的勾先存在这台手机上，联网后自动同步。',
   'shop.unsentTicks': '还有 {n} 个勾没同步，有信号就会自动发出。',
 
+  'welcome.tagline': '存食谱、排三餐、一起买菜。',
   'notify.title': '通知',
   'notify.intro': '房间里有人改了计划或购物清单时，在这台手机上提醒你。',
   'notify.turnOn': '开启通知',

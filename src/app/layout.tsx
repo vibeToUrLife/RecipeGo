@@ -4,6 +4,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { I18nProvider } from "@/components/i18n-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ServiceWorker } from "@/components/service-worker";
+import { Splash } from "@/components/splash";
+import { WELCOMED_SCRIPT } from "@/lib/welcome";
 import { getLocale } from "@/lib/i18n-server";
 import "./globals.css";
 
@@ -36,8 +38,13 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang={locale} className={`${inter.variable} ${fraunces.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased min-h-screen">
+        {/* Before anything paints: a session that has seen the welcome animation
+            doesn't see it again (lib/welcome.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: WELCOMED_SCRIPT }} />
         <I18nProvider locale={locale}>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            {/* After the theme's own script, so the dark theme's colour is set. */}
+            <Splash />
             {children}
             <Toaster richColors />
             <ServiceWorker />

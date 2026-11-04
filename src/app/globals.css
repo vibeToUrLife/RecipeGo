@@ -83,6 +83,84 @@
   h1, h2, h3, h4 { @apply font-serif; }
 }
 
+/* The welcome animation on opening the app (components/splash.tsx): the egg
+   lands, the yolk drops in, the name rises, then it all fades to the page.
+   It plays and then hides by CSS alone, so it can never stay up over the page
+   without JavaScript; the component only lets a tap skip it, and takes it out
+   after. html[data-welcomed], set before anything paints in a session that
+   has seen it, keeps it from showing again. About 1.8s in all. */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: #c65d3b;
+  color: #f7f1e7;
+  animation: splash-out 350ms ease-in 1450ms forwards;
+}
+.dark .splash { background: #a24a2c; }
+html[data-welcomed] .splash { display: none; }
+.splash.splash--leaving { animation: splash-out 220ms ease-in forwards; }
+.splash-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 1.5rem;
+  text-align: center;
+  animation: splash-lift 350ms ease-in 1450ms forwards;
+}
+.splash.splash--leaving .splash-inner { animation: splash-lift 220ms ease-in forwards; }
+.splash-egg { width: 7.5rem; height: auto; overflow: visible; }
+.splash-white, .splash-yolk, .splash-shine { transform-box: fill-box; transform-origin: center; }
+.splash-white { animation: splash-white 480ms cubic-bezier(0.34, 1.56, 0.64, 1) 60ms both; }
+.splash-yolk { animation: splash-yolk 520ms cubic-bezier(0.3, 0.7, 0.4, 1) 320ms both; }
+.splash-shine { animation: splash-shine 240ms ease-out 780ms both; }
+.splash-name { font-size: 2.6rem; font-weight: 600; line-height: 1.1; letter-spacing: -0.01em; }
+.splash-name span {
+  display: inline-block;
+  animation: splash-rise 380ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  animation-delay: calc(560ms + var(--i) * 40ms);
+}
+.splash-tagline { font-size: 0.95rem; opacity: 0.85; animation: splash-rise 380ms ease-out 900ms both; }
+
+@keyframes splash-white {
+  0% { opacity: 0; transform: scale(0.3) rotate(-14deg); }
+  60% { opacity: 1; transform: scale(1.08) rotate(3deg); }
+  100% { transform: none; }
+}
+@keyframes splash-yolk {
+  0% { opacity: 0; transform: translateY(-320%) scale(0.7); }
+  55% { opacity: 1; transform: translateY(0) scale(1.14, 0.84); }
+  75% { transform: scale(0.95, 1.06); }
+  100% { transform: none; }
+}
+@keyframes splash-shine {
+  from { opacity: 0; transform: scale(0); }
+  to { opacity: 0.9; transform: none; }
+}
+@keyframes splash-rise {
+  from { opacity: 0; transform: translateY(0.6em); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes splash-out { to { opacity: 0; visibility: hidden; } }
+@keyframes splash-lift { to { transform: translateY(-14px) scale(1.03); } }
+
+/* No movement for those who've asked for less: the finished picture, briefly,
+   then a fade. */
+@media (prefers-reduced-motion: reduce) {
+  .splash { animation: splash-out 300ms ease-in 700ms forwards; }
+  .splash-inner,
+  .splash.splash--leaving .splash-inner,
+  .splash-white,
+  .splash-yolk,
+  .splash-name span,
+  .splash-tagline { animation: none; }
+  .splash-shine { animation: none; opacity: 0.9; }
+}
+@media print { .splash { display: none; } }
+
 /* Print / "Save as PDF" (the Print buttons on the plan and recipe pages call
    window.print(); the browser dialog's PDF destination goes through here too).
    Screen-only chrome — nav, dialogs, action buttons — opts out per component
