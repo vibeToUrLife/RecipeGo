@@ -52,6 +52,6 @@ jobs:
             if (( 10#$version <= 10#$THROUGH )); then versions+=("$version"); fi
           done
           echo "Recording ${#versions[@]} migrations as applied, through $THROUGH"
-          supabase migration repair --status applied "${versions[@]}"
+          supabase migration repair --linked --status applied "${versions[@]}"
       - name: Show the history now
-        run: supabase migration list
+        run: supabase migration list --linked

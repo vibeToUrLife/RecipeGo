@@ -91,7 +91,7 @@ jobs:
       - name: List what would be applied
         if: steps.secrets.outputs.set == 'true'
         run: |
-          supabase db push --dry-run 2>&1 | tee plan.txt
+          supabase db push --linked --dry-run 2>&1 | tee plan.txt
           # The very first migration still to apply means the live database's
           # history was never recorded, not that it's empty.
           if grep -q 20260628073134 plan.txt; then
@@ -100,4 +100,4 @@ jobs:
           fi
       - name: Apply them
         if: steps.secrets.outputs.set == 'true'
-        run: supabase db push
+        run: supabase db push --linked
