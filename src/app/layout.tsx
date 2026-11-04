@@ -7,6 +7,7 @@ import { ServiceWorker } from "@/components/service-worker";
 import { Splash } from "@/components/splash";
 import { ReloadWhenStale } from "@/components/reload-when-stale";
 import { WELCOMED_SCRIPT } from "@/lib/welcome";
+import { launchStartupImages } from "@/lib/launch-screens";
 import { getLocale } from "@/lib/i18n-server";
 import "./globals.css";
 
@@ -18,8 +19,9 @@ export const metadata: Metadata = {
   description: "Save recipes and build smart shopping lists.",
   // On an iPhone's home screen it's named RecipeGo and opens full screen (see
   // manifest.ts). The default status bar keeps the page below it, so the sticky
-  // header, and the room pill row pinned under it, stay where they are.
-  appleWebApp: { title: "RecipeGo", statusBarStyle: "default" },
+  // header, and the room pill row pinned under it, stay where they are. While
+  // it opens, it shows the welcome animation's terracotta (lib/launch-screens.ts).
+  appleWebApp: { title: "RecipeGo", statusBarStyle: "default", startupImage: launchStartupImages() },
 };
 
 // The phone's status bar and browser bar take the header's colour in each theme.
