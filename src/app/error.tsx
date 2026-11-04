@@ -1,13 +1,17 @@
 'use client' // Error boundaries must be Client Components.
-import { useEffect } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { useT } from '@/components/i18n-provider'
 import { BrandMark } from '@/components/icons'
+import { canReloadToRecover, reloadToRecover } from '@/lib/recover'
 
-// Catches render failures anywhere below the root layout. Without this, a
-// dropped database connection showed Next's default error screen and the only
-// way out was the browser's back button.
+const never = () => () => {}
+
+// Catches render failures anywhere below the root layout. Most go away with a
+// fresh copy of the page (lib/recover.ts), so it reloads by itself, the welcome
+// animation's terracotta covering the screen till that comes. Only when that's
+// been tried twice in the last minute does it show the error, with its Retry.
 export default function Error({
   error,
   unstable_retry,
@@ -16,10 +20,14 @@ export default function Error({
   unstable_retry: () => void
 }) {
   const t = useT()
+  const reloading = useSyncExternalStore(never, canReloadToRecover, () => true)
 
   useEffect(() => {
     console.error(error)
-  }, [error])
+    if (reloading) reloadToRecover()
+  }, [error, reloading])
+
+  if (reloading) return <div className="splash-cover" aria-hidden />
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-4 text-center">

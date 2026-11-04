@@ -5,6 +5,7 @@ import { I18nProvider } from "@/components/i18n-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ServiceWorker } from "@/components/service-worker";
 import { Splash } from "@/components/splash";
+import { ReloadWhenStale } from "@/components/reload-when-stale";
 import { WELCOMED_SCRIPT } from "@/lib/welcome";
 import { getLocale } from "@/lib/i18n-server";
 import "./globals.css";
@@ -48,6 +49,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             {children}
             <Toaster richColors />
             <ServiceWorker />
+            <ReloadWhenStale />
           </ThemeProvider>
         </I18nProvider>
       </body>

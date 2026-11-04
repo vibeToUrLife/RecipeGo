@@ -102,6 +102,10 @@
   animation: splash-out 350ms ease-in 4s forwards;
 }
 .dark .splash { background: #a24a2c; }
+/* What an error shows while it reloads the page (app/error.tsx): the welcome
+   animation's first frame, so the reload leads straight into it. */
+.splash-cover { position: fixed; inset: 0; z-index: 100; background: #c65d3b; }
+.dark .splash-cover { background: #a24a2c; }
 html[data-welcomed] .splash { display: none; }
 .splash.splash--held { animation-play-state: paused; }
 .splash.splash--leaving { animation: splash-leave 300ms ease-in forwards; }
