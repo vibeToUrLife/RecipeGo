@@ -14,6 +14,10 @@
 //   the kept lists go.
 // - A notification shows what changed; tapping it opens that list or plan, in
 //   the app if it's open already.
+// - Opening a page doesn't wait for this worker to start up (on a phone, after
+//   a while away, that takes a moment) before asking the server for it: the
+//   browser asks straight away, and this takes what comes back (navigation
+//   preload).
 const PAGES = 'pages-v1'
 const FILES = 'files-v1'
 const LIST = /^\/(rooms\/[^/]+\/)?shopping-list$/
@@ -27,6 +31,7 @@ self.addEventListener('activate', (event) => {
     for (const key of await caches.keys()) {
       if (key !== PAGES && key !== FILES) await caches.delete(key)
     }
+    await self.registration.navigationPreload?.enable().catch(() => {})
     await self.clients.claim()
   })())
 })
@@ -39,7 +44,7 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/_next/static/')) {
     event.respondWith(builtFile(request))
   } else if (request.mode === 'navigate') {
-    const fresh = fetch(request)
+    const fresh = fromServer(event)
     if (LIST.test(url.pathname)) {
       // Cloned as soon as it arrives, before the page reads it.
       const since = forgotten
@@ -89,6 +94,13 @@ self.addEventListener('notificationclick', (event) => {
     await self.clients.openWindow(url.href)
   })())
 })
+
+// The page from the server: the one the browser started fetching while this
+// was starting up, or, where it didn't (preload off, or not supported), one
+// fetched now. No signal fails either way, for the caller to deal with.
+async function fromServer(event) {
+  return (await event.preloadResponse) ?? fetch(event.request)
+}
 
 async function builtFile(request) {
   return (await caches.match(request, { cacheName: FILES })) ?? fetch(request)
