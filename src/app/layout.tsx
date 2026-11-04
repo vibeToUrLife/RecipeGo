@@ -32,6 +32,8 @@ export const viewport: Viewport = {
 
 // Run server functions next to the Supabase database (Tokyo, ap-northeast-1)
 // so per-request DB round-trips stay local instead of crossing the Pacific.
+// This reaches the pages only: the login check in proxy.ts, which every
+// request passes first, runs where vercel.json's "regions" puts it, the same.
 export const preferredRegion = "hnd1";
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

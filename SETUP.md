@@ -78,6 +78,15 @@ npm install
    - **Region:** choose the one closest to you.
 4. Click **Create new project** and wait ~2 minutes for provisioning to finish.
 
+The site's server code runs in **Tokyo** on Vercel (`hnd1`), next to a database
+in Supabase's Tokyo region (`ap-northeast-1`): every page load asks the database
+a few things in turn, and each trip across an ocean adds a noticeable wait to
+opening the app. If your project is in another region, change both places that
+say `hnd1` to the Vercel region nearest it (Vercel's docs list them, under
+Regions): `preferredRegion` in `src/app/layout.tsx` (the pages) and `regions` in
+`vercel.json` (everything else, including the login check every request passes
+first).
+
 Your **project ref** is the random ID in your project URL — e.g. in
 `https://abcdxyz123.supabase.co` the ref is `abcdxyz123`. You'll reuse it below.
 
@@ -263,7 +272,7 @@ With migrations deploying from CI, Vercel still puts new code live the moment yo
 
 2. **Push to `master`** and check, in Actions, that the **deploy** job goes green with a "Production" address in its log. Until step 3, Vercel also deploys on its own, so each push goes out twice, which does no harm.
 
-3. **Turn off Vercel's own deploy for `master`**, so it only goes live from CI: that's the repository's `vercel.json`, `{ "git": { "deploymentEnabled": { "master": false } } }`, already in place. Other branches still get their preview deployments. (Without the three secrets, nothing deploys `master` at all: either set them, or delete `vercel.json` to go back to Vercel's deploy on push.)
+3. **Turn off Vercel's own deploy for `master`**, so it only goes live from CI: that's the repository's `vercel.json`, `{ "git": { "deploymentEnabled": { "master": false } } }`, already in place. Other branches still get their preview deployments. (Without the three secrets, nothing deploys `master` at all: either set them, or take the `git` part out of `vercel.json` to go back to Vercel's deploy on push. Keep its `regions`.)
 
 Then the old code keeps running for a minute or so after a migration lands, until the new code is live. So a migration should only add (tables, columns, policies), which the old code runs fine with; removing or renaming something waits for a later release, once nothing uses it.
 
