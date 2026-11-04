@@ -192,6 +192,8 @@ Use the same values as your `.env.local`. For notifications, add the VAPID keys 
 
 Click **Deploy**. Vercel builds the app and assigns a domain like `https://recipego.vercel.app`.
 
+Database migrations can deploy themselves too, from CI: see [SETUP.md, "Optional: deploy database changes automatically"](SETUP.md#optional-deploy-database-changes-automatically).
+
 ### 5. Update Supabase redirect allowlist
 
 After the deploy, go back to the Supabase dashboard → **Authentication → URL Configuration**:

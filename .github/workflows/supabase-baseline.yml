@@ -1,0 +1,46 @@
+name: Baseline the database
+
+# Run once, by hand (Actions → Baseline the database → Run workflow), for a
+# live database set up by pasting setup_all.sql or migrations into the SQL
+# editor. Its record of applied migrations is empty, so CI's migrate job
+# would try to apply them all again; this records every migration up to the
+# one given as applied already, without running any. After that, CI applies
+# only the new ones.
+on:
+  workflow_dispatch:
+    inputs:
+      through:
+        description: The number of the newest migration the live database already has, e.g. 20261103120000
+        required: true
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      THROUGH: ${{ inputs.through }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.1
+      - name: Check the migration number
+        run: |
+          if ! [[ "$THROUGH" =~ ^[0-9]{14}$ ]] || ! ls supabase/migrations/"$THROUGH"_*.sql >/dev/null 2>&1; then
+            echo "::error::\"$THROUGH\" isn't the number of a migration in supabase/migrations."
+            exit 1
+          fi
+      - run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+      - name: Record them as applied
+        run: |
+          versions=()
+          for file in supabase/migrations/*.sql; do
+            version=$(basename "$file" | cut -d_ -f1)
+            if (( 10#$version <= 10#$THROUGH )); then versions+=("$version"); fi
+          done
+          echo "Recording ${#versions[@]} migrations as applied, through $THROUGH"
+          supabase migration repair --status applied "${versions[@]}"
+      - name: Show the history now
+        run: supabase migration list

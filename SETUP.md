@@ -229,6 +229,26 @@ Put the app on the internet so you can use it from any device.
 
 Every future `git push` to the `master` branch auto-deploys.
 
+### Optional: deploy database changes automatically
+
+Vercel deploys the app on every push, but a new migration (a file in `supabase/migrations/`) has to be pasted into the SQL Editor by hand. CI can apply it instead: once lint, tests, build and the database tests have passed on `master`, its **migrate** job applies the migrations the live database doesn't have yet.
+
+1. **Add three secrets:** GitHub → the repository → **Settings → Secrets and variables → Actions → New repository secret**.
+
+   | Name | Value |
+   |---|---|
+   | `SUPABASE_ACCESS_TOKEN` | Supabase → your avatar (top right) → **Account preferences → Access Tokens → Generate new token** (supabase.com/dashboard/account/tokens) |
+   | `SUPABASE_PROJECT_ID` | the project's reference: the `xxxx` in `https://xxxx.supabase.co` (also **Project Settings → General → Project ID**) |
+   | `SUPABASE_DB_PASSWORD` | the database password chosen when the project was made. Forgotten it? **Project Settings → Database → Reset database password**. The app itself doesn't use it, so nothing else needs changing. |
+
+2. **Baseline once.** A database set up by pasting SQL (Method A) has no record of which migrations it has, so the first run would apply them all again; the migrate job stops with an error instead. Record them once: GitHub → **Actions → Baseline the database → Run workflow**, giving the number of the newest migration the database already has:
+   - `20261103120000` if you've pasted the notifications SQL (Supabase → **Table Editor** lists a `push_subscriptions` table);
+   - otherwise `20261006120000`, and CI applies the notifications migration for you on the next push.
+
+   Give too old a number and the migrate job fails with "already exists" (nothing is changed): run the baseline again with the newer number.
+
+3. **That's it.** From then on, a push to `master` that adds a migration applies it, a few minutes after Vercel has deployed the app; the app has to cope with those few minutes, as it does now for new tables and columns. Until the secrets are set, the migrate job only notes that it did nothing.
+
 ---
 
 ## 10. Shared Rooms

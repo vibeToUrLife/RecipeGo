@@ -42,3 +42,53 @@ jobs:
           version: 2.122.1
       - run: supabase db start
       - run: supabase test db
+
+  # The database's CD: once all of the above has passed on master, migrations
+  # not yet on the live Supabase database are applied to it (supabase db push).
+  # Vercel deploys the app itself straight away, so the code a migration comes
+  # with runs a few minutes before the migration lands, and has to cope.
+  #
+  # It does nothing until the repository has three secrets (SETUP.md,
+  # "Optional: deploy database changes automatically"). And it stops rather
+  # than apply every migration again to a database set up by pasting SQL into
+  # the SQL editor, whose history of applied migrations is empty: that takes
+  # the one-time "Baseline the database" workflow first.
+  migrate:
+    needs: [verify, database]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+    steps:
+      - name: Check for the secrets
+        id: secrets
+        run: |
+          if [ -n "$SUPABASE_ACCESS_TOKEN" ] && [ -n "$SUPABASE_DB_PASSWORD" ] && [ -n "$SUPABASE_PROJECT_ID" ]; then
+            echo "set=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Migrations weren't deployed: the SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD and SUPABASE_PROJECT_ID secrets aren't all set (SETUP.md)."
+          fi
+      - uses: actions/checkout@v4
+        if: steps.secrets.outputs.set == 'true'
+      - uses: supabase/setup-cli@v1
+        if: steps.secrets.outputs.set == 'true'
+        with:
+          version: 2.122.1
+      - name: Link the live project
+        if: steps.secrets.outputs.set == 'true'
+        run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+      - name: List what would be applied
+        if: steps.secrets.outputs.set == 'true'
+        run: |
+          supabase db push --dry-run 2>&1 | tee plan.txt
+          # The very first migration still to apply means the live database's
+          # history was never recorded, not that it's empty.
+          if grep -q 20260628073134 plan.txt; then
+            echo "::error::The live database has no record of its migrations, so this would apply them all again. Run the \"Baseline the database\" workflow once first (SETUP.md)."
+            exit 1
+          fi
+      - name: Apply them
+        if: steps.secrets.outputs.set == 'true'
+        run: supabase db push
