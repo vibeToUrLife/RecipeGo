@@ -1,56 +1,112 @@
 'use client'
-import { useEffect, useState, useSyncExternalStore, type CSSProperties } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react'
 import { useT } from '@/components/i18n-provider'
 import { cn } from '@/lib/utils'
 import { WELCOMED_KEY } from '@/lib/welcome'
 
 const NAME = 'RecipeGo'
+// The opening plays for this long (less where motion is turned down), and the
+// animation stays at most this long, however far the page has got.
+const INTRO_MS = 1500
+const INTRO_REDUCED_MS = 600
+const CAP_MS = 8000
+
 const never = () => () => {}
 const welcomedAlready = () => document.documentElement.hasAttribute('data-welcomed')
 
 // The welcome animation on opening the app: the egg lands, the yolk drops in,
-// the name rises, then it all fades to the page, which has been loading
-// underneath. About 1.8 seconds; a tap or a key skips it.
+// the name rises, and then it waits, the yolk breathing, until the page under
+// it has loaded, pictures and all. Then it fades to the page. A tap or a key
+// skips it.
 //
-// It plays, and hides itself at the end, by CSS alone (globals.css, .splash), so
-// it can never stay up over the page if this script doesn't run. This only
-// lets it be skipped, and takes it out of the page once it's done. Once a
-// session: see lib/welcome.ts.
+// The stylesheet plays it (globals.css, .splash), and would hide it after 4s
+// by itself if this script never ran. Once React is running, this pauses that
+// (.splash--held), decides when it goes, and takes it out of the page after.
+// Once a session: see lib/welcome.ts.
 export function Splash() {
   const t = useT()
-  // The server, and the hydration render, can't know: they draw it, and the
-  // stylesheet keeps it hidden in a session that has seen it.
+  // The server, and the hydration render, can't know either: they draw it, and
+  // the stylesheet keeps it hidden in a session that has seen it.
   const welcomed = useSyncExternalStore(never, welcomedAlready, () => false)
+  const running = useSyncExternalStore(never, () => true, () => false)
   const [leaving, setLeaving] = useState(false)
   const [gone, setGone] = useState(false)
   const showing = !welcomed && !gone
+  const splash = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (!showing) return
+  // Only now is the session counted as welcomed: a page reloaded before this
+  // plays it again, rather than cutting it off.
+  const leave = useCallback(() => {
     try {
       sessionStorage.setItem(WELCOMED_KEY, '1')
     } catch {
       // Storage blocked: it plays again on the next page loaded.
     }
-    const skip = () => setLeaving(true)
-    window.addEventListener('keydown', skip)
-    // If its fade-out never reports finishing (a tab in the background, say).
-    const fallback = setTimeout(() => setGone(true), 4000)
-    return () => {
-      window.removeEventListener('keydown', skip)
-      clearTimeout(fallback)
+    // Hidden already by the stylesheet's own timing (React got going late):
+    // just gone, as fading it out would first bring it back.
+    const el = splash.current
+    if (!el || getComputedStyle(el).visibility === 'hidden') setGone(true)
+    else setLeaving(true)
+  }, [])
+
+  // Leaves once the opening has played and the page has loaded, or at CAP_MS,
+  // both timed from when it appeared; a tap or a key leaves at once.
+  useEffect(() => {
+    if (!showing) return
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    const intro = reduced ? INTRO_REDUCED_MS : INTRO_MS
+    let played = false
+    let loaded = document.readyState === 'complete'
+    const timers: ReturnType<typeof setTimeout>[] = []
+    const leaveIfReady = () => {
+      if (played && loaded) leave()
     }
-  }, [showing])
+    const onLoad = () => {
+      loaded = true
+      leaveIfReady()
+    }
+    const time = (appeared: number) => {
+      const after = (ms: number) => Math.max(0, appeared + ms - performance.now())
+      timers.push(setTimeout(() => {
+        played = true
+        leaveIfReady()
+      }, after(intro)))
+      timers.push(setTimeout(leave, after(CAP_MS)))
+    }
+    // No frame drawn yet (React can start before the stylesheet has come):
+    // it appears with the next one.
+    let frame = 0
+    if (window.__recipegoSplashAt !== undefined) time(window.__recipegoSplashAt)
+    else if (typeof requestAnimationFrame === 'function') frame = requestAnimationFrame(() => time(performance.now()))
+    else time(performance.now())
+    window.addEventListener('load', onLoad)
+    window.addEventListener('keydown', leave)
+    return () => {
+      timers.forEach(clearTimeout)
+      if (frame) cancelAnimationFrame(frame)
+      window.removeEventListener('load', onLoad)
+      window.removeEventListener('keydown', leave)
+    }
+  }, [showing, leave])
+
+  // Gone when its fade-out ends, or shortly after if that's never reported.
+  useEffect(() => {
+    if (!leaving) return
+    const fallback = setTimeout(() => setGone(true), 800)
+    return () => clearTimeout(fallback)
+  }, [leaving])
 
   if (!showing) return null
   return (
     <div
+      ref={splash}
       aria-hidden
       data-testid="splash"
-      className={cn('splash', leaving && 'splash--leaving')}
-      onPointerDown={() => setLeaving(true)}
+      className={cn('splash', running && 'splash--held', leaving && 'splash--leaving')}
+      onPointerDown={leave}
       onAnimationEnd={(e) => {
-        if (e.target === e.currentTarget && e.animationName === 'splash-out') setGone(true)
+        if (e.target !== e.currentTarget) return
+        if (e.animationName === 'splash-leave' || e.animationName === 'splash-out') setGone(true)
       }}
     >
       <div className="splash-inner">

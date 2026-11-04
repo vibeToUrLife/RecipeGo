@@ -12,6 +12,17 @@ afterEach(() => {
 })
 
 describe('the script run before the page paints', () => {
+  it('notes when the first frame is drawn, for the animation to time itself from', () => {
+    let drawn: FrameRequestCallback | undefined
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => { drawn = cb; return 1 })
+    delete window.__recipegoSplashAt
+    run()
+    expect(window.__recipegoSplashAt).toBeUndefined()
+    drawn!(0)
+    expect(window.__recipegoSplashAt).toBeTypeOf('number')
+    vi.unstubAllGlobals()
+  })
+
   it('marks <html> for a session that has seen the welcome animation', () => {
     sessionStorage.setItem(WELCOMED_KEY, '1')
     run()

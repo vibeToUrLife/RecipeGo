@@ -1,31 +1,12 @@
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
 import { listLibraryRecipes } from '@/lib/data/recipes'
-import { listMyRooms } from '@/lib/data/rooms'
-import { roomToRestore } from '@/lib/last-collection'
 import { AppNav } from '@/components/app-nav'
 import { RecipeLibrary } from '@/components/recipe-library'
 import { RememberCollection } from '@/components/remember-collection'
 import { getT } from '@/lib/i18n-server'
 
-export default async function HomePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ home?: string }>
-}) {
-  const { home } = await searchParams
-  // Return the user to their last room on a fresh visit — unless they explicitly
-  // asked for personal ("My Recipes" links carry ?home=1). Validate membership so
-  // a left/deleted room falls back to personal instead of bouncing to a 404.
-  if (!home) {
-    const last = (await cookies()).get('last_collection')?.value
-    if (last && last !== 'personal') {
-      const myRoomIds = (await listMyRooms()).map((r) => r.id)
-      const target = roomToRestore(home, last, myRoomIds)
-      if (target) redirect(`/rooms/${target}`)
-    }
-  }
-
+// A fresh visit lands in the room used last instead: the proxy sends it there
+// (utils/supabase/middleware.ts) before this page is rendered.
+export default async function HomePage() {
   const recipes = await listLibraryRecipes()
   const t = await getT()
   return (

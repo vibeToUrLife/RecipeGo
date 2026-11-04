@@ -12,34 +12,108 @@ const splash = () => screen.queryByTestId('splash')
 // animationName is set by hand.
 const animationEnd = (el: Element, animationName: string) =>
   fireEvent(el, Object.assign(new Event('webkitAnimationEnd', { bubbles: true }), { animationName }))
+const wait = (ms: number) => act(() => { vi.advanceTimersByTime(ms) })
 
+let readyState: DocumentReadyState
 beforeEach(() => {
+  vi.useFakeTimers()
   sessionStorage.clear()
   document.documentElement.removeAttribute('data-welcomed')
+  // As the script first in the page notes it, on the first frame drawn.
+  window.__recipegoSplashAt = performance.now()
+  readyState = 'complete'
+  Object.defineProperty(document, 'readyState', { get: () => readyState, configurable: true })
 })
-afterEach(() => vi.useRealTimers())
+afterEach(() => {
+  vi.useRealTimers()
+  vi.restoreAllMocks()
+  delete (document as unknown as Record<string, unknown>).readyState
+})
 
 describe('Splash', () => {
   it('plays on opening the app, with the name and the tagline', () => {
     render(<Splash />)
-    expect(splash()).toBeInTheDocument()
     expect(splash()).toHaveTextContent('RecipeGo')
     expect(splash()).toHaveTextContent('welcome.tagline')
     expect(splash()).toHaveAttribute('aria-hidden', 'true')
   })
 
-  it('marks the session as welcomed, so later pages skip it', () => {
+  it('takes over the timing from the stylesheet once React runs', () => {
     render(<Splash />)
+    expect(splash()).toHaveClass('splash--held')
+  })
+
+  it('plays the opening through, then leaves, when the page has loaded already', () => {
+    render(<Splash />)
+    wait(1499)
+    expect(splash()).not.toHaveClass('splash--leaving')
+    wait(1)
+    expect(splash()).toHaveClass('splash--leaving')
+  })
+
+  it('waits on past the opening while the page is still loading, and leaves once it has', () => {
+    readyState = 'loading'
+    render(<Splash />)
+    wait(3000)
+    expect(splash()).not.toHaveClass('splash--leaving')
+    act(() => {
+      readyState = 'complete'
+      window.dispatchEvent(new Event('load'))
+    })
+    expect(splash()).toHaveClass('splash--leaving')
+  })
+
+  it('stops waiting after 8 seconds, however far the page has got', () => {
+    readyState = 'loading'
+    render(<Splash />)
+    wait(7999)
+    expect(splash()).not.toHaveClass('splash--leaving')
+    wait(1)
+    expect(splash()).toHaveClass('splash--leaving')
+  })
+
+  it('times itself from when it appeared, not from when React got going', () => {
+    window.__recipegoSplashAt = performance.now() - 1000
+    render(<Splash />)
+    wait(499)
+    expect(splash()).not.toHaveClass('splash--leaving')
+    wait(1)
+    expect(splash()).toHaveClass('splash--leaving')
+  })
+
+  it('starts timing with the first frame, if none was drawn before React got going', () => {
+    delete window.__recipegoSplashAt
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => setTimeout(() => cb(performance.now()), 700))
+    render(<Splash />)
+    wait(700 + 1499)
+    expect(splash()).not.toHaveClass('splash--leaving')
+    wait(1)
+    expect(splash()).toHaveClass('splash--leaving')
+    vi.unstubAllGlobals()
+  })
+
+  it('counts the session as welcomed only once it leaves, so a reload before that plays it again', () => {
+    render(<Splash />)
+    expect(sessionStorage.getItem(WELCOMED_KEY)).toBeNull()
+    wait(1500)
     expect(sessionStorage.getItem(WELCOMED_KEY)).toBe('1')
   })
 
   it('goes once its fade-out has finished, and not before', () => {
     render(<Splash />)
+    wait(1500)
     animationEnd(splash()!.querySelector('.splash-name span')!, 'splash-rise')
-    animationEnd(splash()!, 'splash-rise')
     expect(splash()).toBeInTheDocument()
+    animationEnd(splash()!, 'splash-leave')
+    expect(splash()).toBeNull()
+  })
 
-    animationEnd(splash()!, 'splash-out')
+  it('takes itself out anyway if its fade-out is never reported', () => {
+    render(<Splash />)
+    wait(1500)
+    wait(799)
+    expect(splash()).toBeInTheDocument()
+    wait(1)
     expect(splash()).toBeNull()
   })
 
@@ -47,6 +121,7 @@ describe('Splash', () => {
     const { unmount } = render(<Splash />)
     fireEvent.pointerDown(splash()!)
     expect(splash()).toHaveClass('splash--leaving')
+    expect(sessionStorage.getItem(WELCOMED_KEY)).toBe('1')
     unmount()
 
     render(<Splash />)
@@ -54,18 +129,18 @@ describe('Splash', () => {
     expect(splash()).toHaveClass('splash--leaving')
   })
 
-  it('isn’t shown again in a session that has seen it', () => {
-    document.documentElement.setAttribute('data-welcomed', '')
+  it('just goes, without fading back in, if the stylesheet already hid it before React ran', () => {
     render(<Splash />)
+    const real = window.getComputedStyle
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((el) =>
+      el === splash() ? ({ visibility: 'hidden' } as CSSStyleDeclaration) : real(el))
+    wait(1500)
     expect(splash()).toBeNull()
   })
 
-  it('takes itself out anyway if its fade-out never reports finishing', () => {
-    vi.useFakeTimers()
+  it('isn’t shown again in a session that has seen it', () => {
+    document.documentElement.setAttribute('data-welcomed', '')
     render(<Splash />)
-    act(() => { vi.advanceTimersByTime(3999) })
-    expect(splash()).toBeInTheDocument()
-    act(() => { vi.advanceTimersByTime(1) })
     expect(splash()).toBeNull()
   })
 })
