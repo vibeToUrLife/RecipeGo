@@ -263,7 +263,7 @@ With migrations deploying from CI, Vercel still puts new code live the moment yo
 
 2. **Push to `master`** and check, in Actions, that the **deploy** job goes green with a "Production" address in its log. Until step 3, Vercel also deploys on its own, so each push goes out twice, which does no harm.
 
-3. **Turn off Vercel's own deploy for `master`**, so it only goes live from CI: a `vercel.json` with `{ "git": { "deploymentEnabled": { "master": false } } }`. Other branches still get their preview deployments.
+3. **Turn off Vercel's own deploy for `master`**, so it only goes live from CI: that's the repository's `vercel.json`, `{ "git": { "deploymentEnabled": { "master": false } } }`, already in place. Other branches still get their preview deployments. (Without the three secrets, nothing deploys `master` at all: either set them, or delete `vercel.json` to go back to Vercel's deploy on push.)
 
 Then the old code keeps running for a minute or so after a migration lands, until the new code is live. So a migration should only add (tables, columns, policies), which the old code runs fine with; removing or renaming something waits for a later release, once nothing uses it.
 
