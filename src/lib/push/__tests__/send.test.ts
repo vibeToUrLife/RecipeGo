@@ -215,7 +215,8 @@ describe('notifyRoom', () => {
     await settle()
     expect(fetchMock).toHaveBeenCalledTimes(4)
 
-    // Five quiet minutes on, a change is news again.
+    // Five minutes after the last one sent (the change at 10:03 doesn't restart
+    // the count), a change is news again.
     vi.setSystemTime(new Date('2026-11-03T10:06:00Z'))
     notifyRoom({ roomId: 'r1', change: { kind: 'listItem', item: 'rice' } })
     await settle()

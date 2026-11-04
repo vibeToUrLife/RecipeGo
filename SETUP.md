@@ -301,7 +301,7 @@ Then **redeploy** (Deployments → ⋯ → **Redeploy**): the public key is buil
 
 Tap **Send a test** to check one arrives.
 
-A run of changes notifies once: items added one after another buzz the others' phones once, and they hear again after five quiet minutes. Ticking or editing items, and changes to your own (not a room's) list or plan, notify no one. Signing out on a phone turns its notifications off.
+A run of changes notifies once. Each kind of change (adding to the list, finishing the shop, changing the plan) sends the others at most one notification every five minutes per person and room, counted from the last one sent, whichever page or phone the change came from. Ticking or editing items, and changes to your own (not a room's) list or plan, notify no one. Signing out on a phone turns its notifications off.
 
 ---
 
