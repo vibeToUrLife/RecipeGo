@@ -249,6 +249,24 @@ Vercel deploys the app on every push, but a new migration (a file in `supabase/m
 
 3. **That's it.** From then on, a push to `master` that adds a migration applies it, a few minutes after Vercel has deployed the app; the app has to cope with those few minutes, as it does now for new tables and columns. Until the secrets are set, the migrate job only notes that it did nothing.
 
+### Optional: deploy the site after the database
+
+With migrations deploying from CI, Vercel still puts new code live the moment you push, a couple of minutes before its migration lands: long enough for someone to open a page that needs a table that isn't there yet. CI can deploy the site instead, once **migrate** has finished, and only if everything before it passed.
+
+1. **Add three more secrets** (GitHub → **Settings → Secrets and variables → Actions**):
+
+   | Name | Value |
+   |---|---|
+   | `VERCEL_TOKEN` | Vercel → your avatar → **Account Settings → Tokens → Create**: name it something like "GitHub Actions", for the account or team the project is in |
+   | `VERCEL_PROJECT_ID` | Vercel → the project → **Settings → General → Project ID** (starts `prj_`) |
+   | `VERCEL_ORG_ID` | the ID of the account or team the project is in: its **Settings → General** (a team's starts `team_`) |
+
+2. **Push to `master`** and check, in Actions, that the **deploy** job goes green with a "Production" address in its log. Until step 3, Vercel also deploys on its own, so each push goes out twice, which does no harm.
+
+3. **Turn off Vercel's own deploy for `master`**, so it only goes live from CI: a `vercel.json` with `{ "git": { "deploymentEnabled": { "master": false } } }`. Other branches still get their preview deployments.
+
+Then the old code keeps running for a minute or so after a migration lands, until the new code is live. So a migration should only add (tables, columns, policies), which the old code runs fine with; removing or renaming something waits for a later release, once nothing uses it.
+
 ---
 
 ## 10. Shared Rooms

@@ -101,3 +101,45 @@ jobs:
       - name: Apply them
         if: steps.secrets.outputs.set == 'true'
         run: supabase db push --linked
+
+  # The site's CD, after the database's: once migrate has applied what the new
+  # code needs, this commit goes to Vercel as the production deployment. So no
+  # one gets a page that asks for a table that isn't there yet, and nothing that
+  # fails CI goes live. Vercel builds it, with the project's own environment
+  # variables, which never come here.
+  #
+  # It does nothing until the repository has three more secrets (SETUP.md,
+  # "Optional: deploy the site after the database"), and until then Vercel's
+  # own deploy on every push carries on. Once this has worked, vercel.json turns
+  # that off for master, so this is the only way master goes live.
+  deploy:
+    needs: [migrate]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      ORG_ID_AS_SET: ${{ secrets.VERCEL_ORG_ID }}
+      PROJECT_ID_AS_SET: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Check for the secrets
+        id: secrets
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$ORG_ID_AS_SET" ] || [ -z "$PROJECT_ID_AS_SET" ]; then
+            echo "::notice::The site wasn't deployed from CI: the VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID secrets aren't all set (SETUP.md)."
+            exit 0
+          fi
+          # Spaces dropped, as they're easy to paste along with an ID.
+          org=$(printf '%s' "$ORG_ID_AS_SET" | tr -d '[:space:]')
+          project=$(printf '%s' "$PROJECT_ID_AS_SET" | tr -d '[:space:]')
+          if ! [[ "$project" =~ ^prj_[A-Za-z0-9]+$ ]]; then
+            echo "::error::The VERCEL_PROJECT_ID secret should be the project's ID, which starts prj_ (Vercel → the project → Settings → General → Project ID)."
+            exit 1
+          fi
+          echo "VERCEL_ORG_ID=$org" >> "$GITHUB_ENV"
+          echo "VERCEL_PROJECT_ID=$project" >> "$GITHUB_ENV"
+          echo "set=true" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        if: steps.secrets.outputs.set == 'true'
+      - name: Deploy to production
+        if: steps.secrets.outputs.set == 'true'
+        run: npx --yes vercel@65.3.1 deploy --prod --yes --token "$VERCEL_TOKEN"
