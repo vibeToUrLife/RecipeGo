@@ -21,6 +21,7 @@ beforeEach(() => {
   document.documentElement.removeAttribute('data-welcomed')
   // As the script first in the page notes it, on the first frame drawn.
   window.__recipegoSplashAt = performance.now()
+  delete window.__recipegoSplashSkip
   readyState = 'complete'
   Object.defineProperty(document, 'readyState', { get: () => readyState, configurable: true })
 })
@@ -76,6 +77,25 @@ describe('Splash', () => {
     window.__recipegoSplashAt = performance.now() - 1000
     render(<Splash />)
     wait(499)
+    expect(splash()).not.toHaveClass('splash--leaving')
+    wait(1)
+    expect(splash()).toHaveClass('splash--leaving')
+  })
+
+  it('begun by the service worker, it plays only the rest of the opening', () => {
+    window.__recipegoSplashSkip = 1000
+    render(<Splash />)
+    wait(499)
+    expect(splash()).not.toHaveClass('splash--leaving')
+    wait(1)
+    expect(splash()).toHaveClass('splash--leaving')
+  })
+
+  it('and still gives the page its full 8 seconds, from when the page appeared', () => {
+    window.__recipegoSplashSkip = 3000
+    readyState = 'loading'
+    render(<Splash />)
+    wait(7999)
     expect(splash()).not.toHaveClass('splash--leaving')
     wait(1)
     expect(splash()).toHaveClass('splash--leaving')

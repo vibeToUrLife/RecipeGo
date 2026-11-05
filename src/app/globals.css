@@ -122,20 +122,35 @@ html[data-welcomed] .splash { display: none; }
 .splash.splash--leaving .splash-inner { animation: splash-lift-leave 300ms ease-in forwards; }
 .splash-egg { width: 7.5rem; height: auto; overflow: visible; }
 .splash-white, .splash-yolk, .splash-shine { transform-box: fill-box; transform-origin: center; }
-.splash-white { animation: splash-white 480ms cubic-bezier(0.34, 1.56, 0.64, 1) 60ms both; }
+/* Each part's start comes --splash-skip sooner: a page taking over from the
+   service worker, which began the animation before it came (lib/welcome.ts),
+   carries on from where that had got, rather than starting over. */
+.splash-white {
+  animation: splash-white 480ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: calc(60ms - var(--splash-skip, 0ms));
+}
 .splash-yolk {
   animation:
-    splash-yolk 520ms cubic-bezier(0.3, 0.7, 0.4, 1) 320ms both,
-    splash-breathe 1.6s ease-in-out 1.4s infinite;
+    splash-yolk 520ms cubic-bezier(0.3, 0.7, 0.4, 1) both,
+    splash-breathe 1.6s ease-in-out infinite;
+  animation-delay: calc(320ms - var(--splash-skip, 0ms)), calc(1.4s - var(--splash-skip, 0ms));
 }
-.splash-shine { animation: splash-shine 240ms ease-out 780ms both; }
+.splash-shine {
+  animation: splash-shine 240ms ease-out both;
+  animation-delay: calc(780ms - var(--splash-skip, 0ms));
+}
 .splash-name { font-size: 2.6rem; font-weight: 600; line-height: 1.1; letter-spacing: -0.01em; }
 .splash-name span {
   display: inline-block;
   animation: splash-rise 380ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
-  animation-delay: calc(560ms + var(--i) * 40ms);
+  animation-delay: calc(560ms + var(--i) * 40ms - var(--splash-skip, 0ms));
 }
-.splash-tagline { font-size: 0.95rem; opacity: 0.85; animation: splash-rise 380ms ease-out 900ms both; }
+.splash-tagline {
+  font-size: 0.95rem;
+  opacity: 0.85;
+  animation: splash-rise 380ms ease-out both;
+  animation-delay: calc(900ms - var(--splash-skip, 0ms));
+}
 
 @keyframes splash-white {
   0% { opacity: 0; transform: scale(0.3) rotate(-14deg); }

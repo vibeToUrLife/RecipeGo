@@ -50,7 +50,9 @@ export function Splash() {
   }, [])
 
   // Leaves once the opening has played and the page has loaded, or at CAP_MS,
-  // both timed from when it appeared; a tap or a key leaves at once.
+  // both timed from when it appeared; a tap or a key leaves at once. Begun by
+  // the service worker before this page came (lib/welcome.ts), the opening
+  // has had that long already; the CAP_MS is still this page's own.
   useEffect(() => {
     if (!showing) return
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -70,7 +72,7 @@ export function Splash() {
       timers.push(setTimeout(() => {
         played = true
         leaveIfReady()
-      }, after(intro)))
+      }, after(intro - (window.__recipegoSplashSkip ?? 0))))
       timers.push(setTimeout(leave, after(CAP_MS)))
     }
     // No frame drawn yet (React can start before the stylesheet has come):

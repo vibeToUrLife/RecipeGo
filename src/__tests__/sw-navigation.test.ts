@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { SPLASH_STARTED_KEY, WELCOMED_KEY } from '@/lib/welcome'
 
 // public/sw.js opening pages, run against a stand-in for the service worker's
 // world: what it answers a navigation with, and what it asks the network for.
@@ -64,7 +65,12 @@ function worker({ fetch = vi.fn(async (r: Req): Promise<Response> => html(`fetch
     await Promise.all(waits)
     return response
   }
-  return { self, fetch, caches, activate, open }
+  const fire = async (type: string, event: object) => {
+    const waits: Promise<unknown>[] = []
+    handlers[type]({ ...event, waitUntil: (p: Promise<unknown>) => waits.push(p) })
+    await Promise.all(waits)
+  }
+  return { self, fetch, caches, activate, open, fire }
 }
 
 describe('the service worker opening pages', () => {
@@ -126,5 +132,151 @@ describe('the service worker opening pages', () => {
     expect([...caches.stores.get('files-v1')!.keys()]).toEqual([`${ORIGIN}/_next/static/chunks/list.js`])
 
     expect(await (await open('/rooms/r1/shopping-list', Promise.reject(new TypeError('Failed to fetch')))).text()).toBe(list)
+  })
+})
+
+// A page as the server draws it, cut down: the welcome animation first in its
+// body, then the page itself and its scripts.
+const PAGE = '<!DOCTYPE html><html lang="zh" class="inter_v fraunces_v"><head><meta charSet="utf-8"/>' +
+  '<link rel="stylesheet" href="/_next/static/chunks/app.css" data-precedence="next"/>' +
+  '<script src="/_next/static/chunks/main.js" async=""></script>' +
+  '<meta name="theme-color" content="#0a0907" media="(prefers-color-scheme: dark)"/></head>' +
+  '<body class="font-sans antialiased"><div hidden=""><!--$--><!--/$--></div><script>early()</script>' +
+  '<div aria-hidden="true" data-testid="splash" class="splash"><div class="splash-inner"><svg class="splash-egg"><path class="splash-white"></path></svg>' +
+  '<p class="splash-name font-serif"><span style="--i:0">R</span></p><p class="splash-tagline">把菜谱变成购物清单</p></div></div>' +
+  '<main><h1>Southbay Kitchen</h1></main><script>self.__next_f.push([1,"room"])</script></body></html>'
+const CSS = '@font-face{font-family:Fraunces;src:url(../media/fraunces.woff2)format("woff2")}.splash{background:#c65d3b}'
+
+// The site's built files, and its pages; no signal for anything else.
+function site(pages: Record<string, string> = {}) {
+  const files: Record<string, string> = {
+    [`${ORIGIN}/_next/static/chunks/app.css`]: CSS,
+    [`${ORIGIN}/_next/static/media/fraunces.woff2`]: 'font',
+    [`${ORIGIN}/_next/static/chunks/list.js`]: 'list()',
+    [`${ORIGIN}/_next/static/chunks/list2.js`]: 'list2()',
+  }
+  return vi.fn(async (r: Req) => {
+    if (href(r) in files) return new Response(files[href(r)])
+    const page = pages[new URL(href(r)).pathname]
+    if (page) return html(page)
+    throw new TypeError('Failed to fetch')
+  })
+}
+const kept = async (caches: ReturnType<typeof cacheStorage>, name: string) => [...(caches.stores.get(name)?.keys() ?? [])]
+const keptWelcome = async (caches: ReturnType<typeof cacheStorage>) => (await caches.match('/__welcome', { cacheName: 'shell-v1' }))?.text()
+
+describe('the welcome animation, from the service worker', () => {
+  it('keeps a copy of it from a page opened: the animation alone, with the page’s stylesheet and fonts', async () => {
+    const { caches, open } = worker({ fetch: site() })
+    await open('/rooms/r1', Promise.resolve(html(PAGE)))
+    const welcome = (await keptWelcome(caches))!
+    expect(welcome).toMatch(/^<!doctype html><html lang="zh" class="inter_v fraunces_v"><head>/)
+    expect(welcome).toContain('<link rel="stylesheet" href="/_next/static/chunks/app.css" data-precedence="next"/>')
+    expect(welcome).toContain('<meta name="theme-color" content="#0a0907" media="(prefers-color-scheme: dark)"/>')
+    expect(welcome).toContain('<body class="font-sans antialiased">')
+    // Held: with no React here to time it, it stays until the page takes over.
+    expect(welcome).toContain('<div aria-hidden="true" data-testid="splash" class="splash splash--held"><div class="splash-inner">')
+    expect(welcome).toContain('<p class="splash-tagline">把菜谱变成购物清单</p></div></div>')
+    expect(welcome).toMatch(/<script>location\.replace\('\/\?launch'\)<\/script><\/body><\/html>$/)
+    // Nothing of the page itself, nor its scripts.
+    for (const left of ['Southbay Kitchen', 'main.js', '__next_f', 'early()']) expect(welcome).not.toContain(left)
+    expect(await kept(caches, 'files-v1')).toEqual(expect.arrayContaining([`${ORIGIN}/_next/static/chunks/app.css`, `${ORIGIN}/_next/static/media/fraunces.woff2`]))
+  })
+
+  it('takes one when it takes over, before any page has been opened through it', async () => {
+    const { caches, activate } = worker({ fetch: site({ '/login': PAGE }) })
+    await activate()
+    await vi.waitFor(async () => expect(await keptWelcome(caches)).toContain('splash--held'))
+  })
+
+  it('opens the app with it at once, and the page the browser fetched ahead goes unused', async () => {
+    const { fetch, caches, open } = worker({ fetch: site() })
+    await open('/rooms/r1', Promise.resolve(html(PAGE)))
+    fetch.mockClear()
+    const opened = await open('/', Promise.resolve(html('the room, from the server')))
+    expect(await opened.text()).toBe(await keptWelcome(caches))
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('opens the page itself without a copy, or with its stylesheet gone', async () => {
+    const none = worker({ fetch: site() })
+    expect(await (await none.open('/', Promise.resolve(html('the room')))).text()).toBe('the room')
+
+    const unstyled = worker({ fetch: site() })
+    await unstyled.open('/rooms/r1', Promise.resolve(html(PAGE)))
+    unstyled.caches.stores.get('files-v1')!.delete(`${ORIGIN}/_next/static/chunks/app.css`)
+    expect(await (await unstyled.open('/', Promise.resolve(html('the room')))).text()).toBe('the room')
+  })
+
+  it('answers nothing but opening the app with it', async () => {
+    const { open } = worker({ fetch: site() })
+    await open('/rooms/r1', Promise.resolve(html(PAGE)))
+    for (const path of ['/?launch', '/?home', '/rooms/r1', '/plan']) {
+      expect(await (await open(path, Promise.resolve(html(`page ${path}`)))).text()).toBe(`page ${path}`)
+    }
+  })
+
+  it('leaves the copy be for a page without the animation', async () => {
+    const { caches, open } = worker({ fetch: site() })
+    await open('/rooms/r1', Promise.resolve(html(PAGE)))
+    const before = await keptWelcome(caches)
+    await open('/plan', Promise.resolve(html('<h1>not found</h1>')))
+    expect(await keptWelcome(caches)).toBe(before)
+  })
+
+  it('keeps its files when a kept list’s old files are cleared away', async () => {
+    const { caches, open } = worker({ fetch: site() })
+    await open('/rooms/r1', Promise.resolve(html(PAGE)))
+    await open('/shopping-list', Promise.resolve(html('<h1>购物清单</h1><script src="/_next/static/chunks/list.js"></script>')))
+    await open('/shopping-list', Promise.resolve(html('<h1>购物清单</h1><script src="/_next/static/chunks/list2.js"></script>')))
+    expect((await kept(caches, 'files-v1')).sort()).toEqual([
+      `${ORIGIN}/_next/static/chunks/app.css`,
+      `${ORIGIN}/_next/static/chunks/list2.js`,
+      `${ORIGIN}/_next/static/media/fraunces.woff2`,
+    ])
+  })
+
+  it('isn’t listed with the kept lists offline, and goes on signing out', async () => {
+    const { caches, open, fire } = worker({ fetch: site() })
+    await open('/rooms/r1', Promise.resolve(html(PAGE)))
+    await open('/shopping-list', Promise.resolve(html('<h1>购物清单</h1>')))
+    const offline = await (await open('/plan', Promise.reject(new TypeError('Failed to fetch')))).text()
+    expect(offline).toContain('href="/shopping-list"')
+    expect(offline).not.toContain('__welcome')
+
+    await fire('message', { data: { type: 'forget' } })
+    expect(await keptWelcome(caches)).toBeUndefined()
+    expect(await kept(caches, 'files-v1')).toEqual([])
+  })
+})
+
+describe('the welcome animation’s copy, opened', () => {
+  // Its first script, run as the copy opens.
+  const firstScript = async () => {
+    const { caches, open } = worker({ fetch: site() })
+    await open('/rooms/r1', Promise.resolve(html(PAGE)))
+    return /<script>([\s\S]*?)<\/script><\/head>/.exec((await keptWelcome(caches))!)![1]
+  }
+  afterEach(() => {
+    sessionStorage.clear()
+    localStorage.clear()
+    document.documentElement.className = ''
+    document.documentElement.removeAttribute('style')
+    document.documentElement.removeAttribute('data-welcomed')
+  })
+
+  it('takes the theme the app keeps, and notes when it started, for the page to carry it on from', async () => {
+    localStorage.setItem('theme', 'dark')
+    const before = Date.now()
+    new Function(await firstScript())()
+    expect(document.documentElement.classList.contains('dark')).toBe(true)
+    expect(Number(sessionStorage.getItem(SPLASH_STARTED_KEY))).toBeGreaterThanOrEqual(before)
+  })
+
+  it('shows no animation in a session that has seen it', async () => {
+    sessionStorage.setItem(WELCOMED_KEY, '1')
+    new Function(await firstScript())()
+    expect(document.documentElement.hasAttribute('data-welcomed')).toBe(true)
+    expect(sessionStorage.getItem(SPLASH_STARTED_KEY)).toBeNull()
   })
 })
