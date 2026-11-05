@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 // solid-png.ts imports 'server-only' (a build-time guard against client bundling).
 vi.mock('server-only', () => ({}))
 
-import { LAUNCH_COLOURS, LAUNCH_IMAGES, launchStartupImages } from '@/lib/launch-screens'
+import { APPLE_WEB_APP_CAPABLE, LAUNCH_COLOURS, LAUNCH_IMAGES, launchStartupImages } from '@/lib/launch-screens'
 import { solidPng } from '@/lib/solid-png'
 import { GET, generateStaticParams } from '@/app/launch/[image]/route'
 
@@ -58,6 +58,12 @@ describe('the iPhone launch images', () => {
     const css = readFileSync(join(process.cwd(), 'src/app/globals.css'), 'utf8')
     expect(css).toMatch(new RegExp(`\\.splash \\{[^}]*background: ${LAUNCH_COLOURS.light};`))
     expect(css).toContain(`.dark .splash { background: ${LAUNCH_COLOURS.dark}; }`)
+  })
+
+  it('come with Apple’s own web app tag, without which an iPhone shows a black screen instead', () => {
+    expect(APPLE_WEB_APP_CAPABLE).toEqual({ 'apple-mobile-web-app-capable': 'yes' })
+    const layout = readFileSync(join(process.cwd(), 'src/app/layout.tsx'), 'utf8')
+    expect(layout).toMatch(/other: \{ \.\.\.APPLE_WEB_APP_CAPABLE \}/)
   })
 
   it('are named in every page’s head, under /launch', () => {

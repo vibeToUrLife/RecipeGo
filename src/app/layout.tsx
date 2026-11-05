@@ -7,7 +7,7 @@ import { ServiceWorker } from "@/components/service-worker";
 import { Splash } from "@/components/splash";
 import { ReloadWhenStale } from "@/components/reload-when-stale";
 import { WELCOMED_SCRIPT } from "@/lib/welcome";
-import { launchStartupImages } from "@/lib/launch-screens";
+import { APPLE_WEB_APP_CAPABLE, launchStartupImages } from "@/lib/launch-screens";
 import { getLocale } from "@/lib/i18n-server";
 import "./globals.css";
 
@@ -22,6 +22,7 @@ export const metadata: Metadata = {
   // header, and the room pill row pinned under it, stay where they are. While
   // it opens, it shows the welcome animation's terracotta (lib/launch-screens.ts).
   appleWebApp: { title: "RecipeGo", statusBarStyle: "default", startupImage: launchStartupImages() },
+  other: { ...APPLE_WEB_APP_CAPABLE },
 };
 
 // The phone's status bar and browser bar take the header's colour in each theme.

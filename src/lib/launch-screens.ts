@@ -43,3 +43,9 @@ export const LAUNCH_IMAGES: LaunchImage[] = SCREENS.flatMap(({ width, height, ra
 
 // For the layout's metadata (appleWebApp.startupImage).
 export const launchStartupImages = () => LAUNCH_IMAGES.map(({ file, media }) => ({ url: `/launch/${file}`, media }))
+
+// iOS draws them only for a page marked apple-mobile-web-app-capable, and
+// shows a black screen without. Next.js now writes the newer
+// mobile-web-app-capable alone for appleWebApp (vercel/next.js#74524), which
+// iOS doesn't read for this, so the layout adds Apple's own as well.
+export const APPLE_WEB_APP_CAPABLE = { 'apple-mobile-web-app-capable': 'yes' } as const
