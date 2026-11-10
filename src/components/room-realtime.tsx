@@ -15,6 +15,12 @@ const ROOM_ID_TABLES = [
 // One table to listen to, narrowed by a postgres_changes filter.
 type Watch = { table: string; filter: string }
 
+// Back after at least this long away (the phone locked, or another app on
+// top), the page catches up at once: the connection may have been dropped
+// meanwhile without anyone noticing yet, which can take the best part of a
+// minute to come to light, and the changes made in between were missed.
+const AWAY_MS = 5_000
+
 /**
  * Invisible subscriber. While mounted, listens for Postgres changes to the
  * current room's tables and re-pulls the server-rendered page (debounced) so
@@ -59,8 +65,8 @@ export function PlanRealtime() {
 }
 
 // Opens one channel listening for the changes watchesFor names (it's handed the
-// signed-in user's id) and re-pulls the page, debounced, on each. Returns the
-// cleanup.
+// signed-in user's id) and re-pulls the page, debounced, on each, and on coming
+// back to the page after a while away, or back online. Returns the cleanup.
 function refreshOnChange(
   router: { refresh: () => void },
   name: string,
@@ -76,6 +82,21 @@ function refreshOnChange(
     if (timer) clearTimeout(timer)
     timer = setTimeout(() => router.refresh(), 300)
   }
+
+  let hiddenAt = document.visibilityState === 'hidden' ? Date.now() : null
+  const onVisibility = () => {
+    if (document.visibilityState === 'hidden') {
+      hiddenAt ??= Date.now()
+      return
+    }
+    if (channel && hiddenAt !== null && Date.now() - hiddenAt >= AWAY_MS) scheduleRefresh()
+    hiddenAt = null
+  }
+  const onOnline = () => {
+    if (channel) scheduleRefresh()
+  }
+  document.addEventListener('visibilitychange', onVisibility)
+  window.addEventListener('online', onOnline)
 
   const start = async () => {
     // Realtime must carry the user's JWT so RLS-filtered postgres_changes are
@@ -115,6 +136,8 @@ function refreshOnChange(
 
   return () => {
     cancelled = true
+    document.removeEventListener('visibilitychange', onVisibility)
+    window.removeEventListener('online', onOnline)
     if (timer) clearTimeout(timer)
     if (channel) supabase.removeChannel(channel)
   }

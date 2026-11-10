@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act, render, waitFor } from '@testing-library/react'
 import { RoomRealtime, PlanRealtime } from '@/components/room-realtime'
 
@@ -144,5 +144,83 @@ describe('PlanRealtime', () => {
     await waitFor(() => expect(handlers.length).toBeGreaterThan(0))
     unmount()
     expect(removeChannel).toHaveBeenCalledWith(channel)
+  })
+})
+
+describe('coming back to the page', () => {
+  let visibility: DocumentVisibilityState = 'visible'
+  const setVisibility = (state: DocumentVisibilityState) => {
+    visibility = state
+    document.dispatchEvent(new Event('visibilitychange'))
+  }
+  beforeEach(() => {
+    visibility = 'visible'
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => visibility })
+  })
+  // Whatever happened in a test, the next one starts on real timers.
+  afterEach(() => vi.useRealTimers())
+
+  it('catches up at once after a while away (the connection may have dropped unnoticed)', async () => {
+    render(<RoomRealtime roomId="room-1" />)
+    await waitFor(() => expect(handlers.length).toBeGreaterThan(0))
+    vi.useFakeTimers()
+    setVisibility('hidden')
+    vi.advanceTimersByTime(60_000)
+    setVisibility('visible')
+    expect(refresh).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(300)
+    expect(refresh).toHaveBeenCalledTimes(1)
+    vi.useRealTimers()
+  })
+
+  it('but not after a moment away', async () => {
+    render(<PlanRealtime />)
+    await waitFor(() => expect(handlers.length).toBeGreaterThan(0))
+    vi.useFakeTimers()
+    setVisibility('hidden')
+    vi.advanceTimersByTime(2_000)
+    setVisibility('visible')
+    vi.advanceTimersByTime(1_000)
+    expect(refresh).not.toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
+  it('catches up on coming back online', async () => {
+    render(<PlanRealtime />)
+    await waitFor(() => expect(handlers.length).toBeGreaterThan(0))
+    vi.useFakeTimers()
+    window.dispatchEvent(new Event('online'))
+    vi.advanceTimersByTime(300)
+    expect(refresh).toHaveBeenCalledTimes(1)
+    vi.useRealTimers()
+  })
+
+  it('leaves a page with nothing to watch (no one signed in) alone', async () => {
+    getSession.mockResolvedValue({ data: { session: null } })
+    render(<PlanRealtime />)
+    await waitFor(() => expect(getSession).toHaveBeenCalled())
+    await act(async () => {})
+    vi.useFakeTimers()
+    setVisibility('hidden')
+    vi.advanceTimersByTime(60_000)
+    setVisibility('visible')
+    window.dispatchEvent(new Event('online'))
+    vi.advanceTimersByTime(1_000)
+    expect(refresh).not.toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
+  it('stops once the page is left', async () => {
+    const { unmount } = render(<RoomRealtime roomId="room-1" />)
+    await waitFor(() => expect(handlers.length).toBeGreaterThan(0))
+    unmount()
+    vi.useFakeTimers()
+    setVisibility('hidden')
+    vi.advanceTimersByTime(60_000)
+    setVisibility('visible')
+    window.dispatchEvent(new Event('online'))
+    vi.advanceTimersByTime(1_000)
+    expect(refresh).not.toHaveBeenCalled()
+    vi.useRealTimers()
   })
 })
