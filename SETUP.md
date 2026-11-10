@@ -421,7 +421,10 @@ The message on the toast says which limit you hit:
 | *Upload failed* | The request never reached Supabase | Check your connection and that `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local` match your project. The browser console has the underlying error. |
 
 **"Something went wrong" when you add a recipe to the plan**
-Your database is missing the meal-planner table (`meal_plan_entries`), or the `note` column on it. Earlier copies of `setup_all.sql` left that section out, so projects set up with Method A never got it. Fix: open **SQL Editor → New query**, paste the `-- 4c. MEAL PLANNER` section of `supabase/setup_all.sql`, and click **Run**. That block is safe to run on a database that already has some of it.
+Your database is missing the meal-planner table (`meal_plan_entries`), or the `note` column on it. Earlier copies of `setup_all.sql` left that section out, so projects set up with Method A never got it. Fix: open **SQL Editor → New query**, paste the `-- 4c. MEAL PLANNER` section of `supabase/setup_all.sql`, and click **Run**. That block is safe to run on a database that already has some of it. Then do the same with the `-- 6. REALTIME` section, or the plan won't update by itself when someone else changes it (next entry).
+
+**The plan doesn't change by itself when someone else changes it** (other room pages do)
+The meal-planner table isn't on Realtime: databases set up from the earliest `setup_all.sql` ran its realtime section before that file had the planner table, so it was skipped, and adding the table later didn't put it back. With migrations deploying from CI, `20261110120000_realtime_meal_plan.sql` puts it on by itself. Otherwise paste the `-- 6. REALTIME` section of `supabase/setup_all.sql` into **SQL Editor → New query** and **Run**: it only adds what's missing, so it's safe to re-run.
 
 **"Could not update your plan" when you tick a meal as eaten (✓)**
 Your database is missing the `eaten_at` column on `meal_plan_entries`, which came with the ✓ button (`20261006120000_meal_plan_eaten.sql`). The rest of the plan keeps working without it. Fix: `npx supabase db push` (Method B), or re-run the `-- 4c. MEAL PLANNER` section of `supabase/setup_all.sql` as above.
