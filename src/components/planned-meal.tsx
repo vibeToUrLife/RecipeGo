@@ -1,5 +1,5 @@
 'use client'
-import { useState, useTransition } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Check, GripVertical, Pencil } from 'lucide-react'
@@ -18,14 +18,22 @@ import { NOTE_MAX } from '@/lib/plan/note'
 import { MEAL_SLOTS, type MealSlot } from '@/lib/plan/week'
 import { PLAN_ENTRY_DRAG_TYPE } from '@/lib/plan/drag'
 import { useFinePointer } from '@/lib/use-fine-pointer'
+import { useTouchDrag } from '@/lib/use-touch-drag'
 import type { MealPlanEntryView } from '@/lib/db-types'
 import { useT } from '@/components/i18n-provider'
 import { NoteIcon } from '@/components/icons'
 import { cn } from '@/lib/utils'
 
 // onToggleEaten: the ✓ was pressed. The grid owns the eaten state, so it can
-// show the change at once and put it back if the save fails.
-export function PlannedMeal({ entry, onToggleEaten }: { entry: MealPlanEntryView; onToggleEaten: () => void }) {
+// show the change at once and put it back if the save fails. onDragOver and
+// onDrop: carried by a finger, the slot it's over as it goes (null: none), and
+// the one it was let go on (see below).
+export function PlannedMeal({ entry, onToggleEaten, onDragOver, onDrop }: {
+  entry: MealPlanEntryView
+  onToggleEaten: () => void
+  onDragOver?: (cell: string | null) => void
+  onDrop?: (cell: string) => void
+}) {
   const t = useT()
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -35,10 +43,26 @@ export function PlannedMeal({ entry, onToggleEaten }: { entry: MealPlanEntryView
   const [slot, setSlot] = useState<MealSlot>(entry.meal_slot)
   const [note, setNote] = useState(entry.note ?? '')
   const [pending, start] = useTransition()
-  // Drag it onto another slot of the week to move it — on a computer only. On a
-  // touch screen a long press stays a long press; the edit dialog moves it there.
+  // Drag it onto another slot of the week to move it: with the mouse on a
+  // computer, the browser's own drag and drop; on a phone or tablet, where that
+  // doesn't start from a touch, a long press picks it up and the finger carries
+  // it (lib/use-touch-drag.ts), onto any slot carrying data-plan-cell. The edit
+  // dialog moves it too.
   const canDrag = useFinePointer()
+  const fingerDrag = !canDrag && !!onDrop
   const [dragging, setDragging] = useState(false)
+  const chip = useRef<HTMLDivElement>(null)
+  useTouchDrag(chip, 'data-plan-cell', fingerDrag, {
+    onLift: () => setDragging(true),
+    onOver: (cell) => onDragOver?.(cell),
+    onDrop: (cell) => {
+      if (cell) onDrop?.(cell)
+    },
+    onEnd: () => {
+      setDragging(false)
+      onDragOver?.(null)
+    },
+  })
   // Ticked as eaten: it stays on the plan, the meal faded well back and its card
   // see-through, so it reads as done at a glance. The ✓ and ✎ keep full
   // strength, so it's plain the tick is on and can come off again.
@@ -64,6 +88,7 @@ export function PlannedMeal({ entry, onToggleEaten }: { entry: MealPlanEntryView
   return (
     <>
       <div
+        ref={chip}
         draggable={canDrag}
         onDragStart={(e) => {
           e.dataTransfer.setData(PLAN_ENTRY_DRAG_TYPE, entry.id)
@@ -72,7 +97,14 @@ export function PlannedMeal({ entry, onToggleEaten }: { entry: MealPlanEntryView
           setTimeout(() => setDragging(true))
         }}
         onDragEnd={() => setDragging(false)}
-        className={cn('flex items-stretch overflow-hidden rounded-md text-sm', eaten ? 'bg-background/40' : 'bg-background', dragging && 'opacity-50')}
+        className={cn(
+          'flex items-stretch overflow-hidden rounded-md text-sm',
+          eaten ? 'bg-background/40' : 'bg-background',
+          dragging && 'opacity-50',
+          // A long press picks it up, rather than selecting its text or
+          // opening the phone's menu for it.
+          fingerDrag && 'select-none [-webkit-touch-callout:none]',
+        )}
       >
         {/* The whole chip drags; the grip only shows that it can, and only
             where there's a mouse. */}

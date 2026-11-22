@@ -26,14 +26,21 @@ vi.mock('@/components/add-meal-dialog', () => ({ AddMealDialog: () => null }))
 // Just the title, with a ✓ after it once eaten, to show which meal sits in which
 // slot and whether it's been eaten; and the button that ticks it (named by a
 // label, not text, so it isn't counted as a meal).
+// What each meal was handed for a finger carrying it (see PlannedMeal), for the
+// tests to play the finger.
+type Carry = { onDragOver?: (cell: string | null) => void; onDrop?: (cell: string) => void }
+const carried: Record<string, Carry> = {}
 vi.mock('@/components/planned-meal', () => ({
-  PlannedMeal: ({ entry, onToggleEaten }: { entry: MealPlanEntryView; onToggleEaten: () => void }) => (
-    <span>
-      {entry.recipe_title}
-      {entry.eaten_at && ' ✓'}
-      <button type="button" aria-label={`tick ${entry.recipe_title}`} onClick={onToggleEaten} />
-    </span>
-  ),
+  PlannedMeal: ({ entry, onToggleEaten, onDragOver, onDrop }: { entry: MealPlanEntryView; onToggleEaten: () => void } & Carry) => {
+    carried[entry.id] = { onDragOver, onDrop }
+    return (
+      <span>
+        {entry.recipe_title}
+        {entry.eaten_at && ' ✓'}
+        <button type="button" aria-label={`tick ${entry.recipe_title}`} onClick={onToggleEaten} />
+      </span>
+    )
+  },
 }))
 vi.mock('@/components/week-start-selector', () => ({ WeekStartSelector: () => null }))
 
@@ -201,6 +208,45 @@ describe('WeekPlanner drag and drop', () => {
     expect(wedLunch).toHaveClass('ring-2')
     leave(document.body)
     expect(wedLunch).not.toHaveClass('ring-2')
+  })
+})
+
+describe('WeekPlanner drag and drop with a finger', () => {
+  beforeEach(() => {
+    vi.mocked(movePlanEntryAction).mockReset()
+    vi.mocked(movePlanEntryAction).mockResolvedValue({ ok: true })
+  })
+
+  it('marks each slot for a finger to find it by', () => {
+    render(<WeekPlanner {...week} entries={[chicken, soup]} />)
+    expect(slot('Wed 1 Jul', 'plan.lunch')).toHaveAttribute('data-plan-cell', '2026-07-01 lunch')
+    expect(slot('Mon 29 Jun', 'plan.dinner')).toHaveAttribute('data-plan-cell', '2026-06-29 dinner')
+  })
+
+  it('lights up the slot under the finger, and only while it’s there', () => {
+    render(<WeekPlanner {...week} entries={[chicken, soup]} />)
+    const wedLunch = slot('Wed 1 Jul', 'plan.lunch')
+    act(() => carried.e1.onDragOver!('2026-07-01 lunch'))
+    expect(wedLunch).toHaveClass('ring-2')
+    act(() => carried.e1.onDragOver!(null))
+    expect(wedLunch).not.toHaveClass('ring-2')
+  })
+
+  it('moves a meal let go of on another slot there at once, and saves it', async () => {
+    render(<WeekPlanner {...week} entries={[chicken, soup]} />)
+    act(() => carried.e1.onDrop!('2026-07-01 lunch'))
+    expect(movePlanEntryAction).toHaveBeenCalledWith('e1', '2026-07-01', 'lunch')
+    expect(mealsIn(slot('Wed 1 Jul', 'plan.lunch'))).toEqual(['Soup', 'Roast Chicken'])
+    expect(mealsIn(slot('Mon 29 Jun', 'plan.dinner'))).toEqual([])
+    await waitFor(() => expect(movePlanEntryAction).toHaveBeenCalledTimes(1))
+  })
+
+  it('leaves a meal let go of on its own slot, or somewhere it can’t make out, alone', () => {
+    render(<WeekPlanner {...week} entries={[chicken, soup]} />)
+    act(() => carried.e1.onDrop!('2026-06-29 dinner'))
+    act(() => carried.e1.onDrop!('2026-07-01 brunch'))
+    act(() => carried.e1.onDrop!('nonsense'))
+    expect(movePlanEntryAction).not.toHaveBeenCalled()
   })
 })
 

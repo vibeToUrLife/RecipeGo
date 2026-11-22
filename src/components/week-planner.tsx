@@ -93,8 +93,10 @@ export function WeekPlanner({
     window.scrollTo({ top: top + window.scrollY - pinnedHeight() - 12 })
   }, [weekStartISO, todayInView])
 
-  // Drag and drop (computers only — see PlannedMeal): a slot takes a meal
-  // dragged from the grid, and lights up while one is held over it.
+  // Drag and drop: a slot takes a meal dragged from the grid, and lights up
+  // while one is held over it. With a mouse that's the browser's drag and drop;
+  // with a finger, PlannedMeal finds the slot by its data-plan-cell and says
+  // which (see PlannedMeal).
   function allowMealDrop(e: DragEvent, cell: string) {
     if (!e.dataTransfer.types.includes(PLAN_ENTRY_DRAG_TYPE)) return
     e.preventDefault()
@@ -107,6 +109,17 @@ export function WeekPlanner({
     if (!id) return
     e.preventDefault()
     setDropCell(null)
+    moveMeal(id, planDate, slot)
+  }
+
+  // A finger let go of the meal over a slot: its cell, "YYYY-MM-DD slot".
+  function dropMealOnCell(id: string, cell: string) {
+    const [planDate, slot] = cell.split(' ')
+    if (!(MEAL_SLOTS as readonly string[]).includes(slot)) return
+    moveMeal(id, planDate, slot as MealSlot)
+  }
+
+  function moveMeal(id: string, planDate: string, slot: MealSlot) {
     const entry = optimistic.find((x) => x.id === id)
     // Only a meal from this week's grid (one dragged in from another tab would be
     // moved without ever showing here), and only to somewhere new.
@@ -241,6 +254,7 @@ export function WeekPlanner({
                     // columns readable on paper.
                     <div
                       key={slot}
+                      data-plan-cell={cell}
                       onDragEnter={(e) => allowMealDrop(e, cell)}
                       onDragOver={(e) => allowMealDrop(e, cell)}
                       onDragLeave={(e) => {
@@ -257,7 +271,15 @@ export function WeekPlanner({
                     >
                       <p className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">{slotLabel[slot]}</p>
                       <div className="flex flex-col gap-1">
-                        {day[slot].map((e) => <PlannedMeal key={e.id} entry={e} onToggleEaten={() => toggleEaten(e)} />)}
+                        {day[slot].map((e) => (
+                          <PlannedMeal
+                            key={e.id}
+                            entry={e}
+                            onToggleEaten={() => toggleEaten(e)}
+                            onDragOver={setDropCell}
+                            onDrop={(to) => dropMealOnCell(e.id, to)}
+                          />
+                        ))}
                         <div className="print:hidden">
                           <AddMealDialog planDate={iso} slot={slot} recipes={recipes} roomId={roomId} />
                         </div>

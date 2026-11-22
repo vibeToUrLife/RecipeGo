@@ -1,9 +1,10 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { PlannedMeal } from '@/components/planned-meal'
 import { updatePlanNoteAction } from '@/app/plan/actions'
 import { PLAN_ENTRY_DRAG_TYPE } from '@/lib/plan/drag'
+import { HOLD_MS, SLOP_PX } from '@/lib/use-touch-drag'
 import type { MealPlanEntryView } from '@/lib/db-types'
 
 // The chip pulls in a router, plan server actions, and the recipe-view modal —
@@ -179,5 +180,143 @@ describe('PlannedMeal dragging', () => {
     mouse(false)
     render(<PlannedMeal entry={entry} onToggleEaten={vi.fn()} />)
     expect(chip()).toHaveAttribute('draggable', 'false')
+  })
+})
+
+describe('PlannedMeal dragging with a finger', () => {
+  const frames: FrameRequestCallback[] = []
+  // What the screen has under the finger: the slot the test puts there.
+  let under: Element | null = null
+  const slotAt = (cell: string) => {
+    const el = document.createElement('div')
+    el.setAttribute('data-plan-cell', cell)
+    document.body.append(el)
+    under = el
+  }
+  // The chip itself, not the copy of it a finger carries.
+  const chip = () => screen.getAllByLabelText('plan.viewRecipe')[0].parentElement!
+  // A finger on the chip, as the browser reports it; false when the page was
+  // kept from scrolling under it, or a tap kept from happening.
+  const finger = (type: 'touchstart' | 'touchmove' | 'touchend', x: number, y: number) => {
+    const point = { identifier: 7, clientX: x, clientY: y }
+    const e = new Event(type, { bubbles: true, cancelable: true })
+    Object.assign(e, { touches: type === 'touchend' ? [] : [point], changedTouches: [point] })
+    return chip().dispatchEvent(e)
+  }
+  const copies = () => screen.queryAllByText('Roast Chicken').length - 1
+  const props = () => ({ entry, onToggleEaten: vi.fn(), onDragOver: vi.fn(), onDrop: vi.fn() })
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    frames.length = 0
+    // A phone: no mouse.
+    vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener: () => {}, removeEventListener: () => {} }))
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => frames.push(cb))
+    vi.stubGlobal('cancelAnimationFrame', () => {})
+    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => under })
+    slotAt('2026-07-20 dinner')
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+    document.querySelectorAll('[data-plan-cell]').forEach((el) => el.remove())
+    under = null
+  })
+
+  it('a long press picks it up, and the finger carries it to the slot it lets go on', () => {
+    const p = props()
+    render(<PlannedMeal {...p} />)
+    expect(finger('touchstart', 20, 20)).toBe(true)
+    act(() => { vi.advanceTimersByTime(HOLD_MS) })
+
+    // Picked up: faded where it was, a copy under the finger, its own slot lit.
+    expect(chip()).toHaveClass('opacity-50')
+    expect(copies()).toBe(1)
+    expect(p.onDragOver).toHaveBeenLastCalledWith('2026-07-20 dinner')
+
+    slotAt('2026-07-22 lunch')
+    expect(finger('touchmove', 20, 300)).toBe(false) // the page stays put under it
+    expect(p.onDragOver).toHaveBeenLastCalledWith('2026-07-22 lunch')
+
+    let tapped = true
+    act(() => { tapped = finger('touchend', 20, 300) })
+    expect(tapped).toBe(false) // and isn't a tap on the meal
+    expect(p.onDrop).toHaveBeenCalledWith('2026-07-22 lunch')
+    expect(chip()).not.toHaveClass('opacity-50')
+    expect(copies()).toBe(0)
+    expect(p.onDragOver).toHaveBeenLastCalledWith(null)
+  })
+
+  it('leaves a finger that moves first to scroll the page, picking nothing up', () => {
+    const p = props()
+    render(<PlannedMeal {...p} />)
+    finger('touchstart', 20, 20)
+    expect(finger('touchmove', 20, 20 + SLOP_PX + 4)).toBe(true)
+    act(() => { vi.advanceTimersByTime(HOLD_MS * 2) })
+    expect(chip()).not.toHaveClass('opacity-50')
+    expect(finger('touchend', 20, 40)).toBe(true)
+    expect(p.onDrop).not.toHaveBeenCalled()
+  })
+
+  it('leaves a quick tap a tap', () => {
+    const p = props()
+    render(<PlannedMeal {...p} />)
+    finger('touchstart', 20, 20)
+    act(() => { vi.advanceTimersByTime(HOLD_MS / 3) })
+    expect(finger('touchend', 20, 20)).toBe(true)
+    act(() => { vi.advanceTimersByTime(HOLD_MS) })
+    expect(chip()).not.toHaveClass('opacity-50')
+    expect(p.onDragOver).not.toHaveBeenCalled()
+  })
+
+  it('stays where it was when let go over nothing that takes it', () => {
+    const p = props()
+    render(<PlannedMeal {...p} />)
+    finger('touchstart', 20, 20)
+    act(() => { vi.advanceTimersByTime(HOLD_MS) })
+    under = null
+    finger('touchmove', 20, 300)
+    finger('touchend', 20, 300)
+    expect(p.onDrop).not.toHaveBeenCalled()
+    expect(p.onDragOver).toHaveBeenLastCalledWith(null)
+    expect(copies()).toBe(0)
+  })
+
+  it('scrolls the page while it’s held near the bottom of the screen', () => {
+    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+    render(<PlannedMeal {...props()} />)
+    finger('touchstart', 20, 20)
+    act(() => { vi.advanceTimersByTime(HOLD_MS) })
+    finger('touchmove', 20, window.innerHeight - 5)
+    act(() => { frames.splice(0).forEach((frame) => frame(0)) })
+    expect(scrollBy).toHaveBeenCalledWith(0, expect.any(Number))
+    expect(scrollBy.mock.calls[0][1]).toBeGreaterThan(0)
+  })
+
+  it('gives up the drag if the phone takes the touch away', () => {
+    const p = props()
+    render(<PlannedMeal {...p} />)
+    finger('touchstart', 20, 20)
+    act(() => { vi.advanceTimersByTime(HOLD_MS) })
+    act(() => { chip().dispatchEvent(new Event('touchcancel')) })
+    expect(chip()).not.toHaveClass('opacity-50')
+    expect(copies()).toBe(0)
+    expect(p.onDrop).not.toHaveBeenCalled()
+  })
+
+  it('picks nothing up with a mouse (that drags it), nor with nowhere to drop it', () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: () => {}, removeEventListener: () => {} }))
+    const { unmount } = render(<PlannedMeal {...props()} />)
+    finger('touchstart', 20, 20)
+    act(() => { vi.advanceTimersByTime(HOLD_MS) })
+    expect(chip()).not.toHaveClass('opacity-50')
+    unmount()
+
+    vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener: () => {}, removeEventListener: () => {} }))
+    render(<PlannedMeal entry={entry} onToggleEaten={vi.fn()} />)
+    finger('touchstart', 20, 20)
+    act(() => { vi.advanceTimersByTime(HOLD_MS) })
+    expect(chip()).not.toHaveClass('opacity-50')
   })
 })
