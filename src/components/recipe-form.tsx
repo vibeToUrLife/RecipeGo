@@ -50,12 +50,19 @@ export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?
 
   // Enter in an ingredient row means "next ingredient", not "save the recipe" —
   // implicit form submission would otherwise fire the moment you finish typing
-  // one. From the qty box Enter moves along to the name beside it; from the name
-  // it goes to the next row, adding one when you're already at the end.
+  // one. A row reads quantity, unit, name, and is typed in that order: from the
+  // qty box Enter moves along to the name (the unit is picked from a list, not
+  // typed); from the name it goes on to the next row's qty box, adding a row
+  // when you're already at the end.
+  const ingQtyRefs = useRef(new Map<string, HTMLInputElement>())
   const ingNameRefs = useRef(new Map<string, HTMLInputElement>())
 
   function focusIngName(id: string) {
     ingNameRefs.current.get(id)?.focus()
+  }
+
+  function focusIngQty(id: string) {
+    ingQtyRefs.current.get(id)?.focus()
   }
 
   function ingredientKeyDown(e: KeyboardEvent<HTMLInputElement>, index: number, fromQty: boolean) {
@@ -63,7 +70,7 @@ export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?
     e.preventDefault()
     if (fromQty) { focusIngName(ings[index].id); return }
     const next = ings[index + 1]
-    if (next) { focusIngName(next.id); return }
+    if (next) { focusIngQty(next.id); return }
     // Last row: only grow the list once there's something in it, so holding
     // Enter can't stack up blank rows.
     if (!e.currentTarget.value.trim()) return
@@ -71,7 +78,7 @@ export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?
     // Commit before focusing — the new row isn't in the DOM until React has
     // rendered it, and this keystroke is the only chance to move the cursor.
     flushSync(() => setIngs([...ings, added]))
-    focusIngName(added.id)
+    focusIngQty(added.id)
   }
 
   function moveStep(fromId: string, toId: string) {
@@ -149,6 +156,10 @@ export function RecipeForm({ recipe, imported, rooms, defaultRoomId }: { recipe?
               placeholder={t('form.qty')}
               defaultValue={row.qty}
               onKeyDown={(e) => ingredientKeyDown(e, i, true)}
+              ref={(el: HTMLInputElement | null) => {
+                if (el) ingQtyRefs.current.set(row.id, el)
+                else ingQtyRefs.current.delete(row.id)
+              }}
               className="w-16"
             />
             <select name="ing_unit" defaultValue={row.unit} aria-label={t('form.unit')} className="h-9 w-20 shrink-0 rounded-md border border-input bg-background px-2 text-sm">

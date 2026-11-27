@@ -42,20 +42,33 @@ describe('RecipeForm ingredient Enter key', () => {
     await userEvent.keyboard('{Enter}')
 
     await waitFor(() => expect(nameFields()).toHaveLength(2))
-    // Straight into the new row — no reaching for the mouse.
-    expect(nameFields()[1]).toHaveFocus()
+    // Straight into the new row, at its first box (a row reads quantity, unit,
+    // name) — no reaching for the mouse.
+    expect(qtyFields()[1]).toHaveFocus()
     // The row that was typed keeps its text.
     expect(nameFields()[0]).toHaveValue('flour')
   })
 
-  it('moves to the existing next row instead of adding one', async () => {
+  it('moves to the existing next row, at its quantity, instead of adding one', async () => {
     render(<RecipeForm recipe={recipe(['flour', 'butter'])} rooms={[]} />)
 
     await userEvent.click(nameFields()[0])
     await userEvent.keyboard('{Enter}')
 
-    await waitFor(() => expect(nameFields()[1]).toHaveFocus())
+    await waitFor(() => expect(qtyFields()[1]).toHaveFocus())
     expect(nameFields()).toHaveLength(2)
+  })
+
+  it('types a whole list from the keyboard: quantity, Enter, name, Enter, the next quantity', async () => {
+    render(<RecipeForm rooms={[]} />)
+
+    await userEvent.click(qtyFields()[0])
+    await userEvent.keyboard('200{Enter}flour{Enter}2{Enter}eggs{Enter}')
+
+    await waitFor(() => expect(nameFields()).toHaveLength(3))
+    expect(qtyFields().map((f) => f.value)).toEqual(['200', '2', ''])
+    expect(nameFields().map((f) => f.value)).toEqual(['flour', 'eggs', ''])
+    expect(qtyFields()[2]).toHaveFocus()
   })
 
   it('will not stack up blank rows when Enter is held on an empty last row', async () => {
